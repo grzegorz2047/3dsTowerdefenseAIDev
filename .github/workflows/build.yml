@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - agent/**
+      - publish-v*
     tags:
       - 'v*'
   pull_request:
@@ -43,6 +44,18 @@ jobs:
           make release -j2 2>&1 | tee build.log
           cd dist
           sha256sum -c SHA256SUMS.txt
+
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          tag=""
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            tag="$GITHUB_REF_NAME"
+          elif [[ "$GITHUB_REF" == refs/heads/publish-v* ]]; then
+            tag="${GITHUB_REF_NAME#publish-}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Report build failure
         if: failure() && github.event_name == 'pull_request'
@@ -97,9 +110,11 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub pre-release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.release.outputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           prerelease: true
           generate_release_notes: true
           files: |
