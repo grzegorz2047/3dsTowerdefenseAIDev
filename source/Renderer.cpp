@@ -217,8 +217,8 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
 
 void Renderer::render(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem) {
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-    drawScene(camera, wave, buildSystem);
     drawBottomPanel(camera, wave, buildSystem);
+    drawScene(camera, wave, buildSystem);
     C3D_FrameEnd(0);
 }
 
