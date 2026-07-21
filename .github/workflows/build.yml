@@ -202,7 +202,7 @@ jobs:
           set +e
           HOME="$PWD/azahar-home" \
             timeout 15s xvfb-run -a ./squashfs-root/AppRun \
-            --windowed "$PWD/dist/CitadelDefense3D.3dsx" \
+            -w "$PWD/dist/CitadelDefense3D.3dsx" \
             > azahar-3dsx-launch.log 2>&1
           status=$?
           echo "Azahar 3DSX exit status: $status" | tee azahar-smoke-result.txt
