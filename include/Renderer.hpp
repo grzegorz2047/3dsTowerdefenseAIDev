@@ -1,8 +1,11 @@
 #pragma once
 
+#include <cstddef>
+
 #include <citro3d.h>
 
 #include "Camera.hpp"
+#include "Level.hpp"
 
 class Renderer {
 public:
@@ -12,11 +15,12 @@ public:
     Renderer(const Renderer&) = delete;
     Renderer& operator=(const Renderer&) = delete;
 
-    [[nodiscard]] bool initialize();
+    [[nodiscard]] bool initialize(const LevelData& level);
     void render(const Camera& camera);
     void shutdown();
 
 private:
+    [[nodiscard]] bool buildLevelMesh(const LevelData& level);
     void drawScene(const Camera& camera);
     void drawBottomPanel(const Camera& camera);
 
@@ -28,4 +32,5 @@ private:
     int projectionUniform_ = -1;
     int modelViewUniform_ = -1;
     void* vertexBuffer_ = nullptr;
+    std::size_t vertexCount_ = 0;
 };

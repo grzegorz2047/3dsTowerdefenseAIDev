@@ -3,6 +3,7 @@
 #include <3ds.h>
 
 #include <cstring>
+#include <vector>
 
 #include "vshader_shbin.h"
 
@@ -28,59 +29,40 @@ struct Vertex {
     float a;
 };
 
-constexpr Vertex kVertices[] = {
-    {-6.0F, 0.0F, -6.0F, 0.18F, 0.42F, 0.20F, 1.0F},
-    { 6.0F, 0.0F, -6.0F, 0.18F, 0.42F, 0.20F, 1.0F},
-    { 6.0F, 0.0F,  6.0F, 0.24F, 0.50F, 0.25F, 1.0F},
-    { 6.0F, 0.0F,  6.0F, 0.24F, 0.50F, 0.25F, 1.0F},
-    {-6.0F, 0.0F,  6.0F, 0.24F, 0.50F, 0.25F, 1.0F},
-    {-6.0F, 0.0F, -6.0F, 0.18F, 0.42F, 0.20F, 1.0F},
-
-    {-0.5F, 0.0F,  0.5F, 0.65F, 0.65F, 0.72F, 1.0F},
-    { 0.5F, 0.0F,  0.5F, 0.65F, 0.65F, 0.72F, 1.0F},
-    { 0.5F, 1.0F,  0.5F, 0.82F, 0.82F, 0.90F, 1.0F},
-    { 0.5F, 1.0F,  0.5F, 0.82F, 0.82F, 0.90F, 1.0F},
-    {-0.5F, 1.0F,  0.5F, 0.82F, 0.82F, 0.90F, 1.0F},
-    {-0.5F, 0.0F,  0.5F, 0.65F, 0.65F, 0.72F, 1.0F},
-
-    { 0.5F, 0.0F, -0.5F, 0.52F, 0.52F, 0.60F, 1.0F},
-    {-0.5F, 0.0F, -0.5F, 0.52F, 0.52F, 0.60F, 1.0F},
-    {-0.5F, 1.0F, -0.5F, 0.70F, 0.70F, 0.78F, 1.0F},
-    {-0.5F, 1.0F, -0.5F, 0.70F, 0.70F, 0.78F, 1.0F},
-    { 0.5F, 1.0F, -0.5F, 0.70F, 0.70F, 0.78F, 1.0F},
-    { 0.5F, 0.0F, -0.5F, 0.52F, 0.52F, 0.60F, 1.0F},
-
-    { 0.5F, 0.0F,  0.5F, 0.70F, 0.58F, 0.24F, 1.0F},
-    { 0.5F, 0.0F, -0.5F, 0.70F, 0.58F, 0.24F, 1.0F},
-    { 0.5F, 1.0F, -0.5F, 0.88F, 0.72F, 0.30F, 1.0F},
-    { 0.5F, 1.0F, -0.5F, 0.88F, 0.72F, 0.30F, 1.0F},
-    { 0.5F, 1.0F,  0.5F, 0.88F, 0.72F, 0.30F, 1.0F},
-    { 0.5F, 0.0F,  0.5F, 0.70F, 0.58F, 0.24F, 1.0F},
-
-    {-0.5F, 0.0F, -0.5F, 0.55F, 0.43F, 0.18F, 1.0F},
-    {-0.5F, 0.0F,  0.5F, 0.55F, 0.43F, 0.18F, 1.0F},
-    {-0.5F, 1.0F,  0.5F, 0.75F, 0.58F, 0.22F, 1.0F},
-    {-0.5F, 1.0F,  0.5F, 0.75F, 0.58F, 0.22F, 1.0F},
-    {-0.5F, 1.0F, -0.5F, 0.75F, 0.58F, 0.22F, 1.0F},
-    {-0.5F, 0.0F, -0.5F, 0.55F, 0.43F, 0.18F, 1.0F},
-
-    {-0.5F, 1.0F,  0.5F, 0.84F, 0.84F, 0.92F, 1.0F},
-    { 0.5F, 1.0F,  0.5F, 0.84F, 0.84F, 0.92F, 1.0F},
-    { 0.5F, 1.0F, -0.5F, 0.84F, 0.84F, 0.92F, 1.0F},
-    { 0.5F, 1.0F, -0.5F, 0.84F, 0.84F, 0.92F, 1.0F},
-    {-0.5F, 1.0F, -0.5F, 0.84F, 0.84F, 0.92F, 1.0F},
-    {-0.5F, 1.0F,  0.5F, 0.84F, 0.84F, 0.92F, 1.0F},
-
-    {-0.5F, 0.0F, -0.5F, 0.35F, 0.35F, 0.40F, 1.0F},
-    { 0.5F, 0.0F, -0.5F, 0.35F, 0.35F, 0.40F, 1.0F},
-    { 0.5F, 0.0F,  0.5F, 0.35F, 0.35F, 0.40F, 1.0F},
-    { 0.5F, 0.0F,  0.5F, 0.35F, 0.35F, 0.40F, 1.0F},
-    {-0.5F, 0.0F,  0.5F, 0.35F, 0.35F, 0.40F, 1.0F},
-    {-0.5F, 0.0F, -0.5F, 0.35F, 0.35F, 0.40F, 1.0F},
+struct TileVisual {
+    float r;
+    float g;
+    float b;
+    float height;
+    float inset;
 };
 
-constexpr int kGroundVertexCount = 6;
-constexpr int kTowerVertexCount = 36;
+TileVisual visualFor(TileType tile) {
+    switch (tile) {
+        case TileType::Road: return {0.48F, 0.34F, 0.20F, 0.03F, 0.03F};
+        case TileType::BuildSpot: return {0.20F, 0.42F, 0.68F, 0.07F, 0.10F};
+        case TileType::Blocked: return {0.24F, 0.25F, 0.28F, 0.38F, 0.05F};
+        case TileType::Spawn: return {0.18F, 0.72F, 0.28F, 0.08F, 0.05F};
+        case TileType::Base: return {0.78F, 0.22F, 0.18F, 0.16F, 0.05F};
+        case TileType::Ground:
+        default: return {0.18F, 0.46F, 0.22F, 0.0F, 0.04F};
+    }
+}
+
+void appendTile(std::vector<Vertex>& vertices, float centerX, float centerZ, const TileVisual& visual) {
+    const float half = 0.5F - visual.inset;
+    const float y = visual.height;
+    const Vertex a{centerX - half, y, centerZ - half, visual.r, visual.g, visual.b, 1.0F};
+    const Vertex b{centerX + half, y, centerZ - half, visual.r, visual.g, visual.b, 1.0F};
+    const Vertex c{centerX + half, y, centerZ + half, visual.r, visual.g, visual.b, 1.0F};
+    const Vertex d{centerX - half, y, centerZ + half, visual.r, visual.g, visual.b, 1.0F};
+    vertices.push_back(a);
+    vertices.push_back(b);
+    vertices.push_back(c);
+    vertices.push_back(c);
+    vertices.push_back(d);
+    vertices.push_back(a);
+}
 
 }  // namespace
 
@@ -88,7 +70,7 @@ Renderer::~Renderer() {
     shutdown();
 }
 
-bool Renderer::initialize() {
+bool Renderer::initialize(const LevelData& level) {
     topTarget_ = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     bottomTarget_ = C3D_RenderTargetCreate(240, 320, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     if (topTarget_ == nullptr || bottomTarget_ == nullptr) {
@@ -120,11 +102,9 @@ bool Renderer::initialize() {
     AttrInfo_AddLoader(attributes, 0, GPU_FLOAT, 3);
     AttrInfo_AddLoader(attributes, 1, GPU_FLOAT, 4);
 
-    vertexBuffer_ = linearAlloc(sizeof(kVertices));
-    if (vertexBuffer_ == nullptr) {
+    if (!buildLevelMesh(level)) {
         return false;
     }
-    std::memcpy(vertexBuffer_, kVertices, sizeof(kVertices));
 
     C3D_BufInfo* buffers = C3D_GetBufInfo();
     BufInfo_Init(buffers);
@@ -140,6 +120,36 @@ bool Renderer::initialize() {
     return true;
 }
 
+bool Renderer::buildLevelMesh(const LevelData& level) {
+    std::vector<Vertex> vertices;
+    vertices.reserve(static_cast<std::size_t>(level.width) * level.height * 6U);
+
+    const float offsetX = -static_cast<float>(level.width) * 0.5F + 0.5F;
+    const float offsetZ = -static_cast<float>(level.height) * 0.5F + 0.5F;
+    for (std::size_t z = 0; z < level.height; ++z) {
+        for (std::size_t x = 0; x < level.width; ++x) {
+            appendTile(
+                vertices,
+                offsetX + static_cast<float>(x),
+                offsetZ + static_cast<float>(z),
+                visualFor(level.tileAt(x, z)));
+        }
+    }
+
+    if (vertices.empty()) {
+        return false;
+    }
+
+    const std::size_t bytes = vertices.size() * sizeof(Vertex);
+    vertexBuffer_ = linearAlloc(bytes);
+    if (vertexBuffer_ == nullptr) {
+        return false;
+    }
+    std::memcpy(vertexBuffer_, vertices.data(), bytes);
+    vertexCount_ = vertices.size();
+    return true;
+}
+
 void Renderer::render(const Camera& camera) {
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
     drawScene(camera);
@@ -152,18 +162,12 @@ void Renderer::drawScene(const Camera& camera) {
     C3D_FrameDrawOn(topTarget_);
 
     C3D_Mtx projection{};
-    C3D_Mtx groundView{};
+    C3D_Mtx modelView{};
     camera.writeProjection(projection);
-    camera.writeView(groundView);
+    camera.writeView(modelView);
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, projectionUniform_, &projection);
-    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &groundView);
-    C3D_DrawArrays(GPU_TRIANGLES, 0, kGroundVertexCount);
-
-    C3D_Mtx towerView{};
-    camera.writeView(towerView);
-    Mtx_Translate(&towerView, 0.0F, 0.0F, 0.0F, true);
-    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &towerView);
-    C3D_DrawArrays(GPU_TRIANGLES, kGroundVertexCount, kTowerVertexCount);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &modelView);
+    C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(vertexCount_));
 }
 
 void Renderer::drawBottomPanel(const Camera& camera) {
@@ -177,6 +181,7 @@ void Renderer::shutdown() {
         linearFree(vertexBuffer_);
         vertexBuffer_ = nullptr;
     }
+    vertexCount_ = 0;
     if (shaderProgramInitialized_) {
         shaderProgramFree(&shaderProgram_);
         shaderProgramInitialized_ = false;

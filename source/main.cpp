@@ -47,7 +47,7 @@ int main() {
     }
 
     Renderer renderer;
-    if (!renderer.initialize()) {
+    if (!renderer.initialize(levelResult.level)) {
         renderer.shutdown();
         return shutdownWithError();
     }
