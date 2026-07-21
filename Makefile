@@ -24,8 +24,9 @@ TOOLS_BIN     ?= $(TOPDIR)/.tools/bin
 MAKEROM       ?= $(TOOLS_BIN)/makerom
 BANNERTOOL    ?= $(TOOLS_BIN)/bannertool
 PYTHON        ?= python3
-RSF_FILE      := $(TOPDIR)/config/application.rsf
+SOURCE_RSF    := $(TOPDIR)/config/application.rsf
 ASSET_DIR     := $(TOPDIR)/$(BUILD)/release-assets
+RSF_FILE      := $(ASSET_DIR)/application.rsf
 ICON_FILE     := $(ASSET_DIR)/icon.png
 BANNER_IMAGE  := $(ASSET_DIR)/banner.png
 BANNER_AUDIO  := $(ASSET_DIR)/banner.wav
@@ -66,7 +67,7 @@ export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 export _3DSXDEPS := $(if $(NO_SMDH),,$(OUTPUT).smdh)
 export _3DSXFLAGS += --smdh=$(CURDIR)/$(TARGET).smdh --romfs=$(CURDIR)/$(ROMFS)
-export MAKEROM BANNERTOOL PYTHON RSF_FILE ASSET_DIR ICON_FILE BANNER_IMAGE BANNER_AUDIO BANNER_FILE CIA_ICON
+export MAKEROM BANNERTOOL PYTHON SOURCE_RSF RSF_FILE ASSET_DIR ICON_FILE BANNER_IMAGE BANNER_AUDIO BANNER_FILE CIA_ICON
 
 .PHONY: all 3dsx cia release tools assets clean checksums
 
@@ -83,10 +84,13 @@ release: cia checksums
 tools:
 	@bash scripts/bootstrap_cia_tools.sh
 
-assets: $(ICON_FILE) $(BANNER_IMAGE) $(BANNER_AUDIO)
+assets: $(ICON_FILE) $(BANNER_IMAGE) $(BANNER_AUDIO) $(RSF_FILE)
 
 $(ICON_FILE) $(BANNER_IMAGE) $(BANNER_AUDIO): scripts/generate_release_assets.py
 	@$(PYTHON) scripts/generate_release_assets.py
+
+$(RSF_FILE): $(SOURCE_RSF) scripts/prepare_release_rsf.sh
+	@bash scripts/prepare_release_rsf.sh "$(SOURCE_RSF)" "$@"
 
 $(BUILD):
 	@mkdir -p $@
