@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   build-3dsx:
@@ -39,9 +40,43 @@ jobs:
           command -v picasso
 
       - name: Build 3DSX
+        id: build
         run: |
           set -o pipefail
           make -j2 2>&1 | tee build.log
+
+      - name: Report compiler failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.existsSync('build.log')
+              ? fs.readFileSync('build.log', 'utf8').trim().split('\n').slice(-80).join('\n')
+              : 'Build failed before build.log was created.';
+            const marker = '<!-- citadel-build-failure -->';
+            const body = `${marker}\n## Build failure\n\n\`\`\`text\n${log}\n\`\`\``;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(comment => comment.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
       - name: Upload build log
         if: always()
