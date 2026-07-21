@@ -1,7 +1,9 @@
 #include "Level.hpp"
 
+#include <cerrno>
 #include <cstdlib>
 #include <fstream>
+#include <limits>
 #include <sstream>
 
 namespace {
@@ -21,18 +23,41 @@ TileType parseTile(char value, bool& valid) {
     }
 }
 
-bool parseDimensions(const std::string& value, std::uint8_t& width, std::uint8_t& height) {
-    const std::size_t separator = value.find(',');
-    if (separator == std::string::npos) {
+bool parseLong(const std::string& value, long& output) {
+    if (value.empty()) {
         return false;
     }
-    const long parsedWidth = std::strtol(value.substr(0, separator).c_str(), nullptr, 10);
-    const long parsedHeight = std::strtol(value.substr(separator + 1).c_str(), nullptr, 10);
+
+    errno = 0;
+    char* end = nullptr;
+    const long parsed = std::strtol(value.c_str(), &end, 10);
+    if (errno == ERANGE || end == value.c_str() || *end != '\0') {
+        return false;
+    }
+
+    output = parsed;
+    return true;
+}
+
+bool parseDimensions(const std::string& value, std::uint8_t& width, std::uint8_t& height) {
+    const std::size_t separator = value.find(',');
+    if (separator == std::string::npos || value.find(',', separator + 1) != std::string::npos) {
+        return false;
+    }
+
+    long parsedWidth = 0;
+    long parsedHeight = 0;
+    if (!parseLong(value.substr(0, separator), parsedWidth) ||
+        !parseLong(value.substr(separator + 1), parsedHeight)) {
+        return false;
+    }
+
     if (parsedWidth <= 0 || parsedHeight <= 0 ||
         parsedWidth > static_cast<long>(kMaximumMapWidth) ||
         parsedHeight > static_cast<long>(kMaximumMapHeight)) {
         return false;
     }
+
     width = static_cast<std::uint8_t>(parsedWidth);
     height = static_cast<std::uint8_t>(parsedHeight);
     return true;
@@ -40,11 +65,75 @@ bool parseDimensions(const std::string& value, std::uint8_t& width, std::uint8_t
 
 bool parsePoint(const std::string& value, GridPoint& point) {
     const std::size_t separator = value.find(',');
-    if (separator == std::string::npos) {
+    if (separator == std::string::npos || value.find(',', separator + 1) != std::string::npos) {
         return false;
     }
-    point.x = static_cast<std::int16_t>(std::strtol(value.substr(0, separator).c_str(), nullptr, 10));
-    point.z = static_cast<std::int16_t>(std::strtol(value.substr(separator + 1).c_str(), nullptr, 10));
+
+    long x = 0;
+    long z = 0;
+    if (!parseLong(value.substr(0, separator), x) ||
+        !parseLong(value.substr(separator + 1), z)) {
+        return false;
+    }
+
+    if (x < std::numeric_limits<std::int16_t>::min() ||
+        x > std::numeric_limits<std::int16_t>::max() ||
+        z < std::numeric_limits<std::int16_t>::min() ||
+        z > std::numeric_limits<std::int16_t>::max()) {
+        return false;
+    }
+
+    point.x = static_cast<std::int16_t>(x);
+    point.z = static_cast<std::int16_t>(z);
+    return true;
+}
+
+bool isPathTile(TileType tile) {
+    return tile == TileType::Road || tile == TileType::Spawn || tile == TileType::Base;
+}
+
+bool validatePath(const LevelData& level, std::string& error) {
+    if (level.pathLength < 2) {
+        error = "Trasa musi miec co najmniej dwa punkty";
+        return false;
+    }
+
+    for (std::size_t index = 0; index < level.pathLength; ++index) {
+        const GridPoint point = level.path[index];
+        if (point.x < 0 || point.z < 0 ||
+            point.x >= static_cast<std::int16_t>(level.width) ||
+            point.z >= static_cast<std::int16_t>(level.height)) {
+            error = "Punkt trasy znajduje sie poza mapa";
+            return false;
+        }
+
+        const TileType tile = level.tileAt(
+            static_cast<std::size_t>(point.x),
+            static_cast<std::size_t>(point.z));
+        if (!isPathTile(tile)) {
+            error = "Trasa moze przebiegac tylko przez S, R i E";
+            return false;
+        }
+
+        if (index > 0) {
+            const GridPoint previous = level.path[index - 1];
+            const int distance = std::abs(static_cast<int>(point.x - previous.x)) +
+                std::abs(static_cast<int>(point.z - previous.z));
+            if (distance != 1) {
+                error = "Kolejne punkty trasy musza byc sasiednie";
+                return false;
+            }
+        }
+    }
+
+    const GridPoint first = level.path[0];
+    const GridPoint last = level.path[level.pathLength - 1];
+    if (level.tileAt(static_cast<std::size_t>(first.x), static_cast<std::size_t>(first.z)) != TileType::Spawn ||
+        level.tileAt(static_cast<std::size_t>(last.x), static_cast<std::size_t>(last.z)) != TileType::Base) {
+        error = "Trasa musi zaczynac sie w S i konczyc w E";
+        return false;
+    }
+
     return true;
 }
 
@@ -68,10 +157,13 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
     std::string line;
     bool readingGrid = false;
     std::size_t gridRow = 0;
-    bool hasSpawn = false;
-    bool hasBase = false;
+    std::size_t spawnCount = 0;
+    std::size_t baseCount = 0;
 
     while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
         if (line.empty() || line[0] == ';') {
             continue;
         }
@@ -89,8 +181,8 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
                     return result;
                 }
                 result.level.tiles[gridRow * kMaximumMapWidth + x] = tile;
-                hasSpawn = hasSpawn || tile == TileType::Spawn;
-                hasBase = hasBase || tile == TileType::Base;
+                spawnCount += tile == TileType::Spawn ? 1U : 0U;
+                baseCount += tile == TileType::Base ? 1U : 0U;
             }
             ++gridRow;
             if (gridRow == result.level.height) {
@@ -124,16 +216,23 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
             readingGrid = true;
             gridRow = 0;
         } else if (key == "path") {
+            if (readingGrid || gridRow != result.level.height) {
+                result.error = "Trasa musi wystapic po kompletnej siatce";
+                return result;
+            }
             std::stringstream points(value);
             std::string pointValue;
             while (std::getline(points, pointValue, ';')) {
-                if (result.level.pathLength >= kMaximumPathPoints ||
+                if (pointValue.empty() || result.level.pathLength >= kMaximumPathPoints ||
                     !parsePoint(pointValue, result.level.path[result.level.pathLength])) {
                     result.error = "Nieprawidlowa trasa";
                     return result;
                 }
                 ++result.level.pathLength;
             }
+        } else {
+            result.error = "Nieznany klucz poziomu";
+            return result;
         }
     }
 
@@ -141,20 +240,15 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
         result.error = "Niekompletna siatka poziomu";
         return result;
     }
-    if (result.level.id.empty() || result.level.name.empty() || !hasSpawn || !hasBase) {
-        result.error = "Brak wymaganych danych poziomu";
+    if (result.level.id.empty() || result.level.name.empty()) {
+        result.error = "Brak identyfikatora lub nazwy poziomu";
         return result;
     }
-    if (result.level.pathLength < 2) {
-        result.error = "Trasa musi miec co najmniej dwa punkty";
+    if (spawnCount != 1 || baseCount != 1) {
+        result.error = "Poziom musi zawierac dokladnie jeden spawn i jedna baze";
         return result;
     }
-
-    const GridPoint first = result.level.path[0];
-    const GridPoint last = result.level.path[result.level.pathLength - 1];
-    if (result.level.tileAt(first.x, first.z) != TileType::Spawn ||
-        result.level.tileAt(last.x, last.z) != TileType::Base) {
-        result.error = "Trasa musi zaczynac sie w S i konczyc w E";
+    if (!validatePath(result.level, result.error)) {
         return result;
     }
 
