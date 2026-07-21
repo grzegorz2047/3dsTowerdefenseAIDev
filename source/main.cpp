@@ -80,7 +80,12 @@ bool initializeScene() {
 
     C3D_TexEnv* environment = C3D_GetTexEnv(0);
     C3D_TexEnvInit(environment);
-    C3D_TexEnvSrc(environment, C3D_Both, GPU_PRIMARY_COLOR, 0, 0);
+    C3D_TexEnvSrc(
+        environment,
+        C3D_Both,
+        GPU_PRIMARY_COLOR,
+        GPU_PRIMARY_COLOR,
+        GPU_PRIMARY_COLOR);
     C3D_TexEnvFunc(environment, C3D_Both, GPU_REPLACE);
 
     C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
