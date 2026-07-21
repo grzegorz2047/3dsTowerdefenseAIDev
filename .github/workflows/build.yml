@@ -41,6 +41,7 @@ jobs:
 
       - name: Build 3DSX
         id: build
+        shell: bash
         run: |
           set -o pipefail
           make -j2 2>&1 | tee build.log
