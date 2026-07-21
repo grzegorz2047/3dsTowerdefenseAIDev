@@ -184,7 +184,7 @@ jobs:
         run: |
           ./azahar.AppImage --appimage-extract > azahar-extract.log 2>&1
           test -x squashfs-root/AppRun
-          xvfb-run -a ./squashfs-root/AppRun --version | tee azahar-cli-version.txt
+          xvfb-run -a ./squashfs-root/AppRun -v | tee azahar-cli-version.txt
 
       - name: Verify CIA installation
         shell: bash
