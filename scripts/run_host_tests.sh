@@ -15,6 +15,7 @@ mkdir -p "$(dirname "$OUTPUT")"
   -Werror \
   -I"$ROOT/include" \
   "$ROOT/tests/logic_tests.cpp" \
+  "$ROOT/source/Economy.cpp" \
   "$ROOT/source/Enemy.cpp" \
   "$ROOT/source/Level.cpp" \
   "$ROOT/source/Tower.cpp" \
