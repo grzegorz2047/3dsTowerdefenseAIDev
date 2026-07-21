@@ -2,15 +2,15 @@
 #include <citro3d.h>
 
 #include "Camera.hpp"
-#include "Enemy.hpp"
 #include "Input.hpp"
 #include "Level.hpp"
 #include "Renderer.hpp"
+#include "Wave.hpp"
 
 namespace {
 
 constexpr float kMaximumDeltaSeconds = 1.0F / 15.0F;
-constexpr float kRestartDelaySeconds = 1.0F;
+constexpr float kRestartDelaySeconds = 1.5F;
 
 float calculateDeltaSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
     if (previousMilliseconds == 0U || nowMilliseconds <= previousMilliseconds) {
@@ -56,7 +56,7 @@ int main() {
 
     InputSystem inputSystem;
     Camera camera;
-    Enemy enemy(levelResult.level);
+    Wave wave(levelResult.level);
     float restartTimer = 0.0F;
     u64 previousMilliseconds = osGetTime();
 
@@ -71,16 +71,16 @@ int main() {
         previousMilliseconds = nowMilliseconds;
 
         camera.update(input, deltaSeconds);
-        if (enemy.reachedBase()) {
+        if (wave.completed() || wave.lost()) {
             restartTimer += deltaSeconds;
             if (restartTimer >= kRestartDelaySeconds) {
-                enemy.reset();
+                wave.reset();
                 restartTimer = 0.0F;
             }
         } else {
-            enemy.update(deltaSeconds);
+            wave.update(deltaSeconds);
         }
-        renderer.render(camera, enemy);
+        renderer.render(camera, wave);
     }
 
     renderer.shutdown();
