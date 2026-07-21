@@ -2,6 +2,7 @@
 #include <citro3d.h>
 
 #include "Camera.hpp"
+#include "Enemy.hpp"
 #include "Input.hpp"
 #include "Level.hpp"
 #include "Renderer.hpp"
@@ -9,6 +10,7 @@
 namespace {
 
 constexpr float kMaximumDeltaSeconds = 1.0F / 15.0F;
+constexpr float kRestartDelaySeconds = 1.0F;
 
 float calculateDeltaSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
     if (previousMilliseconds == 0U || nowMilliseconds <= previousMilliseconds) {
@@ -54,6 +56,8 @@ int main() {
 
     InputSystem inputSystem;
     Camera camera;
+    Enemy enemy(levelResult.level);
+    float restartTimer = 0.0F;
     u64 previousMilliseconds = osGetTime();
 
     while (aptMainLoop()) {
@@ -67,7 +71,16 @@ int main() {
         previousMilliseconds = nowMilliseconds;
 
         camera.update(input, deltaSeconds);
-        renderer.render(camera);
+        if (enemy.reachedBase()) {
+            restartTimer += deltaSeconds;
+            if (restartTimer >= kRestartDelaySeconds) {
+                enemy.reset();
+                restartTimer = 0.0F;
+            }
+        } else {
+            enemy.update(deltaSeconds);
+        }
+        renderer.render(camera, enemy);
     }
 
     renderer.shutdown();
