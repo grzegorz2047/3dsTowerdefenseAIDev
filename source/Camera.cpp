@@ -5,7 +5,8 @@
 
 namespace {
 
-constexpr float kFieldOfView = 55.0F * static_cast<float>(M_PI) / 180.0F;
+constexpr float kPi = 3.14159265358979323846F;
+constexpr float kFieldOfView = 55.0F * kPi / 180.0F;
 constexpr float kAspectRatio = 400.0F / 240.0F;
 constexpr float kNearPlane = 0.1F;
 constexpr float kFarPlane = 100.0F;
@@ -13,7 +14,7 @@ constexpr float kCameraPitch = -0.72F;
 constexpr float kCameraDistance = -12.0F;
 constexpr float kPanSpeed = 0.018F;
 constexpr float kMapLimit = 6.0F;
-constexpr float kQuarterTurn = static_cast<float>(M_PI) * 0.5F;
+constexpr float kQuarterTurn = kPi * 0.5F;
 
 }  // namespace
 
