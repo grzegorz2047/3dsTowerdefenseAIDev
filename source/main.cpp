@@ -3,6 +3,7 @@
 
 #include "Camera.hpp"
 #include "Input.hpp"
+#include "Level.hpp"
 #include "Renderer.hpp"
 
 namespace {
@@ -18,11 +19,21 @@ float calculateDeltaSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
     return elapsed < kMaximumDeltaSeconds ? elapsed : kMaximumDeltaSeconds;
 }
 
+int shutdownWithError() {
+    C3D_Fini();
+    romfsExit();
+    gfxExit();
+    return 1;
+}
+
 }  // namespace
 
 int main() {
     gfxInitDefault();
-    romfsInit();
+    if (romfsInit() != 0) {
+        gfxExit();
+        return 1;
+    }
 
     if (!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)) {
         romfsExit();
@@ -30,13 +41,15 @@ int main() {
         return 1;
     }
 
+    const LevelLoadResult levelResult = LevelLoader::loadFromRomFs("romfs:/levels/tutorial.lvl");
+    if (!levelResult.success) {
+        return shutdownWithError();
+    }
+
     Renderer renderer;
     if (!renderer.initialize()) {
         renderer.shutdown();
-        C3D_Fini();
-        romfsExit();
-        gfxExit();
-        return 1;
+        return shutdownWithError();
     }
 
     InputSystem inputSystem;
