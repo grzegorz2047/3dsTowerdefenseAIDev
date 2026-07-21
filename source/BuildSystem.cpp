@@ -61,6 +61,10 @@ int BuildSystem::gold() const {
     return gold_;
 }
 
+int BuildSystem::towerCost() const {
+    return kTowerCost;
+}
+
 std::size_t BuildSystem::cursorX() const {
     if (buildSpotCount_ == 0) {
         return 0;
@@ -75,9 +79,16 @@ std::size_t BuildSystem::cursorZ() const {
     return static_cast<std::size_t>(buildSpots_[cursorIndex_].z);
 }
 
+bool BuildSystem::cursorOccupied() const {
+    return buildSpotCount_ > 0 && occupied(cursorX(), cursorZ());
+}
+
+bool BuildSystem::hasEnoughGold() const {
+    return gold_ >= kTowerCost;
+}
+
 bool BuildSystem::cursorCanBuild() const {
-    return level_ != nullptr && buildSpotCount_ > 0 && gold_ >= kTowerCost &&
-        !occupied(cursorX(), cursorZ());
+    return level_ != nullptr && buildSpotCount_ > 0 && hasEnoughGold() && !cursorOccupied();
 }
 
 bool BuildSystem::occupied(std::size_t x, std::size_t z) const {
