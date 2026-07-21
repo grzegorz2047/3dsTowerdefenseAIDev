@@ -2,6 +2,7 @@
 
 #include <cstddef>
 
+#include <citro2d.h>
 #include <citro3d.h>
 
 #include "BuildSystem.hpp"
@@ -23,6 +24,7 @@ public:
 
 private:
     [[nodiscard]] bool buildLevelMesh(const LevelData& level);
+    [[nodiscard]] bool initializeHud();
     void drawScene(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
     void drawBottomPanel(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
 
@@ -32,6 +34,11 @@ private:
     DVLB_s* shaderBinary_ = nullptr;
     shaderProgram_s shaderProgram_{};
     bool shaderProgramInitialized_ = false;
+    bool citro2dInitialized_ = false;
+    C2D_TextBuf staticTextBuffer_ = nullptr;
+    C2D_TextBuf dynamicTextBuffer_ = nullptr;
+    C2D_Text titleText_{};
+    C2D_Text controlsText_{};
     int projectionUniform_ = -1;
     int modelViewUniform_ = -1;
     void* vertexBuffer_ = nullptr;
