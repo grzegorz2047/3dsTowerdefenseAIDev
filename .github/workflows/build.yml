@@ -27,7 +27,7 @@ jobs:
         run: |
           test -f "$DEVKITARM/3ds_rules"
           test -f "$DEVKITPRO/libctru/include/3ds.h"
-          command -v arm-none-eabi-g++
+          test -x "$DEVKITARM/bin/arm-none-eabi-g++"
           command -v picasso
 
       - name: Build 3DSX
