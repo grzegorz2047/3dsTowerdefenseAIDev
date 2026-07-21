@@ -79,7 +79,13 @@ all: 3dsx
 cia: tools assets $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile cia
 
-release: 3dsx cia checksums
+# The two formats share the same object directory. Keep the top-level stages
+# sequential even when the caller uses -j, otherwise parallel recursive links
+# can observe partially written ARM object files.
+release:
+	@$(MAKE) --no-print-directory 3dsx
+	@$(MAKE) --no-print-directory cia
+	@$(MAKE) --no-print-directory checksums
 
 tools:
 	@bash scripts/bootstrap_cia_tools.sh
@@ -98,7 +104,9 @@ $(BUILD):
 clean:
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf $(TARGET).map $(TARGET).cia dist
 
-checksums: 3dsx cia
+checksums:
+	@test -f $(TARGET).3dsx
+	@test -f $(TARGET).cia
 	@mkdir -p dist
 	@cp $(TARGET).3dsx $(TARGET).cia dist/
 	@cd dist && sha256sum $(TARGET).3dsx $(TARGET).cia > SHA256SUMS.txt

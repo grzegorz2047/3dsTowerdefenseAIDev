@@ -2,6 +2,7 @@
 #include <citro3d.h>
 
 #include <algorithm>
+#include <cstdio>
 
 #include "BuildSystem.hpp"
 #include "Camera.hpp"
@@ -26,9 +27,35 @@ float calculateFrameSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
     return std::min(elapsed, kMaximumFrameSeconds);
 }
 
-int shutdownWithError() {
-    C3D_Fini();
-    romfsExit();
+int showStartupError(const char* stage, const char* detail, bool citro3dInitialized, bool romfsInitialized) {
+    if (citro3dInitialized) {
+        C3D_Fini();
+    }
+    if (romfsInitialized) {
+        romfsExit();
+    }
+
+    consoleInit(GFX_TOP, nullptr);
+    consoleClear();
+    std::printf("CITADEL DEFENSE 3D\n");
+    std::printf("==================\n\n");
+    std::printf("BLAD STARTU: %s\n\n", stage != nullptr ? stage : "nieznany etap");
+    if (detail != nullptr && detail[0] != '\0') {
+        std::printf("%s\n\n", detail);
+    }
+    std::printf("Nacisnij START, aby zamknac.\n");
+    std::printf("Zachowaj ten komunikat do diagnozy.\n");
+
+    while (aptMainLoop()) {
+        hidScanInput();
+        if ((hidKeysDown() & KEY_START) != 0U) {
+            break;
+        }
+        gfxFlushBuffers();
+        gfxSwapBuffers();
+        gspWaitForVBlank();
+    }
+
     gfxExit();
     return 1;
 }
@@ -37,26 +64,39 @@ int shutdownWithError() {
 
 int main() {
     gfxInitDefault();
-    if (romfsInit() != 0) {
-        gfxExit();
-        return 1;
+
+    const Result romfsResult = romfsInit();
+    if (R_FAILED(romfsResult)) {
+        char detail[96];
+        std::snprintf(detail, sizeof(detail), "romfsInit() = 0x%08lX", static_cast<unsigned long>(romfsResult));
+        return showStartupError("ROMFS", detail, false, false);
     }
 
     if (!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)) {
-        romfsExit();
-        gfxExit();
-        return 1;
+        return showStartupError(
+            "CITRO3D",
+            "C3D_Init nie przydzielil bufora polecen GPU.",
+            false,
+            true);
     }
 
     const LevelLoadResult levelResult = LevelLoader::loadFromRomFs("romfs:/levels/tutorial.lvl");
     if (!levelResult.success) {
-        return shutdownWithError();
+        return showStartupError(
+            "LADOWANIE POZIOMU",
+            levelResult.error.c_str(),
+            true,
+            true);
     }
 
     Renderer renderer;
     if (!renderer.initialize(levelResult.level)) {
         renderer.shutdown();
-        return shutdownWithError();
+        return showStartupError(
+            "RENDERER",
+            "Nie udalo sie utworzyc ekranow, shaderow lub bufora wierzcholkow.",
+            true,
+            true);
     }
 
     InputSystem inputSystem;
