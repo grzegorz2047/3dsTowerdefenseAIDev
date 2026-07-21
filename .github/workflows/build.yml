@@ -15,29 +15,19 @@ jobs:
   build-3dsx:
     runs-on: ubuntu-latest
     container:
-      image: devkitpro/devkitarm:latest
+      image: devkitpro/devkitarm:20260610
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Install Nintendo 3DS toolchain packages
-        shell: bash
-        run: |
-          set -o pipefail
-          for attempt in 1 2 3; do
-            if { dkp-pacman -Sy --noconfirm && dkp-pacman -S --noconfirm --needed 3ds-dev; } 2>&1 | tee install.log; then
-              exit 0
-            fi
-            echo "devkitPro package installation failed on attempt ${attempt}" | tee -a install.log
-            sleep $((attempt * 5))
-          done
-          exit 1
-
-      - name: Verify toolchain
+      - name: Verify bundled Nintendo 3DS toolchain
         run: |
           test -f "$DEVKITARM/3ds_rules"
           test -f "$DEVKITPRO/libctru/include/3ds.h"
+          test -f "$DEVKITPRO/libctru/lib/libctru.a"
+          test -f "$DEVKITPRO/libctru/lib/libcitro3d.a"
+          test -f "$DEVKITPRO/libctru/lib/libcitro2d.a"
           test -x "$DEVKITARM/bin/arm-none-eabi-g++"
           command -v picasso
 
@@ -54,14 +44,10 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const source = fs.existsSync('build.log')
-              ? 'build.log'
-              : fs.existsSync('install.log')
-                ? 'install.log'
-                : null;
+            const source = fs.existsSync('build.log') ? 'build.log' : null;
             const log = source
               ? fs.readFileSync(source, 'utf8').trim().split('\n').slice(-80).join('\n')
-              : 'Workflow failed before a diagnostic log was created.';
+              : 'Workflow failed before build.log was created.';
             const marker = '<!-- citadel-build-failure -->';
             const body = `${marker}\n## Build failure\n\nSource: \`${source ?? 'unknown'}\`\n\n\`\`\`text\n${log}\n\`\`\``;
             const { data: comments } = await github.rest.issues.listComments({
@@ -86,14 +72,12 @@ jobs:
               });
             }
 
-      - name: Upload diagnostic logs
+      - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: CitadelDefense3D-build-logs
-          path: |
-            install.log
-            build.log
+          name: CitadelDefense3D-build-log
+          path: build.log
           if-no-files-found: warn
 
       - name: Prepare checksums
