@@ -53,6 +53,24 @@ void advanceEnemy(Enemy& enemy, float step, int count) {
     }
 }
 
+void testBundledTutorialLevel() {
+    const LevelLoadResult result = LevelLoader::loadFromRomFs("romfs/levels/tutorial.lvl");
+    require(result.success(), result.error.c_str());
+
+    const LevelData& level = result.level;
+    require(level.id == "tutorial", "tutorial id should be stable");
+    require(level.width == 12 && level.height == 12, "tutorial dimensions should be 12x12");
+    require(level.pathLength == 14, "tutorial path length should be 14");
+
+    const GridPoint first = level.path[0];
+    const GridPoint second = level.path[1];
+    const GridPoint last = level.path[level.pathLength - 1];
+    require(first.x == 1 && first.z == 3, "tutorial path should start at spawn");
+    require(second.x == 2 && second.z == 3, "tutorial second path point should remain on road");
+    require(level.tileAt(2, 3) == TileType::Road, "tutorial grid must mark path point 2,3 as road");
+    require(last.x == 8 && last.z == 9, "tutorial path should end at base");
+}
+
 void testEnemyTimePartitioning() {
     const LevelData level = makeLevel();
     Enemy fine(level);
@@ -107,6 +125,7 @@ void testTowerPlacementRules() {
 }  // namespace
 
 int main() {
+    testBundledTutorialLevel();
     testEnemyTimePartitioning();
     testWaveLossWithoutTowers();
     testTowerCanWinWave();
