@@ -26,6 +26,7 @@ private:
     void drawScene(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
     void drawBottomPanel(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
 
+    const LevelData* level_ = nullptr;
     C3D_RenderTarget* topTarget_ = nullptr;
     C3D_RenderTarget* bottomTarget_ = nullptr;
     DVLB_s* shaderBinary_ = nullptr;
