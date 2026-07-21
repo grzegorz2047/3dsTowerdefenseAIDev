@@ -31,7 +31,17 @@ jobs:
           command -v picasso
 
       - name: Build 3DSX
-        run: make -j2
+        run: |
+          set -o pipefail
+          make -j2 2>&1 | tee build.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CitadelDefense3D-build-log
+          path: build.log
+          if-no-files-found: warn
 
       - name: Prepare checksums
         run: make checksums
