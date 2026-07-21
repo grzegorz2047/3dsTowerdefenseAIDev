@@ -2,6 +2,7 @@
 
 #include <3ds.h>
 
+#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -10,7 +11,13 @@
 namespace {
 
 constexpr u32 kTopClearColor = 0x182030FF;
-constexpr u32 kBottomClearColor = 0x101820FF;
+constexpr u32 kHudBackground = C2D_Color32(14, 20, 32, 255);
+constexpr u32 kHudPanel = C2D_Color32(28, 38, 56, 255);
+constexpr u32 kHudText = C2D_Color32(236, 241, 248, 255);
+constexpr u32 kHudMuted = C2D_Color32(166, 181, 202, 255);
+constexpr u32 kHudGood = C2D_Color32(82, 212, 126, 255);
+constexpr u32 kHudWarning = C2D_Color32(245, 188, 66, 255);
+constexpr u32 kHudDanger = C2D_Color32(235, 82, 82, 255);
 constexpr u32 kDisplayTransferFlags =
     GX_TRANSFER_FLIP_VERT(0) |
     GX_TRANSFER_OUT_TILED(0) |
@@ -103,6 +110,13 @@ float worldZ(const LevelData& level, std::size_t gridZ) {
     return -static_cast<float>(level.height) * 0.5F + 0.5F + static_cast<float>(gridZ);
 }
 
+void drawDynamicText(C2D_TextBuf buffer, const char* value, float x, float y, float scale, u32 color) {
+    C2D_Text text{};
+    C2D_TextParse(&text, buffer, value);
+    C2D_TextOptimize(&text);
+    C2D_DrawText(&text, C2D_WithColor, x, y, 0.5F, scale, scale, color);
+}
+
 }  // namespace
 
 Renderer::~Renderer() {
@@ -112,13 +126,14 @@ Renderer::~Renderer() {
 bool Renderer::initialize(const LevelData& level) {
     level_ = &level;
     topTarget_ = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
-    bottomTarget_ = C3D_RenderTargetCreate(240, 320, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
-    if (topTarget_ == nullptr || bottomTarget_ == nullptr) {
+    if (topTarget_ == nullptr) {
         return false;
     }
-
     C3D_RenderTargetSetOutput(topTarget_, GFX_TOP, GFX_LEFT, kDisplayTransferFlags);
-    C3D_RenderTargetSetOutput(bottomTarget_, GFX_BOTTOM, GFX_LEFT, kDisplayTransferFlags);
+
+    if (!initializeHud()) {
+        return false;
+    }
 
     auto* shaderData = reinterpret_cast<u32*>(const_cast<u8*>(vshader_shbin));
     shaderBinary_ = DVLB_ParseFile(shaderData, vshader_shbin_size);
@@ -129,7 +144,6 @@ bool Renderer::initialize(const LevelData& level) {
     shaderProgramInit(&shaderProgram_);
     shaderProgramInitialized_ = true;
     shaderProgramSetVsh(&shaderProgram_, &shaderBinary_->DVLE[0]);
-    C3D_BindProgram(&shaderProgram_);
 
     projectionUniform_ = shaderInstanceGetUniformLocation(shaderProgram_.vertexShader, "projection");
     modelViewUniform_ = shaderInstanceGetUniformLocation(shaderProgram_.vertexShader, "modelView");
@@ -137,26 +151,38 @@ bool Renderer::initialize(const LevelData& level) {
         return false;
     }
 
-    C3D_AttrInfo* attributes = C3D_GetAttrInfo();
-    AttrInfo_Init(attributes);
-    AttrInfo_AddLoader(attributes, 0, GPU_FLOAT, 3);
-    AttrInfo_AddLoader(attributes, 1, GPU_FLOAT, 4);
-
     if (!buildLevelMesh(level)) {
         return false;
     }
 
-    C3D_BufInfo* buffers = C3D_GetBufInfo();
-    BufInfo_Init(buffers);
-    BufInfo_Add(buffers, vertexBuffer_, sizeof(Vertex), 2, 0x10);
+    return true;
+}
 
-    C3D_TexEnv* environment = C3D_GetTexEnv(0);
-    C3D_TexEnvInit(environment);
-    C3D_TexEnvSrc(environment, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
-    C3D_TexEnvFunc(environment, C3D_Both, GPU_REPLACE);
+bool Renderer::initializeHud() {
+    if (!C2D_Init(C2D_DEFAULT_MAX_OBJECTS)) {
+        return false;
+    }
+    citro2dInitialized_ = true;
+    C2D_Prepare();
 
-    C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
-    C3D_CullFace(GPU_CULL_BACK_CCW);
+    bottomTarget_ = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+    if (bottomTarget_ == nullptr) {
+        return false;
+    }
+
+    staticTextBuffer_ = C2D_TextBufNew(256);
+    dynamicTextBuffer_ = C2D_TextBufNew(768);
+    if (staticTextBuffer_ == nullptr || dynamicTextBuffer_ == nullptr) {
+        return false;
+    }
+
+    C2D_TextParse(&titleText_, staticTextBuffer_, "CITADEL DEFENSE 3D");
+    C2D_TextOptimize(&titleText_);
+    C2D_TextParse(
+        &controlsText_,
+        staticTextBuffer_,
+        "D-PAD: WYBOR POLA   A: BUDUJ\nL/R: OBROT   CIRCLE PAD: KAMERA\nSTART: WYJSCIE");
+    C2D_TextOptimize(&controlsText_);
     return true;
 }
 
@@ -199,6 +225,23 @@ void Renderer::render(const Camera& camera, const Wave& wave, const BuildSystem&
 void Renderer::drawScene(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem) {
     C3D_RenderTargetClear(topTarget_, C3D_CLEAR_ALL, kTopClearColor, 0);
     C3D_FrameDrawOn(topTarget_);
+
+    C3D_BindProgram(&shaderProgram_);
+    C3D_AttrInfo* attributes = C3D_GetAttrInfo();
+    AttrInfo_Init(attributes);
+    AttrInfo_AddLoader(attributes, 0, GPU_FLOAT, 3);
+    AttrInfo_AddLoader(attributes, 1, GPU_FLOAT, 4);
+
+    C3D_BufInfo* buffers = C3D_GetBufInfo();
+    BufInfo_Init(buffers);
+    BufInfo_Add(buffers, vertexBuffer_, sizeof(Vertex), 2, 0x10);
+
+    C3D_TexEnv* environment = C3D_GetTexEnv(0);
+    C3D_TexEnvInit(environment);
+    C3D_TexEnvSrc(environment, C3D_Both, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+    C3D_TexEnvFunc(environment, C3D_Both, GPU_REPLACE);
+    C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+    C3D_CullFace(GPU_CULL_BACK_CCW);
 
     C3D_Mtx projection{};
     C3D_Mtx modelView{};
@@ -244,12 +287,59 @@ void Renderer::drawScene(const Camera& camera, const Wave& wave, const BuildSyst
     }
 }
 
-void Renderer::drawBottomPanel(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem) {
-    const u32 rotationShade = static_cast<u32>(camera.rotationIndex()) * 0x04040000U;
-    const u32 damageShade = static_cast<u32>(5 - wave.baseHealth()) * 0x08000000U;
-    const u32 economyShade = static_cast<u32>(buildSystem.gold() / 15) * 0x00030000U;
-    C3D_RenderTargetClear(bottomTarget_, C3D_CLEAR_ALL, kBottomClearColor + rotationShade + damageShade + economyShade, 0);
-    C3D_FrameDrawOn(bottomTarget_);
+void Renderer::drawBottomPanel(const Camera&, const Wave& wave, const BuildSystem& buildSystem) {
+    C2D_TargetClear(bottomTarget_, kHudBackground);
+    C2D_SceneBegin(bottomTarget_);
+
+    C2D_DrawRectSolid(8.0F, 8.0F, 0.1F, 304.0F, 34.0F, kHudPanel);
+    C2D_DrawRectSolid(8.0F, 50.0F, 0.1F, 304.0F, 100.0F, kHudPanel);
+    C2D_DrawRectSolid(8.0F, 158.0F, 0.1F, 304.0F, 40.0F, kHudPanel);
+    C2D_DrawRectSolid(8.0F, 206.0F, 0.1F, 304.0F, 28.0F, kHudPanel);
+
+    C2D_DrawText(&titleText_, C2D_WithColor | C2D_AlignCenter, 160.0F, 14.0F, 0.5F, 0.62F, 0.62F, kHudText);
+    C2D_DrawText(&controlsText_, C2D_WithColor | C2D_AlignCenter, 160.0F, 208.0F, 0.5F, 0.38F, 0.38F, kHudMuted);
+
+    C2D_TextBufClear(dynamicTextBuffer_);
+    char text[96];
+
+    std::snprintf(text, sizeof(text), "BAZA: %d", wave.baseHealth());
+    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 59.0F, 0.55F, wave.baseHealth() <= 2 ? kHudDanger : kHudText);
+
+    std::snprintf(text, sizeof(text), "ZLOTO: %d", buildSystem.gold());
+    drawDynamicText(dynamicTextBuffer_, text, 168.0F, 59.0F, 0.55F, kHudText);
+
+    std::snprintf(text, sizeof(text), "WIEZE: %zu", buildSystem.towerCount());
+    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 88.0F, 0.50F, kHudText);
+
+    std::snprintf(text, sizeof(text), "FALA: %zu/%zu", wave.spawnedCount(), wave.enemyCount());
+    drawDynamicText(dynamicTextBuffer_, text, 168.0F, 88.0F, 0.50F, kHudText);
+
+    std::snprintf(text, sizeof(text), "KOSZT WIEZY: %d", buildSystem.towerCost());
+    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 118.0F, 0.46F, kHudMuted);
+
+    const char* status = "A: ZBUDUJ WIEZE";
+    u32 statusColor = kHudGood;
+    if (wave.completed()) {
+        status = "ZWYCIESTWO!";
+    } else if (wave.lost()) {
+        status = "PORAZKA!";
+        statusColor = kHudDanger;
+    } else if (buildSystem.cursorOccupied()) {
+        status = "POLE JEST ZAJETE";
+        statusColor = kHudWarning;
+    } else if (!buildSystem.hasEnoughGold()) {
+        status = "ZA MALO ZLOTA";
+        statusColor = kHudWarning;
+    }
+    drawDynamicText(dynamicTextBuffer_, status, 18.0F, 168.0F, 0.56F, statusColor);
+
+    std::snprintf(
+        text,
+        sizeof(text),
+        "WYBRANE POLE: %zu,%zu",
+        buildSystem.cursorX(),
+        buildSystem.cursorZ());
+    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 187.0F, 0.36F, kHudMuted);
 }
 
 void Renderer::shutdown() {
@@ -263,6 +353,20 @@ void Renderer::shutdown() {
     enemyVertexCount_ = 0;
     towerVertexOffset_ = 0;
     towerVertexCount_ = 0;
+
+    if (staticTextBuffer_ != nullptr) {
+        C2D_TextBufDelete(staticTextBuffer_);
+        staticTextBuffer_ = nullptr;
+    }
+    if (dynamicTextBuffer_ != nullptr) {
+        C2D_TextBufDelete(dynamicTextBuffer_);
+        dynamicTextBuffer_ = nullptr;
+    }
+    if (citro2dInitialized_) {
+        C2D_Fini();
+        citro2dInitialized_ = false;
+    }
+
     if (shaderProgramInitialized_) {
         shaderProgramFree(&shaderProgram_);
         shaderProgramInitialized_ = false;
