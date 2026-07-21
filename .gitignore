@@ -1,5 +1,6 @@
 build/
 dist/
+.tools/
 *.3dsx
 *.cia
 *.elf
