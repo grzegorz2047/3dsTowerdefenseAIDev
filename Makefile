@@ -73,13 +73,13 @@ export MAKEROM BANNERTOOL PYTHON SOURCE_RSF RSF_FILE ASSET_DIR ICON_FILE BANNER_
 
 all: 3dsx
 
-3dsx: $(BUILD)
+3dsx: tools assets $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile 3dsx
 
 cia: tools assets $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile cia
 
-release: cia checksums
+release: 3dsx cia checksums
 
 tools:
 	@bash scripts/bootstrap_cia_tools.sh
@@ -98,7 +98,7 @@ $(BUILD):
 clean:
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf $(TARGET).map $(TARGET).cia dist
 
-checksums: cia
+checksums: 3dsx cia
 	@mkdir -p dist
 	@cp $(TARGET).3dsx $(TARGET).cia dist/
 	@cd dist && sha256sum $(TARGET).3dsx $(TARGET).cia > SHA256SUMS.txt
@@ -126,7 +126,7 @@ $(BANNER_FILE): $(BANNER_IMAGE) $(BANNER_AUDIO)
 	@$(BANNERTOOL) makebanner -i "$(BANNER_IMAGE)" -a "$(BANNER_AUDIO)" -o "$@"
 
 $(OUTPUT).cia: $(OUTPUT).elf $(CIA_ICON) $(BANNER_FILE) $(RSF_FILE)
-	@$(MAKEROM) -f cia -target t -exefslogo -o "$@" \
+	@cd "$(TOPDIR)" && "$(MAKEROM)" -f cia -target t -exefslogo -o "$(OUTPUT).cia" \
 		-elf "$(OUTPUT).elf" -rsf "$(RSF_FILE)" \
 		-banner "$(BANNER_FILE)" -icon "$(CIA_ICON)"
 	@echo "built ... $(notdir $@)"
