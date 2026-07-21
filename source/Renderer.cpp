@@ -110,6 +110,7 @@ Renderer::~Renderer() {
 }
 
 bool Renderer::initialize(const LevelData& level) {
+    level_ = &level;
     topTarget_ = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     bottomTarget_ = C3D_RenderTargetCreate(240, 320, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     if (topTarget_ == nullptr || bottomTarget_ == nullptr) {
@@ -216,16 +217,18 @@ void Renderer::drawScene(const Camera& camera, const Wave& wave, const BuildSyst
         C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(towerVertexOffset_), static_cast<int>(towerVertexCount_));
     }
 
-    C3D_Mtx cursorView{};
-    camera.writeView(cursorView);
-    Mtx_Translate(
-        &cursorView,
-        worldX(level_, buildSystem.cursorX()),
-        buildSystem.cursorCanBuild() ? -0.02F : -0.55F,
-        worldZ(level_, buildSystem.cursorZ()),
-        true);
-    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &cursorView);
-    C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(towerVertexOffset_), static_cast<int>(towerVertexCount_));
+    if (level_ != nullptr) {
+        C3D_Mtx cursorView{};
+        camera.writeView(cursorView);
+        Mtx_Translate(
+            &cursorView,
+            worldX(*level_, buildSystem.cursorX()),
+            buildSystem.cursorCanBuild() ? -0.02F : -0.55F,
+            worldZ(*level_, buildSystem.cursorZ()),
+            true);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &cursorView);
+        C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(towerVertexOffset_), static_cast<int>(towerVertexCount_));
+    }
 
     for (std::size_t index = 0; index < wave.spawnedCount(); ++index) {
         const Enemy& enemy = wave.enemyAt(index);
@@ -254,6 +257,7 @@ void Renderer::shutdown() {
         linearFree(vertexBuffer_);
         vertexBuffer_ = nullptr;
     }
+    level_ = nullptr;
     levelVertexCount_ = 0;
     enemyVertexOffset_ = 0;
     enemyVertexCount_ = 0;
