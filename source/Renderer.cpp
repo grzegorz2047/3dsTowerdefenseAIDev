@@ -95,6 +95,14 @@ void appendTower(std::vector<Vertex>& vertices) {
     appendBox(vertices, 0.34F, 0.08F, 1.08F, 0.20F, 0.55F, 0.86F);
 }
 
+float worldX(const LevelData& level, std::size_t gridX) {
+    return -static_cast<float>(level.width) * 0.5F + 0.5F + static_cast<float>(gridX);
+}
+
+float worldZ(const LevelData& level, std::size_t gridZ) {
+    return -static_cast<float>(level.height) * 0.5F + 0.5F + static_cast<float>(gridZ);
+}
+
 }  // namespace
 
 Renderer::~Renderer() {
@@ -102,6 +110,7 @@ Renderer::~Renderer() {
 }
 
 bool Renderer::initialize(const LevelData& level) {
+    level_ = &level;
     topTarget_ = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     bottomTarget_ = C3D_RenderTargetCreate(240, 320, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
     if (topTarget_ == nullptr || bottomTarget_ == nullptr) {
@@ -180,14 +189,14 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
     return true;
 }
 
-void Renderer::render(const Camera& camera, const Wave& wave, const Tower& tower) {
+void Renderer::render(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem) {
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-    drawScene(camera, wave, tower);
-    drawBottomPanel(camera, wave);
+    drawScene(camera, wave, buildSystem);
+    drawBottomPanel(camera, wave, buildSystem);
     C3D_FrameEnd(0);
 }
 
-void Renderer::drawScene(const Camera& camera, const Wave& wave, const Tower& tower) {
+void Renderer::drawScene(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem) {
     C3D_RenderTargetClear(topTarget_, C3D_CLEAR_ALL, kTopClearColor, 0);
     C3D_FrameDrawOn(topTarget_);
 
@@ -199,11 +208,25 @@ void Renderer::drawScene(const Camera& camera, const Wave& wave, const Tower& to
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &modelView);
     C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(levelVertexCount_));
 
-    if (tower.valid()) {
+    for (std::size_t index = 0; index < buildSystem.towerCount(); ++index) {
+        const Tower& tower = buildSystem.towerAt(index);
         C3D_Mtx towerView{};
         camera.writeView(towerView);
         Mtx_Translate(&towerView, tower.x(), 0.0F, tower.z(), true);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &towerView);
+        C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(towerVertexOffset_), static_cast<int>(towerVertexCount_));
+    }
+
+    if (level_ != nullptr) {
+        C3D_Mtx cursorView{};
+        camera.writeView(cursorView);
+        Mtx_Translate(
+            &cursorView,
+            worldX(*level_, buildSystem.cursorX()),
+            buildSystem.cursorCanBuild() ? -0.02F : -0.55F,
+            worldZ(*level_, buildSystem.cursorZ()),
+            true);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &cursorView);
         C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(towerVertexOffset_), static_cast<int>(towerVertexCount_));
     }
 
@@ -221,10 +244,11 @@ void Renderer::drawScene(const Camera& camera, const Wave& wave, const Tower& to
     }
 }
 
-void Renderer::drawBottomPanel(const Camera& camera, const Wave& wave) {
+void Renderer::drawBottomPanel(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem) {
     const u32 rotationShade = static_cast<u32>(camera.rotationIndex()) * 0x04040000U;
     const u32 damageShade = static_cast<u32>(5 - wave.baseHealth()) * 0x08000000U;
-    C3D_RenderTargetClear(bottomTarget_, C3D_CLEAR_ALL, kBottomClearColor + rotationShade + damageShade, 0);
+    const u32 economyShade = static_cast<u32>(buildSystem.gold() / 15) * 0x00030000U;
+    C3D_RenderTargetClear(bottomTarget_, C3D_CLEAR_ALL, kBottomClearColor + rotationShade + damageShade + economyShade, 0);
     C3D_FrameDrawOn(bottomTarget_);
 }
 
@@ -233,6 +257,7 @@ void Renderer::shutdown() {
         linearFree(vertexBuffer_);
         vertexBuffer_ = nullptr;
     }
+    level_ = nullptr;
     levelVertexCount_ = 0;
     enemyVertexOffset_ = 0;
     enemyVertexCount_ = 0;

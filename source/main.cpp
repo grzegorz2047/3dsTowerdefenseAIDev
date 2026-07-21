@@ -1,11 +1,11 @@
 #include <3ds.h>
 #include <citro3d.h>
 
+#include "BuildSystem.hpp"
 #include "Camera.hpp"
 #include "Input.hpp"
 #include "Level.hpp"
 #include "Renderer.hpp"
-#include "Tower.hpp"
 #include "Wave.hpp"
 
 namespace {
@@ -58,7 +58,7 @@ int main() {
     InputSystem inputSystem;
     Camera camera;
     Wave wave(levelResult.level);
-    Tower tower(levelResult.level);
+    BuildSystem buildSystem(levelResult.level);
     float restartTimer = 0.0F;
     u64 previousMilliseconds = osGetTime();
 
@@ -77,14 +77,15 @@ int main() {
             restartTimer += deltaSeconds;
             if (restartTimer >= kRestartDelaySeconds) {
                 wave.reset();
-                tower.reset();
+                buildSystem.reset();
                 restartTimer = 0.0F;
             }
         } else {
-            tower.update(deltaSeconds, wave);
+            buildSystem.handleInput(input);
+            buildSystem.update(deltaSeconds, wave);
             wave.update(deltaSeconds);
         }
-        renderer.render(camera, wave, tower);
+        renderer.render(camera, wave, buildSystem);
     }
 
     renderer.shutdown();

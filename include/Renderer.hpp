@@ -4,9 +4,9 @@
 
 #include <citro3d.h>
 
+#include "BuildSystem.hpp"
 #include "Camera.hpp"
 #include "Level.hpp"
-#include "Tower.hpp"
 #include "Wave.hpp"
 
 class Renderer {
@@ -18,14 +18,15 @@ public:
     Renderer& operator=(const Renderer&) = delete;
 
     [[nodiscard]] bool initialize(const LevelData& level);
-    void render(const Camera& camera, const Wave& wave, const Tower& tower);
+    void render(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
     void shutdown();
 
 private:
     [[nodiscard]] bool buildLevelMesh(const LevelData& level);
-    void drawScene(const Camera& camera, const Wave& wave, const Tower& tower);
-    void drawBottomPanel(const Camera& camera, const Wave& wave);
+    void drawScene(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
+    void drawBottomPanel(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
 
+    const LevelData* level_ = nullptr;
     C3D_RenderTarget* topTarget_ = nullptr;
     C3D_RenderTarget* bottomTarget_ = nullptr;
     DVLB_s* shaderBinary_ = nullptr;

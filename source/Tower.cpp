@@ -20,17 +20,16 @@ float worldZ(const LevelData& level, std::size_t gridZ) {
 
 }  // namespace
 
-Tower::Tower(const LevelData& level) {
-    for (std::size_t z = 0; z < level.height && !valid_; ++z) {
-        for (std::size_t x = 0; x < level.width; ++x) {
-            if (level.tileAt(x, z) == TileType::BuildSpot) {
-                x_ = worldX(level, x);
-                z_ = worldZ(level, z);
-                valid_ = true;
-                break;
-            }
-        }
+Tower::Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ)
+    : gridX_(gridX), gridZ_(gridZ) {
+    if (gridX >= level.width || gridZ >= level.height ||
+        level.tileAt(gridX, gridZ) != TileType::BuildSpot) {
+        return;
     }
+
+    x_ = worldX(level, gridX);
+    z_ = worldZ(level, gridZ);
+    valid_ = true;
 }
 
 void Tower::update(float deltaSeconds, Wave& wave) {
@@ -71,7 +70,7 @@ void Tower::update(float deltaSeconds, Wave& wave) {
     }
 }
 
-void Tower::reset() {
+void Tower::resetCombat() {
     cooldown_ = 0.0F;
     shotsFired_ = 0;
 }
@@ -82,6 +81,14 @@ float Tower::x() const {
 
 float Tower::z() const {
     return z_;
+}
+
+std::size_t Tower::gridX() const {
+    return gridX_;
+}
+
+std::size_t Tower::gridZ() const {
+    return gridZ_;
 }
 
 bool Tower::valid() const {
