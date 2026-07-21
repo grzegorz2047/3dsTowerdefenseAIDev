@@ -1,7 +1,5 @@
 #include "BuildSystem.hpp"
 
-#include <algorithm>
-
 BuildSystem::BuildSystem(const LevelData& level) : level_(&level) {
     for (std::size_t z = 0; z < level.height && buildSpotCount_ < kMaximumTowers; ++z) {
         for (std::size_t x = 0; x < level.width && buildSpotCount_ < kMaximumTowers; ++x) {
@@ -32,21 +30,19 @@ void BuildSystem::update(float deltaSeconds, Wave& wave) {
         towers_[index].update(deltaSeconds, wave);
     }
 
-    for (std::size_t index = 0; index < wave.spawnedCount() && index < rewarded_.size(); ++index) {
+    for (std::size_t index = 0; index < wave.spawnedCount(); ++index) {
         const Enemy& enemy = wave.enemyAt(index);
-        if (enemy.dead() && !rewarded_[index]) {
-            rewarded_[index] = true;
-            gold_ += kKillReward;
+        if (enemy.dead()) {
+            economy_.rewardEnemy(index);
         }
     }
 }
 
 void BuildSystem::reset() {
     towers_.fill(Tower{});
-    rewarded_.fill(false);
     towerCount_ = 0;
     cursorIndex_ = 0;
-    gold_ = kInitialGold;
+    economy_.reset();
 }
 
 std::size_t BuildSystem::towerCount() const {
@@ -58,11 +54,11 @@ const Tower& BuildSystem::towerAt(std::size_t index) const {
 }
 
 int BuildSystem::gold() const {
-    return gold_;
+    return economy_.gold();
 }
 
 int BuildSystem::towerCost() const {
-    return kTowerCost;
+    return Economy::kTowerCost;
 }
 
 std::size_t BuildSystem::cursorX() const {
@@ -84,7 +80,7 @@ bool BuildSystem::cursorOccupied() const {
 }
 
 bool BuildSystem::hasEnoughGold() const {
-    return gold_ >= kTowerCost;
+    return economy_.canAfford(Economy::kTowerCost);
 }
 
 bool BuildSystem::cursorCanBuild() const {
@@ -118,7 +114,9 @@ void BuildSystem::tryBuild() {
     if (!tower.valid()) {
         return;
     }
+    if (!economy_.trySpend(Economy::kTowerCost)) {
+        return;
+    }
 
     towers_[towerCount_++] = tower;
-    gold_ -= kTowerCost;
 }
