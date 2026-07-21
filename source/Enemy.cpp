@@ -21,7 +21,7 @@ Enemy::Enemy(const LevelData& level) : level_(&level) {
 }
 
 void Enemy::update(float deltaSeconds) {
-    if (reachedBase_ || level_ == nullptr || level_->pathLength < 2) {
+    if (dead() || reachedBase_ || level_ == nullptr || level_->pathLength < 2) {
         return;
     }
 
@@ -56,12 +56,20 @@ void Enemy::update(float deltaSeconds) {
 void Enemy::reset() {
     segmentIndex_ = 0;
     segmentProgress_ = 0.0F;
+    health_ = kMaximumHealth;
     reachedBase_ = level_ == nullptr || level_->pathLength < 2;
     if (!reachedBase_) {
         const GridPoint start = level_->path[0];
         x_ = worldX(*level_, start.x);
         z_ = worldZ(*level_, start.z);
     }
+}
+
+void Enemy::takeDamage(int amount) {
+    if (amount <= 0 || dead() || reachedBase_) {
+        return;
+    }
+    health_ = std::max(health_ - amount, 0);
 }
 
 float Enemy::x() const {
@@ -74,6 +82,14 @@ float Enemy::z() const {
 
 bool Enemy::reachedBase() const {
     return reachedBase_;
+}
+
+bool Enemy::dead() const {
+    return health_ <= 0;
+}
+
+int Enemy::health() const {
+    return health_;
 }
 
 float Enemy::pathProgress() const {
