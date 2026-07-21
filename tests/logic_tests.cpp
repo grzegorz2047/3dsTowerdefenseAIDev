@@ -55,7 +55,7 @@ void advanceEnemy(Enemy& enemy, float step, int count) {
 
 void testBundledTutorialLevel() {
     const LevelLoadResult result = LevelLoader::loadFromRomFs("romfs/levels/tutorial.lvl");
-    require(result.success(), result.error.c_str());
+    require(result.success, result.error.c_str());
 
     const LevelData& level = result.level;
     require(level.id == "tutorial", "tutorial id should be stable");
