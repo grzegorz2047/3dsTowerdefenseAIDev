@@ -176,14 +176,14 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
     return true;
 }
 
-void Renderer::render(const Camera& camera, const Enemy& enemy) {
+void Renderer::render(const Camera& camera, const Wave& wave) {
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-    drawScene(camera, enemy);
-    drawBottomPanel(camera);
+    drawScene(camera, wave);
+    drawBottomPanel(camera, wave);
     C3D_FrameEnd(0);
 }
 
-void Renderer::drawScene(const Camera& camera, const Enemy& enemy) {
+void Renderer::drawScene(const Camera& camera, const Wave& wave) {
     C3D_RenderTargetClear(topTarget_, C3D_CLEAR_ALL, kTopClearColor, 0);
     C3D_FrameDrawOn(topTarget_);
 
@@ -195,7 +195,12 @@ void Renderer::drawScene(const Camera& camera, const Enemy& enemy) {
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &modelView);
     C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(levelVertexCount_));
 
-    if (!enemy.reachedBase()) {
+    for (std::size_t index = 0; index < wave.spawnedCount(); ++index) {
+        const Enemy& enemy = wave.enemyAt(index);
+        if (enemy.reachedBase()) {
+            continue;
+        }
+
         C3D_Mtx enemyView{};
         camera.writeView(enemyView);
         Mtx_Translate(&enemyView, enemy.x(), 0.0F, enemy.z(), true);
@@ -204,9 +209,10 @@ void Renderer::drawScene(const Camera& camera, const Enemy& enemy) {
     }
 }
 
-void Renderer::drawBottomPanel(const Camera& camera) {
-    const u32 rotationShade = static_cast<u32>(camera.rotationIndex()) * 0x08080000U;
-    C3D_RenderTargetClear(bottomTarget_, C3D_CLEAR_ALL, kBottomClearColor + rotationShade, 0);
+void Renderer::drawBottomPanel(const Camera& camera, const Wave& wave) {
+    const u32 rotationShade = static_cast<u32>(camera.rotationIndex()) * 0x04040000U;
+    const u32 damageShade = static_cast<u32>(5 - wave.baseHealth()) * 0x08000000U;
+    C3D_RenderTargetClear(bottomTarget_, C3D_CLEAR_ALL, kBottomClearColor + rotationShade + damageShade, 0);
     C3D_FrameDrawOn(bottomTarget_);
 }
 
