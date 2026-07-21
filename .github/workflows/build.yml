@@ -1,0 +1,36 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-3dsx:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build 3DSX
+        run: make -j2
+
+      - name: Prepare checksums
+        run: make checksums
+
+      - name: Upload development artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CitadelDefense3D-3dsx
+          path: |
+            dist/CitadelDefense3D.3dsx
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
