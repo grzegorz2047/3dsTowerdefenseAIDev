@@ -23,8 +23,9 @@ fi
 
 if [[ ! -x "$BIN_DIR/bannertool" ]]; then
   rm -rf "$SOURCE_DIR/bannertool"
-  git clone https://github.com/diasurgical/bannertool.git "$SOURCE_DIR/bannertool"
+  git clone --recurse-submodules https://github.com/diasurgical/bannertool.git "$SOURCE_DIR/bannertool"
   git -C "$SOURCE_DIR/bannertool" checkout --detach "$BANNERTOOL_COMMIT"
+  git -C "$SOURCE_DIR/bannertool" submodule update --init --recursive
   make -C "$SOURCE_DIR/bannertool" -j2 CC="$HOST_CC" CXX="$HOST_CXX"
   bannertool_path="$(find "$SOURCE_DIR/bannertool" -type f -name bannertool -perm -111 | head -n 1)"
   test -n "$bannertool_path"
