@@ -49,19 +49,49 @@ TileVisual visualFor(TileType tile) {
     }
 }
 
-void appendTile(std::vector<Vertex>& vertices, float centerX, float centerZ, const TileVisual& visual) {
-    const float half = 0.5F - visual.inset;
-    const float y = visual.height;
-    const Vertex a{centerX - half, y, centerZ - half, visual.r, visual.g, visual.b, 1.0F};
-    const Vertex b{centerX + half, y, centerZ - half, visual.r, visual.g, visual.b, 1.0F};
-    const Vertex c{centerX + half, y, centerZ + half, visual.r, visual.g, visual.b, 1.0F};
-    const Vertex d{centerX - half, y, centerZ + half, visual.r, visual.g, visual.b, 1.0F};
+void appendQuad(std::vector<Vertex>& vertices, const Vertex& a, const Vertex& b, const Vertex& c, const Vertex& d) {
     vertices.push_back(a);
     vertices.push_back(b);
     vertices.push_back(c);
     vertices.push_back(c);
     vertices.push_back(d);
     vertices.push_back(a);
+}
+
+void appendTile(std::vector<Vertex>& vertices, float centerX, float centerZ, const TileVisual& visual) {
+    const float half = 0.5F - visual.inset;
+    const float y = visual.height;
+    appendQuad(
+        vertices,
+        {centerX - half, y, centerZ - half, visual.r, visual.g, visual.b, 1.0F},
+        {centerX + half, y, centerZ - half, visual.r, visual.g, visual.b, 1.0F},
+        {centerX + half, y, centerZ + half, visual.r, visual.g, visual.b, 1.0F},
+        {centerX - half, y, centerZ + half, visual.r, visual.g, visual.b, 1.0F});
+}
+
+void appendEnemy(std::vector<Vertex>& vertices) {
+    constexpr float h = 0.28F;
+    constexpr float y0 = 0.10F;
+    constexpr float y1 = 0.76F;
+    constexpr float r = 0.76F;
+    constexpr float g = 0.18F;
+    constexpr float b = 0.62F;
+
+    appendQuad(vertices,
+        {-h, y0,  h, r, g, b, 1.0F}, { h, y0,  h, r, g, b, 1.0F},
+        { h, y1,  h, r, g, b, 1.0F}, {-h, y1,  h, r, g, b, 1.0F});
+    appendQuad(vertices,
+        { h, y0, -h, r, g, b, 1.0F}, {-h, y0, -h, r, g, b, 1.0F},
+        {-h, y1, -h, r, g, b, 1.0F}, { h, y1, -h, r, g, b, 1.0F});
+    appendQuad(vertices,
+        { h, y0,  h, r, g, b, 1.0F}, { h, y0, -h, r, g, b, 1.0F},
+        { h, y1, -h, r, g, b, 1.0F}, { h, y1,  h, r, g, b, 1.0F});
+    appendQuad(vertices,
+        {-h, y0, -h, r, g, b, 1.0F}, {-h, y0,  h, r, g, b, 1.0F},
+        {-h, y1,  h, r, g, b, 1.0F}, {-h, y1, -h, r, g, b, 1.0F});
+    appendQuad(vertices,
+        {-h, y1,  h, r, g, b, 1.0F}, { h, y1,  h, r, g, b, 1.0F},
+        { h, y1, -h, r, g, b, 1.0F}, {-h, y1, -h, r, g, b, 1.0F});
 }
 
 }  // namespace
@@ -122,23 +152,20 @@ bool Renderer::initialize(const LevelData& level) {
 
 bool Renderer::buildLevelMesh(const LevelData& level) {
     std::vector<Vertex> vertices;
-    vertices.reserve(static_cast<std::size_t>(level.width) * level.height * 6U);
+    vertices.reserve(static_cast<std::size_t>(level.width) * level.height * 6U + 30U);
 
     const float offsetX = -static_cast<float>(level.width) * 0.5F + 0.5F;
     const float offsetZ = -static_cast<float>(level.height) * 0.5F + 0.5F;
     for (std::size_t z = 0; z < level.height; ++z) {
         for (std::size_t x = 0; x < level.width; ++x) {
-            appendTile(
-                vertices,
-                offsetX + static_cast<float>(x),
-                offsetZ + static_cast<float>(z),
-                visualFor(level.tileAt(x, z)));
+            appendTile(vertices, offsetX + static_cast<float>(x), offsetZ + static_cast<float>(z), visualFor(level.tileAt(x, z)));
         }
     }
 
-    if (vertices.empty()) {
-        return false;
-    }
+    levelVertexCount_ = vertices.size();
+    enemyVertexOffset_ = vertices.size();
+    appendEnemy(vertices);
+    enemyVertexCount_ = vertices.size() - enemyVertexOffset_;
 
     const std::size_t bytes = vertices.size() * sizeof(Vertex);
     vertexBuffer_ = linearAlloc(bytes);
@@ -146,18 +173,17 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
         return false;
     }
     std::memcpy(vertexBuffer_, vertices.data(), bytes);
-    vertexCount_ = vertices.size();
     return true;
 }
 
-void Renderer::render(const Camera& camera) {
+void Renderer::render(const Camera& camera, const Enemy& enemy) {
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-    drawScene(camera);
+    drawScene(camera, enemy);
     drawBottomPanel(camera);
     C3D_FrameEnd(0);
 }
 
-void Renderer::drawScene(const Camera& camera) {
+void Renderer::drawScene(const Camera& camera, const Enemy& enemy) {
     C3D_RenderTargetClear(topTarget_, C3D_CLEAR_ALL, kTopClearColor, 0);
     C3D_FrameDrawOn(topTarget_);
 
@@ -167,7 +193,15 @@ void Renderer::drawScene(const Camera& camera) {
     camera.writeView(modelView);
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, projectionUniform_, &projection);
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &modelView);
-    C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(vertexCount_));
+    C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(levelVertexCount_));
+
+    if (!enemy.reachedBase()) {
+        C3D_Mtx enemyView{};
+        camera.writeView(enemyView);
+        Mtx_Translate(&enemyView, enemy.x(), 0.0F, enemy.z(), true);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &enemyView);
+        C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(enemyVertexOffset_), static_cast<int>(enemyVertexCount_));
+    }
 }
 
 void Renderer::drawBottomPanel(const Camera& camera) {
@@ -181,7 +215,9 @@ void Renderer::shutdown() {
         linearFree(vertexBuffer_);
         vertexBuffer_ = nullptr;
     }
-    vertexCount_ = 0;
+    levelVertexCount_ = 0;
+    enemyVertexOffset_ = 0;
+    enemyVertexCount_ = 0;
     if (shaderProgramInitialized_) {
         shaderProgramFree(&shaderProgram_);
         shaderProgramInitialized_ = false;
