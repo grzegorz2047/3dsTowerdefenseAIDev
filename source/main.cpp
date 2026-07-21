@@ -1,6 +1,8 @@
 #include <3ds.h>
 #include <citro3d.h>
 
+#include <algorithm>
+
 #include "BuildSystem.hpp"
 #include "Camera.hpp"
 #include "Input.hpp"
@@ -10,16 +12,18 @@
 
 namespace {
 
-constexpr float kMaximumDeltaSeconds = 1.0F / 15.0F;
+constexpr float kFixedStepSeconds = 1.0F / 60.0F;
+constexpr float kMaximumFrameSeconds = 1.0F / 15.0F;
+constexpr float kMaximumAccumulatorSeconds = kFixedStepSeconds * 5.0F;
 constexpr float kRestartDelaySeconds = 1.5F;
 
-float calculateDeltaSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
+float calculateFrameSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
     if (previousMilliseconds == 0U || nowMilliseconds <= previousMilliseconds) {
-        return 1.0F / 60.0F;
+        return kFixedStepSeconds;
     }
 
     const float elapsed = static_cast<float>(nowMilliseconds - previousMilliseconds) / 1000.0F;
-    return elapsed < kMaximumDeltaSeconds ? elapsed : kMaximumDeltaSeconds;
+    return std::min(elapsed, kMaximumFrameSeconds);
 }
 
 int shutdownWithError() {
@@ -60,6 +64,7 @@ int main() {
     Wave wave(levelResult.level);
     BuildSystem buildSystem(levelResult.level);
     float restartTimer = 0.0F;
+    float simulationAccumulator = 0.0F;
     u64 previousMilliseconds = osGetTime();
 
     while (aptMainLoop()) {
@@ -69,22 +74,31 @@ int main() {
         }
 
         const u64 nowMilliseconds = osGetTime();
-        const float deltaSeconds = calculateDeltaSeconds(nowMilliseconds, previousMilliseconds);
+        const float frameSeconds = calculateFrameSeconds(nowMilliseconds, previousMilliseconds);
         previousMilliseconds = nowMilliseconds;
 
-        camera.update(input, deltaSeconds);
-        if (wave.completed() || wave.lost()) {
-            restartTimer += deltaSeconds;
-            if (restartTimer >= kRestartDelaySeconds) {
-                wave.reset();
-                buildSystem.reset();
-                restartTimer = 0.0F;
+        camera.update(input, frameSeconds);
+        buildSystem.handleInput(input);
+
+        simulationAccumulator = std::min(
+            simulationAccumulator + frameSeconds,
+            kMaximumAccumulatorSeconds);
+
+        while (simulationAccumulator >= kFixedStepSeconds) {
+            if (wave.completed() || wave.lost()) {
+                restartTimer += kFixedStepSeconds;
+                if (restartTimer >= kRestartDelaySeconds) {
+                    wave.reset();
+                    buildSystem.reset();
+                    restartTimer = 0.0F;
+                }
+            } else {
+                buildSystem.update(kFixedStepSeconds, wave);
+                wave.update(kFixedStepSeconds);
             }
-        } else {
-            buildSystem.handleInput(input);
-            buildSystem.update(deltaSeconds, wave);
-            wave.update(deltaSeconds);
+            simulationAccumulator -= kFixedStepSeconds;
         }
+
         renderer.render(camera, wave, buildSystem);
     }
 
