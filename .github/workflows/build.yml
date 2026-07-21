@@ -5,14 +5,16 @@ on:
     branches:
       - main
       - agent/**
+    tags:
+      - 'v*'
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
-  build-3dsx:
+  build-release:
     runs-on: ubuntu-latest
     container:
       image: devkitpro/devkitarm:20260610
@@ -30,13 +32,17 @@ jobs:
           test -f "$DEVKITPRO/libctru/lib/libcitro2d.a"
           test -x "$DEVKITARM/bin/arm-none-eabi-g++"
           command -v picasso
+          command -v git
+          command -v python3
 
-      - name: Build 3DSX
+      - name: Build 3DSX and CIA
         id: build
         shell: bash
         run: |
           set -o pipefail
-          make -j2 2>&1 | tee build.log
+          make release -j2 2>&1 | tee build.log
+          cd dist
+          sha256sum -c SHA256SUMS.txt
 
       - name: Report build failure
         if: failure() && github.event_name == 'pull_request'
@@ -46,7 +52,7 @@ jobs:
             const fs = require('fs');
             const source = fs.existsSync('build.log') ? 'build.log' : null;
             const log = source
-              ? fs.readFileSync(source, 'utf8').trim().split('\n').slice(-80).join('\n')
+              ? fs.readFileSync(source, 'utf8').trim().split('\n').slice(-100).join('\n')
               : 'Workflow failed before build.log was created.';
             const marker = '<!-- citadel-build-failure -->';
             const body = `${marker}\n## Build failure\n\nSource: \`${source ?? 'unknown'}\`\n\n\`\`\`text\n${log}\n\`\`\``;
@@ -80,14 +86,24 @@ jobs:
           path: build.log
           if-no-files-found: warn
 
-      - name: Prepare checksums
-        run: make checksums
-
-      - name: Upload development artifact
+      - name: Upload playable artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: CitadelDefense3D-3dsx
+          name: CitadelDefense3D-playable
           path: |
             dist/CitadelDefense3D.3dsx
+            dist/CitadelDefense3D.cia
             dist/SHA256SUMS.txt
           if-no-files-found: error
+
+      - name: Publish GitHub pre-release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            dist/CitadelDefense3D.3dsx
+            dist/CitadelDefense3D.cia
+            dist/SHA256SUMS.txt
+            docs/INSTALLATION.md
