@@ -35,20 +35,22 @@ constexpr Vertex kVertices[] = {
 
 DVLB_s* shaderBinary = nullptr;
 shaderProgram_s shaderProgram{};
+bool shaderProgramInitialized = false;
 int projectionUniform = -1;
 C3D_Mtx projection{};
 void* vertexBuffer = nullptr;
 C3D_RenderTarget* topTarget = nullptr;
 
 bool initializeScene() {
-    shaderBinary = DVLB_ParseFile(
-        reinterpret_cast<u32*>(vshader_shbin),
-        vshader_shbin_size);
+    auto* shaderData = reinterpret_cast<u32*>(
+        const_cast<u8*>(vshader_shbin));
+    shaderBinary = DVLB_ParseFile(shaderData, vshader_shbin_size);
     if (shaderBinary == nullptr) {
         return false;
     }
 
     shaderProgramInit(&shaderProgram);
+    shaderProgramInitialized = true;
     shaderProgramSetVsh(&shaderProgram, &shaderBinary->DVLE[0]);
     C3D_BindProgram(&shaderProgram);
 
@@ -96,7 +98,10 @@ void shutdownScene() {
         vertexBuffer = nullptr;
     }
 
-    shaderProgramFree(&shaderProgram);
+    if (shaderProgramInitialized) {
+        shaderProgramFree(&shaderProgram);
+        shaderProgramInitialized = false;
+    }
     if (shaderBinary != nullptr) {
         DVLB_Free(shaderBinary);
         shaderBinary = nullptr;
