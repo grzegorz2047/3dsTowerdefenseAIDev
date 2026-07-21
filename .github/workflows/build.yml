@@ -35,6 +35,11 @@ jobs:
           command -v picasso
           command -v git
           command -v python3
+          command -v g++
+
+      - name: Run host gameplay tests
+        shell: bash
+        run: bash scripts/run_host_tests.sh
 
       - name: Build 3DSX and CIA
         id: build
@@ -66,9 +71,9 @@ jobs:
             const source = fs.existsSync('build.log') ? 'build.log' : null;
             const log = source
               ? fs.readFileSync(source, 'utf8').trim().split('\n').slice(-100).join('\n')
-              : 'Workflow failed before build.log was created.';
+              : 'Workflow failed before build.log was created. Check the host test step.';
             const marker = '<!-- citadel-build-failure -->';
-            const body = `${marker}\n## Build failure\n\nSource: \`${source ?? 'unknown'}\`\n\n\`\`\`text\n${log}\n\`\`\``;
+            const body = `${marker}\n## Build failure\n\nSource: \`${source ?? 'host tests or setup'}\`\n\n\`\`\`text\n${log}\n\`\`\``;
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
