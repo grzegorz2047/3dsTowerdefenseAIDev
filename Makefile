@@ -16,9 +16,9 @@ DATA        := data
 INCLUDES    := include
 ROMFS       := romfs
 
-APP_TITLE       := Citadel Defense 3D
-APP_DESCRIPTION := 3D tower defense for Nintendo 3DS
-APP_AUTHOR      := grzegorz2047
+export APP_TITLE       := Citadel Defense 3D
+export APP_DESCRIPTION := 3D tower defense for Nintendo 3DS
+export APP_AUTHOR      := grzegorz2047
 
 ARCH        := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 CFLAGS      := -g -Wall -Wextra -O2 -mword-relocations -ffunction-sections $(ARCH)
@@ -26,7 +26,7 @@ CFLAGS      += $(INCLUDE) -D__3DS__
 CXXFLAGS    := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++17
 ASFLAGS     := -g $(ARCH)
 LDFLAGS     := -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
-LIBS        := -lcitro3d -lcitro2d -lctru -lm
+LIBS        := -lcitro2d -lcitro3d -lctru -lm
 LIBDIRS     := $(CTRULIB)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
@@ -66,8 +66,6 @@ $(BUILD):
 clean:
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf $(TARGET).map dist
 
-# CIA packaging is intentionally separated from the regular developer build.
-# The implementation will be completed in issue #2 after metadata assets are added.
 cia: all
 	@echo "CIA packaging requires makerom, bannertool and release metadata."
 	@echo "See docs/BUILD_AND_RELEASE.md and issue #2."
