@@ -5,6 +5,7 @@
 #include <citro3d.h>
 
 #include "Camera.hpp"
+#include "Enemy.hpp"
 #include "Level.hpp"
 
 class Renderer {
@@ -16,12 +17,12 @@ public:
     Renderer& operator=(const Renderer&) = delete;
 
     [[nodiscard]] bool initialize(const LevelData& level);
-    void render(const Camera& camera);
+    void render(const Camera& camera, const Enemy& enemy);
     void shutdown();
 
 private:
     [[nodiscard]] bool buildLevelMesh(const LevelData& level);
-    void drawScene(const Camera& camera);
+    void drawScene(const Camera& camera, const Enemy& enemy);
     void drawBottomPanel(const Camera& camera);
 
     C3D_RenderTarget* topTarget_ = nullptr;
@@ -32,5 +33,7 @@ private:
     int projectionUniform_ = -1;
     int modelViewUniform_ = -1;
     void* vertexBuffer_ = nullptr;
-    std::size_t vertexCount_ = 0;
+    std::size_t levelVertexCount_ = 0;
+    std::size_t enemyVertexOffset_ = 0;
+    std::size_t enemyVertexCount_ = 0;
 };
