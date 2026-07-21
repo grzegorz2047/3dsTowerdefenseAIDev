@@ -6,6 +6,7 @@
 
 #include "Camera.hpp"
 #include "Level.hpp"
+#include "Tower.hpp"
 #include "Wave.hpp"
 
 class Renderer {
@@ -17,12 +18,12 @@ public:
     Renderer& operator=(const Renderer&) = delete;
 
     [[nodiscard]] bool initialize(const LevelData& level);
-    void render(const Camera& camera, const Wave& wave);
+    void render(const Camera& camera, const Wave& wave, const Tower& tower);
     void shutdown();
 
 private:
     [[nodiscard]] bool buildLevelMesh(const LevelData& level);
-    void drawScene(const Camera& camera, const Wave& wave);
+    void drawScene(const Camera& camera, const Wave& wave, const Tower& tower);
     void drawBottomPanel(const Camera& camera, const Wave& wave);
 
     C3D_RenderTarget* topTarget_ = nullptr;
@@ -36,4 +37,6 @@ private:
     std::size_t levelVertexCount_ = 0;
     std::size_t enemyVertexOffset_ = 0;
     std::size_t enemyVertexCount_ = 0;
+    std::size_t towerVertexOffset_ = 0;
+    std::size_t towerVertexCount_ = 0;
 };

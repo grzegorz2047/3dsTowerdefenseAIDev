@@ -15,6 +15,7 @@ public:
     void reset();
 
     [[nodiscard]] std::size_t spawnedCount() const;
+    [[nodiscard]] Enemy& enemyAt(std::size_t index);
     [[nodiscard]] const Enemy& enemyAt(std::size_t index) const;
     [[nodiscard]] int baseHealth() const;
     [[nodiscard]] bool completed() const;

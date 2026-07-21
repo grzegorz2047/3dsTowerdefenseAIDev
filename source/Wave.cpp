@@ -36,6 +36,11 @@ void Wave::update(float deltaSeconds) {
         }
 
         Enemy& enemy = enemies_[index];
+        if (enemy.dead()) {
+            resolved_[index] = true;
+            continue;
+        }
+
         enemy.update(step);
         if (enemy.reachedBase()) {
             resolved_[index] = true;
@@ -56,6 +61,10 @@ void Wave::reset() {
 
 std::size_t Wave::spawnedCount() const {
     return spawnedCount_;
+}
+
+Enemy& Wave::enemyAt(std::size_t index) {
+    return enemies_.at(index);
 }
 
 const Enemy& Wave::enemyAt(std::size_t index) const {
