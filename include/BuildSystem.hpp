@@ -19,8 +19,11 @@ public:
     [[nodiscard]] std::size_t towerCount() const;
     [[nodiscard]] const Tower& towerAt(std::size_t index) const;
     [[nodiscard]] int gold() const;
+    [[nodiscard]] int towerCost() const;
     [[nodiscard]] std::size_t cursorX() const;
     [[nodiscard]] std::size_t cursorZ() const;
+    [[nodiscard]] bool cursorOccupied() const;
+    [[nodiscard]] bool hasEnoughGold() const;
     [[nodiscard]] bool cursorCanBuild() const;
 
 private:

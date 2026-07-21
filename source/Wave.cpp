@@ -63,6 +63,10 @@ std::size_t Wave::spawnedCount() const {
     return spawnedCount_;
 }
 
+std::size_t Wave::enemyCount() const {
+    return kEnemyCount;
+}
+
 Enemy& Wave::enemyAt(std::size_t index) {
     return enemies_.at(index);
 }
