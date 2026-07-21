@@ -10,8 +10,9 @@ constexpr float kFieldOfView = 55.0F * kPi / 180.0F;
 constexpr float kAspectRatio = 400.0F / 240.0F;
 constexpr float kNearPlane = 0.1F;
 constexpr float kFarPlane = 100.0F;
-constexpr float kCameraPitch = -0.72F;
-constexpr float kCameraDistance = -12.0F;
+constexpr float kCameraPitch = 0.72F;
+constexpr float kCameraDistance = -14.0F;
+constexpr float kCameraHeight = -4.2F;
 constexpr float kPanSpeed = 0.018F;
 constexpr float kMapLimit = 6.0F;
 constexpr float kQuarterTurn = kPi * 0.5F;
@@ -52,7 +53,7 @@ void Camera::writeProjection(C3D_Mtx& destination) const {
 
 void Camera::writeView(C3D_Mtx& destination) const {
     Mtx_Identity(&destination);
-    Mtx_Translate(&destination, 0.0F, -3.2F, kCameraDistance, true);
+    Mtx_Translate(&destination, 0.0F, kCameraHeight, kCameraDistance, true);
     Mtx_RotateX(&destination, kCameraPitch, true);
     Mtx_RotateY(
         &destination,
