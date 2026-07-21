@@ -1,0 +1,8 @@
+build/
+dist/
+*.3dsx
+*.cia
+*.elf
+*.map
+*.smdh
+*.shbin
