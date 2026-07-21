@@ -5,8 +5,8 @@
 #include <citro3d.h>
 
 #include "Camera.hpp"
-#include "Enemy.hpp"
 #include "Level.hpp"
+#include "Wave.hpp"
 
 class Renderer {
 public:
@@ -17,13 +17,13 @@ public:
     Renderer& operator=(const Renderer&) = delete;
 
     [[nodiscard]] bool initialize(const LevelData& level);
-    void render(const Camera& camera, const Enemy& enemy);
+    void render(const Camera& camera, const Wave& wave);
     void shutdown();
 
 private:
     [[nodiscard]] bool buildLevelMesh(const LevelData& level);
-    void drawScene(const Camera& camera, const Enemy& enemy);
-    void drawBottomPanel(const Camera& camera);
+    void drawScene(const Camera& camera, const Wave& wave);
+    void drawBottomPanel(const Camera& camera, const Wave& wave);
 
     C3D_RenderTarget* topTarget_ = nullptr;
     C3D_RenderTarget* bottomTarget_ = nullptr;
