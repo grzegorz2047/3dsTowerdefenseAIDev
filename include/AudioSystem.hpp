@@ -29,6 +29,10 @@ public:
     [[nodiscard]] bool available() const;
     [[nodiscard]] AudioBackend backend() const;
     [[nodiscard]] Result ndspResult() const;
+    [[nodiscard]] Result ndspInitialResult() const;
+    [[nodiscard]] Result ndspShimResult() const;
+    [[nodiscard]] bool ndspShimAttempted() const;
+    [[nodiscard]] bool ndspShimActive() const;
     [[nodiscard]] Result csndResult() const;
     [[nodiscard]] Result lastPlayResult() const;
     [[nodiscard]] Result probeResult() const;
@@ -55,6 +59,10 @@ private:
 
     AudioBackend backend_ = AudioBackend::None;
     Result ndspResult_ = 0;
+    Result ndspInitialResult_ = 0;
+    Result ndspShimResult_ = 0;
+    bool ndspShimAttempted_ = false;
+    bool ndspShimActive_ = false;
     Result csndResult_ = 0;
     Result lastPlayResult_ = 0;
     Result probeResult_ = 0;
