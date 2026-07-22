@@ -40,6 +40,7 @@ COMMON_FLAGS=(
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/performance_budget_tests.cpp" -o "$BUILD_DIR/performance-budget-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/performance_stress_level_tests.cpp" "$ROOT/source/Level.cpp" -o "$BUILD_DIR/performance-stress-level-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/orbit_camera_tests.cpp" "$ROOT/source/OrbitCamera.cpp" -o "$BUILD_DIR/orbit-camera-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/seven_segment_digits_tests.cpp" -o "$BUILD_DIR/seven-segment-digits-tests"
 
 "$BUILD_DIR/gameplay-tests"
 "$BUILD_DIR/tower-archetype-tests"
@@ -61,6 +62,7 @@ COMMON_FLAGS=(
 "$BUILD_DIR/performance-budget-tests"
 "$BUILD_DIR/performance-stress-level-tests" "$ROOT"
 "$BUILD_DIR/orbit-camera-tests"
+"$BUILD_DIR/seven-segment-digits-tests"
 
 # One screen, one owner. PrintConsole is allowed only on the top startup-error path.
 if grep -R "consoleInit(GFX_BOTTOM" "$ROOT/source" "$ROOT/include"; then
@@ -106,6 +108,10 @@ grep -q "UiRenderer& uiRenderer" "$ROOT/include/Renderer.hpp"
 grep -q "missionUiState" "$ROOT/source/main.cpp"
 grep -q "campaignUiState" "$ROOT/source/main.cpp"
 grep -q "drawWrappedText" "$ROOT/source/UiRenderer.cpp"
+grep -q "kMinimumReadableScale = 0.40F" "$ROOT/source/UiRenderer.cpp"
+grep -q "std::max(scale, kMinimumReadableScale)" "$ROOT/source/UiRenderer.cpp"
+grep -q "drawSegmentNumber(state.gold" "$ROOT/source/UiRenderer.cpp"
+grep -q "SevenSegmentDigits::maskFor" "$ROOT/source/UiRenderer.cpp"
 grep -q '"X KAMPANIA"' "$ROOT/source/UiRenderer.cpp"
 grep -q '"Y POWTORZ"' "$ROOT/source/UiRenderer.cpp"
 if grep -q '"L 3D ON"\|"L 3D OFF"' "$ROOT/source/UiRenderer.cpp"; then
