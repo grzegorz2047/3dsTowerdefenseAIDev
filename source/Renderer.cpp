@@ -212,8 +212,9 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
 }
 
 void Renderer::render(const Camera& camera, const Wave& wave,
-    const BuildSystem& buildSystem, const TutorialFlow&) {
-    lastStereoPlan_ = Stereo3D::plan(osGet3DSliderState(), true, Stereo3D::kDefaultDepthPercent);
+    const BuildSystem& buildSystem, const TutorialFlow&,
+    bool stereoEnabled, std::uint8_t maximum3DDepthPercent) {
+    lastStereoPlan_ = Stereo3D::plan(osGet3DSliderState(), stereoEnabled, maximum3DDepthPercent);
 
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
     drawScene(topLeftTarget_, camera, wave, buildSystem, lastStereoPlan_.leftEyeIod);

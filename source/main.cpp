@@ -293,7 +293,8 @@ MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t mission
         audioSystem.updateProbe();
         renderTouchHud(bottomConsole, mission, wave, buildSystem, tutorialFlow, audioSystem,
             hudMode, paused, speedMultiplier, missionResult);
-        renderer.render(camera, wave, buildSystem, tutorialFlow);
+        renderer.render(camera, wave, buildSystem, tutorialFlow,
+            saveData.settings.stereoEnabled, saveData.settings.maximum3DDepthPercent);
     }
 
     audioSystem.shutdown();
@@ -349,7 +350,7 @@ int main() {
     const SaveLoadResult loaded = SaveDataStore::load(kSavePath);
     if (loaded.status == SaveLoadStatus::Loaded && progress.restore(loaded.data.campaign)) {
         saveData = loaded.data;
-        saveMessage = loaded.migrated ? "Zapis zmigrowany do v2." : "Wczytano zapis.";
+        saveMessage = loaded.migrated ? "Zapis zmigrowany do v3." : "Wczytano zapis.";
         if (loaded.migrated) saveProblem = !persistSave(progress, saveData, saveMessage);
     } else if (loaded.status == SaveLoadStatus::Corrupt || loaded.status == SaveLoadStatus::UnsupportedVersion) {
         saveProblem = true;
