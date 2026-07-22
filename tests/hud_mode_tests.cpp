@@ -15,16 +15,25 @@ void expect(bool condition, const char* message) {
 }  // namespace
 
 int main() {
-    const HudMode gameplay = hudModeForSelectHeld(false);
-    const HudMode diagnostics = hudModeForSelectHeld(true);
+    HudMode mode = HudMode::Gameplay;
+    expect(!showAudioDiagnostics(mode), "gameplay HUD must hide raw audio diagnostics");
 
-    expect(gameplay == HudMode::Gameplay, "released SELECT must use gameplay HUD");
-    expect(diagnostics == HudMode::AudioDiagnostics, "held SELECT must use diagnostic HUD");
-    expect(!showAudioDiagnostics(gameplay), "gameplay HUD must hide raw audio diagnostics");
-    expect(showAudioDiagnostics(diagnostics), "diagnostic HUD must expose raw audio diagnostics");
-    expect(!allowDiagnosticTone(gameplay, true), "B must not play the test tone in normal gameplay");
-    expect(!allowDiagnosticTone(diagnostics, false), "diagnostic tone requires B press");
-    expect(allowDiagnosticTone(diagnostics, true), "SELECT+B must play the diagnostic tone");
+    mode = toggleHudMode(mode, false);
+    expect(mode == HudMode::Gameplay, "no SELECT press must preserve gameplay HUD");
+
+    mode = toggleHudMode(mode, true);
+    expect(mode == HudMode::AudioDiagnostics, "first SELECT press must enable diagnostics");
+    expect(showAudioDiagnostics(mode), "diagnostic HUD must expose raw audio diagnostics");
+
+    mode = toggleHudMode(mode, false);
+    expect(mode == HudMode::AudioDiagnostics, "released SELECT must preserve diagnostic mode");
+
+    expect(!allowDiagnosticTone(HudMode::Gameplay, true), "B must not play the test tone in normal gameplay");
+    expect(!allowDiagnosticTone(HudMode::AudioDiagnostics, false), "diagnostic tone requires B press");
+    expect(allowDiagnosticTone(HudMode::AudioDiagnostics, true), "diagnostic mode plus B must play the tone");
+
+    mode = toggleHudMode(mode, true);
+    expect(mode == HudMode::Gameplay, "second SELECT press must return to gameplay HUD");
 
     std::cout << "HUD mode tests passed\n";
     return 0;
