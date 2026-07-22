@@ -89,6 +89,7 @@ void UiRenderer::renderBottom(const UiState& state) {
     } else {
         drawMission(state);
     }
+    C2D_Flush();
     composedFrameActive_ = false;
 }
 
@@ -210,4 +211,5 @@ void UiRenderer::renderTopOverlay(C3D_RenderTarget* target, const UiState& state
     std::snprintf(text, sizeof(text), "%d   HP %d   %zu/%zu", std::clamp(state.gold, 0, 9999),
         state.baseHealth, state.spawnedEnemies, state.totalEnemies);
     drawText(text, 39.0F, 14.0F, 0.46F, kText);
+    C2D_Flush();
 }
