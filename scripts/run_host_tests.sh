@@ -5,6 +5,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT/build/host-tests"
 HOST_CXX="${HOST_CXX:-g++}"
 
+: > "$ROOT/build.log"
+exec > >(tee -a "$ROOT/build.log") 2>&1
+trap 'status=$?; echo "HOST TEST FAILURE ($status): $BASH_COMMAND"; exit $status' ERR
+
 mkdir -p "$BUILD_DIR"
 
 COMMON_FLAGS=(
