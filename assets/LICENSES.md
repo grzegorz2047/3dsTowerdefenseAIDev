@@ -1,0 +1,34 @@
+# Asset licenses
+
+Każdy asset wizualny, dźwiękowy lub font używany przez grę musi mieć wpis w tym pliku przed merge.
+
+## Dozwolone źródła
+
+- `Project` — wykonane od zera dla tego repozytorium przez właściciela projektu lub współtwórcę, który przekazał prawa do dystrybucji;
+- `CC0-1.0` — domena publiczna / Creative Commons Zero;
+- inne licencje tylko po osobnym przeglądzie warunków modyfikacji, redystrybucji, atrybucji i dystrybucji binarnej.
+
+## Niedozwolone
+
+- ripy z innych gier;
+- pliki o nieznanym autorze lub pochodzeniu;
+- assety oznaczone wyłącznie jako „free” bez tekstu licencji;
+- assety, których licencja zabrania modyfikacji lub redystrybucji w paczce gry;
+- modele lub tekstury wygenerowane na podstawie chronionych postaci i marek bez zgody.
+
+## Rejestr
+
+| ID | Typ | Autor | Licencja | Źródło | Modyfikacje | Pliki wynikowe |
+| --- | --- | --- | --- | --- | --- | --- |
+| `tutorial_procedural_tiles` | mesh / vertex colors | grzegorz2047 | Project | proceduralnie generowane w `source/Renderer.cpp` | brak zewnętrznego źródła | runtime VBO |
+| `tutorial_placeholder_tower` | mesh / vertex colors | grzegorz2047 | Project | proceduralnie generowane w `source/Renderer.cpp` | bryła testowa | runtime VBO |
+| `tutorial_placeholder_enemy` | mesh / vertex colors | grzegorz2047 | Project | proceduralnie generowane w `source/Renderer.cpp` | bryła testowa | runtime VBO |
+| `release_icon_banner` | image/audio | grzegorz2047 | Project | `scripts/generate_release_assets.py` | generowane deterministycznie | `build/release-assets/*` |
+
+## Szablon nowego wpisu
+
+```text
+| `asset_id` | model/texture/audio | Autor | SPDX lub Project | URL albo ścieżka źródłowa | opis zmian | ścieżki wynikowe |
+```
+
+Dla zewnętrznego assetu do PR należy dołączyć kopię tekstu licencji, gdy licencja tego wymaga, oraz trwały adres źródła. Sam link do strony pobierania nie jest wystarczającym dowodem warunków licencji.
