@@ -11,7 +11,7 @@ struct TowerStats {
     ProjectilePayload payload;
 };
 
-TowerStats statsFor(TowerType type) {
+TowerStats baseStatsFor(TowerType type) {
     switch (type) {
         case TowerType::Mortar:
             return {2.85F, 1.25F, {ProjectileEffect::Splash, 2, 1.15F, 0.0F, 1.0F}};
@@ -21,6 +21,22 @@ TowerStats statsFor(TowerType type) {
         default:
             return {3.40F, 0.55F, {ProjectileEffect::Direct, 1, 0.0F, 0.0F, 1.0F}};
     }
+}
+
+TowerStats statsFor(TowerType type, std::uint8_t level) {
+    TowerStats stats = baseStatsFor(type);
+    const int extraLevels = static_cast<int>(level) - 1;
+    stats.range += 0.18F * static_cast<float>(extraLevels);
+    stats.attackIntervalSeconds *= 1.0F - 0.12F * static_cast<float>(extraLevels);
+    stats.payload.damage += extraLevels;
+    if (stats.payload.effect == ProjectileEffect::Splash) {
+        stats.payload.radius += 0.12F * static_cast<float>(extraLevels);
+    }
+    if (stats.payload.effect == ProjectileEffect::Frost) {
+        stats.payload.slowDurationSeconds += 0.35F * static_cast<float>(extraLevels);
+        stats.payload.slowMovementMultiplier = std::max(0.40F, stats.payload.slowMovementMultiplier - 0.05F * static_cast<float>(extraLevels));
+    }
+    return stats;
 }
 
 float worldX(const LevelData& level, std::size_t gridX) {
@@ -54,9 +70,10 @@ const char* towerName(TowerType type) {
 }
 
 Tower::Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ, TowerType type)
-    : gridX_(gridX), gridZ_(gridZ), type_(type) {
+    : gridX_(gridX), gridZ_(gridZ), type_(type), investedGold_(towerCost(type)) {
     if (gridX >= level.width || gridZ >= level.height ||
         level.tileAt(gridX, gridZ) != TileType::BuildSpot) {
+        investedGold_ = 0;
         return;
     }
 
@@ -70,7 +87,7 @@ void Tower::update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles) 
         return;
     }
 
-    const TowerStats stats = statsFor(type_);
+    const TowerStats stats = statsFor(type_, level_);
     const float rangeSquared = stats.range * stats.range;
     cooldown_ = std::max(cooldown_ - std::max(deltaSeconds, 0.0F), 0.0F);
     if (cooldown_ > 0.0F) {
@@ -110,10 +127,27 @@ void Tower::resetCombat() {
     shotsFired_ = 0;
 }
 
+bool Tower::upgrade() {
+    if (!canUpgrade()) {
+        return false;
+    }
+    const int cost = upgradeCost();
+    ++level_;
+    investedGold_ += cost;
+    return true;
+}
+
 float Tower::x() const { return x_; }
 float Tower::z() const { return z_; }
 std::size_t Tower::gridX() const { return gridX_; }
 std::size_t Tower::gridZ() const { return gridZ_; }
 TowerType Tower::type() const { return type_; }
+std::uint8_t Tower::level() const { return level_; }
+int Tower::investedGold() const { return investedGold_; }
+int Tower::upgradeCost() const {
+    return canUpgrade() ? towerCost(type_) * static_cast<int>(level_ + 1U) / 2 : 0;
+}
+int Tower::sellValue() const { return investedGold_ * 70 / 100; }
+bool Tower::canUpgrade() const { return valid_ && level_ < kMaximumLevel; }
 bool Tower::valid() const { return valid_; }
 int Tower::shotsFired() const { return shotsFired_; }
