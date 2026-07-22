@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <string>
 
+#include "SevenSegmentDigits.hpp"
 #include "TouchUiLayout.hpp"
 
 namespace {
@@ -12,11 +13,12 @@ const u32 kBackground = C2D_Color32(12, 18, 28, 255);
 const u32 kPanel = C2D_Color32(20, 29, 40, 255);
 const u32 kPanelStrong = C2D_Color32(24, 43, 62, 255);
 const u32 kText = C2D_Color32(236, 240, 244, 255);
-const u32 kMuted = C2D_Color32(164, 178, 191, 255);
+const u32 kMuted = C2D_Color32(190, 202, 213, 255);
 const u32 kAccent = C2D_Color32(112, 225, 255, 255);
 const u32 kGold = C2D_Color32(255, 222, 112, 255);
 const u32 kDanger = C2D_Color32(255, 132, 132, 255);
 const u32 kSelected = C2D_Color32(48, 91, 119, 255);
+constexpr float kMinimumReadableScale = 0.40F;
 
 const char* towerLabel(TowerType type) {
     switch (type) {
@@ -63,18 +65,20 @@ void UiRenderer::drawText(const char* text, float x, float y, float scale, u32 c
     C2D_Text parsed{};
     C2D_TextParse(&parsed, textBuffer_, text);
     C2D_TextOptimize(&parsed);
-    C2D_DrawText(&parsed, C2D_WithColor, x, y, 0.5F, scale, scale, color);
+    const float readableScale = std::max(scale, kMinimumReadableScale);
+    C2D_DrawText(&parsed, C2D_WithColor, x, y, 0.5F, readableScale, readableScale, color);
 }
 
 void UiRenderer::drawWrappedText(const char* text, float x, float y, float scale, u32 color,
     std::size_t charactersPerLine, std::size_t maximumLines) {
     if (text == nullptr || text[0] == '\0' || charactersPerLine == 0U || maximumLines == 0U) return;
 
+    const float readableScale = std::max(scale, kMinimumReadableScale);
     const std::string source(text);
     std::size_t cursor = 0U;
     std::size_t lineIndex = 0U;
     std::string line;
-    const float lineHeight = 34.0F * scale;
+    const float lineHeight = 34.0F * readableScale;
 
     while (cursor < source.size() && lineIndex < maximumLines) {
         while (cursor < source.size() && source[cursor] == ' ') ++cursor;
@@ -86,7 +90,7 @@ void UiRenderer::drawWrappedText(const char* text, float x, float y, float scale
         const bool explicitBreak = separator != std::string::npos && source[separator] == '\n';
 
         if (!line.empty() && line.size() + 1U + word.size() > charactersPerLine) {
-            drawText(line.c_str(), x, y + static_cast<float>(lineIndex) * lineHeight, scale, color);
+            drawText(line.c_str(), x, y + static_cast<float>(lineIndex) * lineHeight, readableScale, color);
             ++lineIndex;
             line.clear();
             if (lineIndex >= maximumLines) break;
@@ -97,20 +101,49 @@ void UiRenderer::drawWrappedText(const char* text, float x, float y, float scale
         cursor = separator == std::string::npos ? source.size() : separator + 1U;
 
         if (explicitBreak || line.size() >= charactersPerLine) {
-            drawText(line.c_str(), x, y + static_cast<float>(lineIndex) * lineHeight, scale, color);
+            drawText(line.c_str(), x, y + static_cast<float>(lineIndex) * lineHeight, readableScale, color);
             ++lineIndex;
             line.clear();
         }
     }
 
     if (!line.empty() && lineIndex < maximumLines) {
-        drawText(line.c_str(), x, y + static_cast<float>(lineIndex) * lineHeight, scale, color);
+        drawText(line.c_str(), x, y + static_cast<float>(lineIndex) * lineHeight, readableScale, color);
     }
 }
 
 void UiRenderer::drawButton(float x, float y, float width, float height, const char* label, bool selected) {
     C2D_DrawRectSolid(x, y, 0.1F, width, height, selected ? kSelected : kPanelStrong);
-    drawText(label, x + 7.0F, y + height * 0.36F, 0.44F, selected ? kGold : kText);
+    drawText(label, x + 7.0F, y + height * 0.34F, 0.46F, selected ? kGold : kText);
+}
+
+void UiRenderer::drawSegmentDigit(unsigned int digit, float x, float y, float scale, u32 color) {
+    const std::uint8_t mask = SevenSegmentDigits::maskFor(digit);
+    const float thickness = 2.0F * scale;
+    const float horizontal = 8.0F * scale;
+    const float vertical = 6.0F * scale;
+    const float right = x + horizontal - thickness;
+    const float middleY = y + vertical;
+    const float bottomY = y + vertical * 2.0F;
+
+    if ((mask & SevenSegmentDigits::Top) != 0U) C2D_DrawRectSolid(x, y, 0.95F, horizontal, thickness, color);
+    if ((mask & SevenSegmentDigits::UpperRight) != 0U) C2D_DrawRectSolid(right, y, 0.95F, thickness, vertical, color);
+    if ((mask & SevenSegmentDigits::LowerRight) != 0U) C2D_DrawRectSolid(right, middleY, 0.95F, thickness, vertical, color);
+    if ((mask & SevenSegmentDigits::Bottom) != 0U) C2D_DrawRectSolid(x, bottomY, 0.95F, horizontal, thickness, color);
+    if ((mask & SevenSegmentDigits::LowerLeft) != 0U) C2D_DrawRectSolid(x, middleY, 0.95F, thickness, vertical, color);
+    if ((mask & SevenSegmentDigits::UpperLeft) != 0U) C2D_DrawRectSolid(x, y, 0.95F, thickness, vertical, color);
+    if ((mask & SevenSegmentDigits::Middle) != 0U) C2D_DrawRectSolid(x, middleY, 0.95F, horizontal, thickness, color);
+}
+
+void UiRenderer::drawSegmentNumber(int value, float x, float y, float scale, u32 color) {
+    const int safe = SevenSegmentDigits::clampValue(value);
+    char digits[5]{};
+    std::snprintf(digits, sizeof(digits), "%d", safe);
+    const float advance = 11.0F * scale;
+    for (std::size_t index = 0U; digits[index] != '\0'; ++index) {
+        drawSegmentDigit(static_cast<unsigned int>(digits[index] - '0'),
+            x + static_cast<float>(index) * advance, y, scale, color);
+    }
 }
 
 void UiRenderer::renderStandalone(const UiState& state) {
@@ -134,12 +167,12 @@ void UiRenderer::drawStandaloneTop(const UiState& state) {
     if (state.screen == UiScreen::Loading) {
         drawText("LADOWANIE MISJI", 112.0F, 88.0F, 0.62F, kGold);
         drawWrappedText(state.title, 65.0F, 124.0F, 0.58F, kText, 24U, 2U);
-        drawText("Przygotowywanie pola bitwy...", 82.0F, 178.0F, 0.42F, kMuted);
+        drawText("Przygotowywanie pola bitwy...", 82.0F, 178.0F, 0.44F, kMuted);
     } else {
-        drawText("WYBRANA MISJA", 28.0F, 72.0F, 0.42F, kMuted);
+        drawText("WYBRANA MISJA", 28.0F, 72.0F, 0.44F, kMuted);
         drawWrappedText(state.title, 28.0F, 94.0F, 0.68F, kGold, 25U, 2U);
-        drawWrappedText(state.objective, 28.0F, 144.0F, 0.43F, kText, 39U, 3U);
-        drawText("A: rozpocznij   START: wyjdz", 28.0F, 202.0F, 0.38F, kMuted);
+        drawWrappedText(state.objective, 28.0F, 144.0F, 0.46F, kText, 36U, 3U);
+        drawText("A: rozpocznij   START: wyjdz", 28.0F, 202.0F, 0.42F, kMuted);
     }
     C2D_Flush();
 }
@@ -154,7 +187,7 @@ void UiRenderer::renderBottom(const UiState& state) {
         C2D_DrawRectSolid(8.0F, 70.0F, 0.1F, 304.0F, 100.0F, kPanel);
         drawText("CITADEL DEFENSE 3D", 35.0F, 91.0F, 0.72F, kAccent);
         drawText("Ladowanie poziomu...", 62.0F, 126.0F, 0.58F, kText);
-        drawWrappedText(state.title, 45.0F, 151.0F, 0.44F, kMuted, 27U, 2U);
+        drawWrappedText(state.title, 45.0F, 151.0F, 0.46F, kMuted, 25U, 2U);
     } else {
         drawMission(state);
     }
@@ -164,7 +197,7 @@ void UiRenderer::renderBottom(const UiState& state) {
 
 void UiRenderer::drawCampaign(const UiState& state) {
     C2D_DrawRectSolid(0.0F, 0.0F, 0.1F, 320.0F, 30.0F, kPanelStrong);
-    drawText("CITADEL DEFENSE 3D", 12.0F, 7.0F, 0.58F, kAccent);
+    drawText("CITADEL DEFENSE 3D", 10.0F, 7.0F, 0.56F, kAccent);
     drawText("KAMPANIA", 238.0F, 8.0F, 0.45F, kMuted);
 
     C2D_DrawRectSolid(6.0F, 36.0F, 0.1F, 144.0F, 158.0F, kPanel);
@@ -174,26 +207,25 @@ void UiRenderer::drawCampaign(const UiState& state) {
             C2D_DrawRectSolid(10.0F, itemY - 3.0F, 0.2F, 136.0F, 21.0F, kSelected);
         }
         char line[48]{};
-        std::snprintf(line, sizeof(line), "%zu. %.16s  %u/3", index + 1U,
+        std::snprintf(line, sizeof(line), "%zu. %.13s %u/3", index + 1U,
             state.missionUnlocked[index] ? state.campaignTitles[index] : "ZABLOKOWANE",
             static_cast<unsigned int>(state.missionStars[index]));
-        drawText(line, 14.0F, itemY, 0.40F, index == state.selectedMission ? kGold : kText);
+        drawText(line, 13.0F, itemY, 0.42F, index == state.selectedMission ? kGold : kText);
     }
 
     C2D_DrawRectSolid(156.0F, 36.0F, 0.1F, 158.0F, 158.0F, kPanel);
-    drawWrappedText(state.title, 164.0F, 43.0F, 0.45F, kAccent, 19U, 2U);
-    drawText("CEL", 164.0F, 73.0F, 0.28F, kMuted);
-    drawWrappedText(state.objective, 164.0F, 84.0F, 0.34F, kText, 21U, 3U);
-    drawWrappedText(state.availableTowers, 164.0F, 121.0F, 0.31F, kMuted, 23U, 2U);
-    drawWrappedText(state.threats, 164.0F, 145.0F, 0.31F, kMuted, 23U, 2U);
+    drawWrappedText(state.title, 164.0F, 43.0F, 0.47F, kAccent, 17U, 2U);
+    drawText("CEL:", 164.0F, 76.0F, 0.40F, kMuted);
+    drawWrappedText(state.objective, 164.0F, 92.0F, 0.42F, kText, 18U, 2U);
+    drawWrappedText(state.availableTowers, 164.0F, 123.0F, 0.40F, kMuted, 19U, 1U);
+    drawWrappedText(state.threats, 164.0F, 142.0F, 0.40F, kMuted, 19U, 1U);
     char stars[48]{};
-    std::snprintf(stars, sizeof(stars), "3*: HP>=%u, WIEZE<=%u",
+    std::snprintf(stars, sizeof(stars), "3*: HP>=%u WIEZE<=%u",
         static_cast<unsigned int>(state.fullHealthThreshold),
         static_cast<unsigned int>(state.efficientTowerLimit));
-    drawText(stars, 164.0F, 170.0F, 0.31F, kGold);
-    if (state.statusMessage != nullptr && state.statusMessage[0] != '\0') {
-        drawWrappedText(state.statusMessage, 164.0F, 183.0F, 0.27F,
-            state.saveProblem ? kDanger : kMuted, 26U, 1U);
+    drawText(stars, 164.0F, 163.0F, 0.40F, kGold);
+    if (state.saveProblem && state.statusMessage != nullptr && state.statusMessage[0] != '\0') {
+        drawWrappedText(state.statusMessage, 164.0F, 180.0F, 0.40F, kDanger, 19U, 1U);
     }
 
     drawButton(6.0F, 201.0F, 98.0F, 33.0F, "A GRAJ", false);
@@ -214,15 +246,15 @@ void UiRenderer::drawMission(const UiState& state) {
 
     C2D_DrawRectSolid(8.0F, 58.0F, 0.1F, 304.0F, 62.0F, kPanel);
     char resources[64]{};
-    std::snprintf(resources, sizeof(resources), "ZLOTO %d   BAZA %d   WROG %zu/%zu",
+    std::snprintf(resources, sizeof(resources), "ZLOTO %d  BAZA %d  WROG %zu/%zu",
         state.gold, state.baseHealth, state.spawnedEnemies, state.totalEnemies);
-    drawText(resources, 14.0F, 65.0F, 0.42F, kGold);
+    drawText(resources, 14.0F, 64.0F, 0.47F, kGold);
     char selection[64]{};
-    std::snprintf(selection, sizeof(selection), "%s koszt %d  pole %zu,%zu  %s",
+    std::snprintf(selection, sizeof(selection), "%s %dG  POLE %zu,%zu  %s",
         towerLabel(state.selectedTower), state.towerCost, state.cursorX, state.cursorZ,
-        state.cursorOccupied ? "WIEZA" : "BUDOWA");
-    drawText(selection, 14.0F, 85.0F, 0.38F, kText);
-    drawWrappedText(state.instruction, 14.0F, 104.0F, 0.31F, kMuted, 45U, 1U);
+        state.cursorOccupied ? "ZAJETE" : "WOLNE");
+    drawText(selection, 14.0F, 85.0F, 0.43F, kText);
+    drawWrappedText(state.instruction, 14.0F, 104.0F, 0.40F, kMuted, 38U, 1U);
 
     if (state.diagnosticsVisible) {
         drawDiagnostics(state);
@@ -241,7 +273,7 @@ void UiRenderer::drawMission(const UiState& state) {
         std::snprintf(speedLabel, sizeof(speedLabel), "TEMPO %dx", state.speedMultiplier);
         drawButton(speed.x, speed.y, speed.width, speed.height, speedLabel, state.speedMultiplier == 2);
         drawButton(cancel.x, cancel.y, cancel.width, cancel.height, "ANULUJ", false);
-        drawWrappedText(state.statusMessage, 168.0F, 133.0F, 0.29F, kGold, 10U, 2U);
+        drawWrappedText(state.statusMessage, 168.0F, 133.0F, 0.40F, kGold, 12U, 2U);
     }
 
     const TouchRect build = TouchUiLayout::rectFor(TouchUiAction::BuildOrSelect);
@@ -262,20 +294,18 @@ void UiRenderer::drawDiagnostics(const UiState& state) {
     char line[96]{};
     std::snprintf(line, sizeof(line), "FPS %.1f AVG %.1fms MAX %.1fms", fps,
         state.performance.averageFrameMilliseconds, state.performance.worstFrameMilliseconds);
-    drawText(line, 13.0F, 137.0F, 0.36F, state.performance.frameBudgetExceeded() ? kDanger : kText);
-    std::snprintf(line, sizeof(line), "RENDER %.1fms  MEM %luKB", state.performance.lastRenderMilliseconds,
+    drawText(line, 13.0F, 137.0F, 0.40F, state.performance.frameBudgetExceeded() ? kDanger : kText);
+    std::snprintf(line, sizeof(line), "RENDER %.1fms MEM %luKB", state.performance.lastRenderMilliseconds,
         static_cast<unsigned long>(state.performance.freeLinearMemoryBytes / 1024U));
-    drawText(line, 13.0F, 158.0F, 0.36F, state.performance.memoryReserveLow() ? kDanger : kText);
-    std::snprintf(line, sizeof(line), "3D %s %u%% oczy %u sep %.4f", state.stereoEnabled ? "ON" : "OFF",
-        static_cast<unsigned int>(state.maximum3DDepthPercent), static_cast<unsigned int>(state.stereoEyeCount),
-        state.stereoSeparation);
-    drawText(line, 13.0F, 179.0F, 0.34F, kText);
-    std::snprintf(line, sizeof(line), "AUDIO %s HLE %s CH %d", state.audioBackend,
-        state.ndspShimActive ? "ON" : (state.ndspShimAttempted ? "BLAD" : "NIE"), state.audioChannel);
-    drawText(line, 13.0F, 200.0F, 0.34F, kMuted);
+    drawText(line, 13.0F, 158.0F, 0.40F, state.performance.memoryReserveLow() ? kDanger : kText);
+    std::snprintf(line, sizeof(line), "3D %s %u%% OCZY %u", state.stereoEnabled ? "ON" : "OFF",
+        static_cast<unsigned int>(state.maximum3DDepthPercent), static_cast<unsigned int>(state.stereoEyeCount));
+    drawText(line, 13.0F, 179.0F, 0.40F, kText);
+    std::snprintf(line, sizeof(line), "AUDIO %s CH %d", state.audioBackend, state.audioChannel);
+    drawText(line, 13.0F, 200.0F, 0.40F, kMuted);
     std::snprintf(line, sizeof(line), "BUF %s %lu/%lu", state.audioWaveStatus,
         static_cast<unsigned long>(state.audioSamplePosition), static_cast<unsigned long>(state.audioSampleCount));
-    drawText(line, 13.0F, 219.0F, 0.32F, kMuted);
+    drawText(line, 13.0F, 219.0F, 0.40F, kMuted);
 }
 
 void UiRenderer::renderTopOverlay(C3D_RenderTarget* target, const UiState& state) {
@@ -283,14 +313,13 @@ void UiRenderer::renderTopOverlay(C3D_RenderTarget* target, const UiState& state
     if (!composedFrameActive_) beginFrame();
     C2D_Prepare();
     C2D_SceneBegin(target);
-    C2D_DrawRectSolid(8.0F, 8.0F, 0.8F, 180.0F, 28.0F, C2D_Color32(24, 28, 38, 225));
-    C2D_DrawCircleSolid(20.0F, 22.0F, 0.9F, 8.0F, C2D_Color32(244, 190, 48, 255));
-    char gold[16]{};
-    std::snprintf(gold, sizeof(gold), "%d", std::clamp(state.gold, 0, 9999));
-    drawText(gold, 32.0F, 14.0F, 0.46F, kGold);
+    C2D_DrawRectSolid(8.0F, 8.0F, 0.8F, 224.0F, 32.0F, C2D_Color32(24, 28, 38, 235));
+    C2D_DrawCircleSolid(21.0F, 24.0F, 0.9F, 10.0F, C2D_Color32(244, 190, 48, 255));
+    C2D_DrawCircleSolid(18.5F, 21.0F, 0.92F, 3.0F, C2D_Color32(255, 232, 136, 255));
+    drawSegmentNumber(state.gold, 36.0F, 13.0F, 1.05F, kGold);
     char status[48]{};
-    std::snprintf(status, sizeof(status), "HP %d   %zu/%zu", state.baseHealth,
+    std::snprintf(status, sizeof(status), "HP %d   WROG %zu/%zu", state.baseHealth,
         state.spawnedEnemies, state.totalEnemies);
-    drawText(status, 70.0F, 14.0F, 0.46F, kText);
+    drawText(status, 94.0F, 16.0F, 0.48F, kText);
     C2D_Flush();
 }
