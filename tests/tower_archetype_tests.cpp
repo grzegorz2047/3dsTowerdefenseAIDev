@@ -45,6 +45,11 @@ LevelData makeLevel() {
     return level;
 }
 
+void spawnFirstEnemy(Wave& wave) {
+    wave.update(0.11F);
+    expect(wave.spawnedCount() >= 1, "tower test target should be spawned");
+}
+
 void testTowerCatalog() {
     expect(towerCost(TowerType::Ballista) < towerCost(TowerType::Frost), "ballista should be cheapest");
     expect(towerCost(TowerType::Frost) < towerCost(TowerType::Mortar), "mortar should be most expensive");
@@ -72,6 +77,7 @@ void testTowersLaunchDistinctPayloads() {
 void testTowerAimsAtSelectedTarget() {
     const LevelData level = makeLevel();
     Wave wave(level);
+    spawnFirstEnemy(wave);
     Tower tower(level, 2, 1, TowerType::Ballista);
     ProjectilePool projectiles;
 
@@ -105,6 +111,7 @@ void testSplashDamagesNearbyEnemies() {
 void testFrostSlowsAndExpires() {
     const LevelData level = makeLevel();
     Wave wave(level);
+    spawnFirstEnemy(wave);
     Enemy& target = wave.enemyAt(0);
     const float normalSpeed = target.movementSpeed();
 
