@@ -31,6 +31,10 @@ private:
     [[nodiscard]] bool buildLevelMesh(const LevelData& level);
     [[nodiscard]] bool initializeHud();
     void drawScene(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
+    void drawTopOverlay(
+        const Wave& wave,
+        const BuildSystem& buildSystem,
+        const TutorialFlow& tutorialFlow);
     void drawBottomPanel(
         const Camera& camera,
         const Wave& wave,
@@ -59,17 +63,3 @@ private:
     std::size_t projectileVertexOffset_ = 0;
     std::size_t projectileVertexCount_ = 0;
 };
-
-// Citro2D queues rectangles and text until C2D_Flush. Renderer.cpp currently
-// draws the bottom panel before restoring the custom Citro3D state for the top
-// scene. Submit each text batch while the Citro2D state is still active; the
-// first text flush also submits all panel rectangles queued before it.
-#define C2D_DrawText(...) (C2D_DrawText(__VA_ARGS__), C2D_Flush())
-
-// Keep a final safety flush before the frame is transferred to the displays.
-inline void rendererFrameEndWithHudFlush(int flags) {
-    C2D_Flush();
-    C3D_FrameEnd(flags);
-}
-
-#define C3D_FrameEnd rendererFrameEndWithHudFlush
