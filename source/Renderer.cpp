@@ -68,12 +68,12 @@ void appendTile(std::vector<Vertex>& vertices, float x, float z, const TileVisua
         {x + half, y, z - half, visual.r, visual.g, visual.b, 1.0F});
 }
 
-void appendBox(std::vector<Vertex>& vertices, float halfX, float halfZ,
-    float y0, float y1, float r, float g, float b) {
-    const float x0 = -halfX;
-    const float x1 = halfX;
-    const float z0 = -halfZ;
-    const float z1 = halfZ;
+void appendBoxAt(std::vector<Vertex>& vertices, float centerX, float centerZ,
+    float halfX, float halfZ, float y0, float y1, float r, float g, float b) {
+    const float x0 = centerX - halfX;
+    const float x1 = centerX + halfX;
+    const float z0 = centerZ - halfZ;
+    const float z1 = centerZ + halfZ;
     appendQuad(vertices, {x0,y0,z1,r,g,b,1}, {x1,y0,z1,r,g,b,1},
         {x1,y1,z1,r,g,b,1}, {x0,y1,z1,r,g,b,1});
     appendQuad(vertices, {x1,y0,z0,r,g,b,1}, {x0,y0,z0,r,g,b,1},
@@ -84,6 +84,62 @@ void appendBox(std::vector<Vertex>& vertices, float halfX, float halfZ,
         {x0,y1,z1,r,g,b,1}, {x0,y1,z0,r,g,b,1});
     appendQuad(vertices, {x0,y1,z1,r,g,b,1}, {x1,y1,z1,r,g,b,1},
         {x1,y1,z0,r,g,b,1}, {x0,y1,z0,r,g,b,1});
+}
+
+void appendEnemy(std::vector<Vertex>& vertices) {
+    constexpr float leatherR = 0.30F;
+    constexpr float leatherG = 0.16F;
+    constexpr float leatherB = 0.10F;
+    constexpr float clothR = 0.58F;
+    constexpr float clothG = 0.13F;
+    constexpr float clothB = 0.34F;
+    constexpr float skinR = 0.72F;
+    constexpr float skinG = 0.48F;
+    constexpr float skinB = 0.30F;
+    constexpr float shieldR = 0.45F;
+    constexpr float shieldG = 0.48F;
+    constexpr float shieldB = 0.52F;
+
+    appendBoxAt(vertices, -0.13F, 0.0F, 0.09F, 0.11F, 0.06F, 0.28F, leatherR, leatherG, leatherB);
+    appendBoxAt(vertices,  0.13F, 0.0F, 0.09F, 0.11F, 0.06F, 0.28F, leatherR, leatherG, leatherB);
+    appendBoxAt(vertices, 0.0F, 0.0F, 0.23F, 0.15F, 0.26F, 0.66F, clothR, clothG, clothB);
+    appendBoxAt(vertices, 0.0F, 0.0F, 0.15F, 0.14F, 0.66F, 0.91F, skinR, skinG, skinB);
+    appendBoxAt(vertices, -0.29F, 0.0F, 0.06F, 0.08F, 0.38F, 0.66F, skinR, skinG, skinB);
+    appendBoxAt(vertices,  0.29F, 0.0F, 0.06F, 0.08F, 0.38F, 0.66F, skinR, skinG, skinB);
+    appendBoxAt(vertices, -0.35F, 0.02F, 0.07F, 0.23F, 0.30F, 0.74F, shieldR, shieldG, shieldB);
+    appendBoxAt(vertices, 0.0F, -0.12F, 0.18F, 0.04F, 0.86F, 0.97F, leatherR, leatherG, leatherB);
+}
+
+void appendTower(std::vector<Vertex>& vertices) {
+    constexpr float stoneR = 0.43F;
+    constexpr float stoneG = 0.49F;
+    constexpr float stoneB = 0.57F;
+    constexpr float darkStoneR = 0.27F;
+    constexpr float darkStoneG = 0.32F;
+    constexpr float darkStoneB = 0.39F;
+    constexpr float woodR = 0.42F;
+    constexpr float woodG = 0.24F;
+    constexpr float woodB = 0.10F;
+    constexpr float metalR = 0.72F;
+    constexpr float metalG = 0.76F;
+    constexpr float metalB = 0.80F;
+
+    appendBoxAt(vertices, 0.0F, 0.0F, 0.42F, 0.42F, 0.06F, 0.22F, darkStoneR, darkStoneG, darkStoneB);
+    appendBoxAt(vertices, 0.0F, 0.0F, 0.31F, 0.31F, 0.20F, 0.88F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, 0.0F, 0.0F, 0.39F, 0.39F, 0.86F, 1.00F, darkStoneR, darkStoneG, darkStoneB);
+    appendBoxAt(vertices, -0.30F, -0.30F, 0.09F, 0.09F, 0.98F, 1.19F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices,  0.30F, -0.30F, 0.09F, 0.09F, 0.98F, 1.19F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, -0.30F,  0.30F, 0.09F, 0.09F, 0.98F, 1.19F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices,  0.30F,  0.30F, 0.09F, 0.09F, 0.98F, 1.19F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, 0.0F, 0.0F, 0.08F, 0.27F, 1.02F, 1.11F, woodR, woodG, woodB);
+    appendBoxAt(vertices, -0.22F, 0.0F, 0.22F, 0.04F, 1.05F, 1.13F, metalR, metalG, metalB);
+    appendBoxAt(vertices,  0.22F, 0.0F, 0.22F, 0.04F, 1.05F, 1.13F, metalR, metalG, metalB);
+    appendBoxAt(vertices, 0.0F, -0.28F, 0.04F, 0.12F, 1.07F, 1.15F, metalR, metalG, metalB);
+}
+
+void appendProjectile(std::vector<Vertex>& vertices) {
+    appendBoxAt(vertices, 0.0F, 0.0F, 0.035F, 0.13F, -0.025F, 0.025F, 0.78F, 0.48F, 0.13F);
+    appendBoxAt(vertices, 0.0F, -0.15F, 0.07F, 0.06F, -0.05F, 0.05F, 0.82F, 0.86F, 0.90F);
 }
 
 float worldX(const LevelData& level, std::size_t gridX) {
@@ -127,7 +183,7 @@ bool Renderer::initialize(const LevelData& level) {
 
 bool Renderer::buildLevelMesh(const LevelData& level) {
     std::vector<Vertex> vertices;
-    vertices.reserve(static_cast<std::size_t>(level.width) * level.height * 6U + 300U);
+    vertices.reserve(static_cast<std::size_t>(level.width) * level.height * 6U + 1200U);
     const float offsetX = -static_cast<float>(level.width) * 0.5F + 0.5F;
     const float offsetZ = -static_cast<float>(level.height) * 0.5F + 0.5F;
     for (std::size_t z = 0; z < level.height; ++z) {
@@ -139,13 +195,13 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
 
     levelVertexCount_ = vertices.size();
     enemyVertexOffset_ = vertices.size();
-    appendBox(vertices, 0.24F, 0.18F, 0.05F, 0.92F, 0.58F, 0.13F, 0.34F);
+    appendEnemy(vertices);
     enemyVertexCount_ = vertices.size() - enemyVertexOffset_;
     towerVertexOffset_ = vertices.size();
-    appendBox(vertices, 0.38F, 0.38F, 0.05F, 1.12F, 0.43F, 0.49F, 0.57F);
+    appendTower(vertices);
     towerVertexCount_ = vertices.size() - towerVertexOffset_;
     projectileVertexOffset_ = vertices.size();
-    appendBox(vertices, 0.04F, 0.14F, -0.03F, 0.03F, 0.82F, 0.58F, 0.16F);
+    appendProjectile(vertices);
     projectileVertexCount_ = vertices.size() - projectileVertexOffset_;
 
     const std::size_t bytes = vertices.size() * sizeof(Vertex);
