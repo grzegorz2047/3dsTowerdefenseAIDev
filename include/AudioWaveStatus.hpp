@@ -30,3 +30,7 @@ enum class AudioWaveStatus : std::uint8_t {
         default: return "UNKNOWN";
     }
 }
+
+[[nodiscard]] constexpr bool audioWaveStatusActive(AudioWaveStatus status) {
+    return status == AudioWaveStatus::Queued || status == AudioWaveStatus::Playing;
+}
