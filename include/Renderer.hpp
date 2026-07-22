@@ -8,6 +8,7 @@
 #include "BuildSystem.hpp"
 #include "Camera.hpp"
 #include "Level.hpp"
+#include "TutorialFlow.hpp"
 #include "Wave.hpp"
 
 class Renderer {
@@ -19,14 +20,22 @@ public:
     Renderer& operator=(const Renderer&) = delete;
 
     [[nodiscard]] bool initialize(const LevelData& level);
-    void render(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
+    void render(
+        const Camera& camera,
+        const Wave& wave,
+        const BuildSystem& buildSystem,
+        const TutorialFlow& tutorialFlow);
     void shutdown();
 
 private:
     [[nodiscard]] bool buildLevelMesh(const LevelData& level);
     [[nodiscard]] bool initializeHud();
     void drawScene(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
-    void drawBottomPanel(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
+    void drawBottomPanel(
+        const Camera& camera,
+        const Wave& wave,
+        const BuildSystem& buildSystem,
+        const TutorialFlow& tutorialFlow);
 
     const LevelData* level_ = nullptr;
     C3D_RenderTarget* topTarget_ = nullptr;
