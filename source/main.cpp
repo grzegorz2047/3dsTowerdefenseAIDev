@@ -64,8 +64,16 @@ void renderAudioDiagnostics(const AudioSystem& audioSystem) {
         audioWaveStatusName(audioSystem.diagnosticWaveStatus()),
         static_cast<unsigned long>(audioSystem.diagnosticSamplePosition()),
         static_cast<unsigned long>(audioSystem.diagnosticSampleCount()));
-    std::printf("PROBE:%08lX ACTIVE:%s EVER:%s\n\n", static_cast<unsigned long>(audioSystem.probeResult()),
+    std::printf("PROBE:%08lX ACTIVE:%s EVER:%s\n", static_cast<unsigned long>(audioSystem.probeResult()),
         audioSystem.channelActive() ? "TAK" : "NIE", audioSystem.channelEverActive() ? "TAK" : "NIE");
+}
+
+void renderStereoDiagnostics(const Renderer& renderer, const GameSettings& settings) {
+    std::printf("3D:%s LIMIT:%u%% OCZY:%u\n", settings.stereoEnabled ? "ON" : "OFF",
+        static_cast<unsigned int>(settings.maximum3DDepthPercent),
+        static_cast<unsigned int>(renderer.lastEyeCount()));
+    std::printf("SUWAK:%3.0f%% SEPARACJA:%.4f\n", renderer.lastStereoSlider() * 100.0F,
+        renderer.lastStereoSeparation());
 }
 
 void renderCampaignMenu(PrintConsole& console, const CampaignProgress& progress, const SaveData& saveData,
@@ -93,6 +101,9 @@ void renderCampaignMenu(PrintConsole& console, const CampaignProgress& progress,
     std::printf("\nDZWIEK:%s [X]  START:%ux [Y]\n",
         saveData.settings.soundEnabled ? "ON" : "OFF",
         static_cast<unsigned int>(saveData.settings.preferredSpeed));
+    std::printf("3D:%s [L]  LIMIT:%u%% [R]\n",
+        saveData.settings.stereoEnabled ? "ON" : "OFF",
+        static_cast<unsigned int>(saveData.settings.maximum3DDepthPercent));
     if (!saveMessage.empty()) std::printf("%s\n", saveMessage.c_str());
     if (saveProblem) std::printf("USZKODZONY ZAPIS: SELECT+Y RESET\n");
     std::printf("D-PAD: WYBOR   A: GRAJ   START: WYJSCIE\n");
@@ -119,6 +130,13 @@ std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progr
         } else if (input.pressed(KEY_Y)) {
             saveData.settings.preferredSpeed = saveData.settings.preferredSpeed == 1 ? 2 : 1;
             saveProblem = !persistSave(progress, saveData, saveMessage);
+        } else if (input.pressed(KEY_L)) {
+            saveData.settings.stereoEnabled = !saveData.settings.stereoEnabled;
+            saveProblem = !persistSave(progress, saveData, saveMessage);
+        } else if (input.pressed(KEY_R)) {
+            saveData.settings.maximum3DDepthPercent =
+                Stereo3D::nextDepthLimit(saveData.settings.maximum3DDepthPercent);
+            saveProblem = !persistSave(progress, saveData, saveMessage);
         }
 
         const std::size_t selectableCount = progress.unlockedCount();
@@ -138,7 +156,8 @@ std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progr
 
 void renderTouchHud(PrintConsole& console, const CampaignMission& mission, const Wave& wave,
     const BuildSystem& buildSystem, const TutorialFlow& tutorialFlow, const AudioSystem& audioSystem,
-    HudMode hudMode, bool paused, int speedMultiplier, const MissionResult& missionResult) {
+    const Renderer& renderer, const GameSettings& settings, HudMode hudMode, bool paused,
+    int speedMultiplier, const MissionResult& missionResult) {
     consoleSelect(&console);
     std::printf("\x1b[2J\x1b[H");
     std::printf("\x1b[36m%s\x1b[0m\n", mission.title);
@@ -170,9 +189,13 @@ void renderTouchHud(PrintConsole& console, const CampaignMission& mission, const
 
     if (showAudioDiagnostics(hudMode)) {
         std::printf("\n");
+        renderStereoDiagnostics(renderer, settings);
         renderAudioDiagnostics(audioSystem);
     } else {
-        std::printf("\nDZWIEK: %s  SELECT: diagnostyka\n", audioSystem.available() ? "WLACZONY" : "WYLACZONY");
+        std::printf("\n3D:%s %u%%  DZWIEK:%s\nSELECT: diagnostyka\n",
+            settings.stereoEnabled ? "ON" : "OFF",
+            static_cast<unsigned int>(settings.maximum3DDepthPercent),
+            audioSystem.available() ? "WLACZONY" : "WYLACZONY");
     }
 }
 
@@ -291,10 +314,10 @@ MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t mission
         const AudioFrameState audioState{tutorialFlow.phase(), buildSystem.projectiles().activeCount()};
         if (saveData.settings.soundEnabled) audioSystem.playMask(audioRouter.update(audioState));
         audioSystem.updateProbe();
-        renderTouchHud(bottomConsole, mission, wave, buildSystem, tutorialFlow, audioSystem,
-            hudMode, paused, speedMultiplier, missionResult);
         renderer.render(camera, wave, buildSystem, tutorialFlow,
             saveData.settings.stereoEnabled, saveData.settings.maximum3DDepthPercent);
+        renderTouchHud(bottomConsole, mission, wave, buildSystem, tutorialFlow, audioSystem,
+            renderer, saveData.settings, hudMode, paused, speedMultiplier, missionResult);
     }
 
     audioSystem.shutdown();

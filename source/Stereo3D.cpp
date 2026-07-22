@@ -15,3 +15,11 @@ StereoFramePlan Stereo3D::plan(float sliderState, bool enabled, std::uint8_t max
     }
     return result;
 }
+
+std::uint8_t Stereo3D::nextDepthLimit(std::uint8_t currentDepthPercent) {
+    if (currentDepthPercent < 25U) return 25U;
+    if (currentDepthPercent < 50U) return 50U;
+    if (currentDepthPercent < 75U) return 75U;
+    if (currentDepthPercent < 100U) return 100U;
+    return 25U;
+}
