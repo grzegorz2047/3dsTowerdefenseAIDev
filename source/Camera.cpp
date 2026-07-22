@@ -13,6 +13,7 @@ constexpr float kFarPlane = 100.0F;
 constexpr float kCameraPitch = 0.72F;
 constexpr float kCameraDistance = -17.0F;
 constexpr float kCameraHeight = -5.4F;
+constexpr float kStereoConvergenceDistance = 17.0F;
 constexpr float kPanSpeed = 0.018F;
 constexpr float kMapLimit = 6.0F;
 constexpr float kQuarterTurn = kPi * 0.5F;
@@ -33,43 +34,27 @@ void Camera::update(const InputSnapshot& input, float deltaSeconds) {
     focusX_ = std::clamp(focusX_ + worldX, -kMapLimit, kMapLimit);
     focusZ_ = std::clamp(focusZ_ + worldZ, -kMapLimit, kMapLimit);
 
-    if (input.pressed(KEY_L)) {
-        rotationIndex_ = (rotationIndex_ + 3) % 4;
-    }
-    if (input.pressed(KEY_R)) {
-        rotationIndex_ = (rotationIndex_ + 1) % 4;
-    }
+    if (input.pressed(KEY_L)) rotationIndex_ = (rotationIndex_ + 3) % 4;
+    if (input.pressed(KEY_R)) rotationIndex_ = (rotationIndex_ + 1) % 4;
 }
 
 void Camera::writeProjection(C3D_Mtx& destination) const {
-    Mtx_PerspTilt(
-        &destination,
-        kFieldOfView,
-        kAspectRatio,
-        kNearPlane,
-        kFarPlane,
-        false);
+    Mtx_PerspTilt(&destination, kFieldOfView, kAspectRatio, kNearPlane, kFarPlane, false);
+}
+
+void Camera::writeStereoProjection(C3D_Mtx& destination, float interocularDistance) const {
+    Mtx_PerspStereoTilt(&destination, kFieldOfView, kAspectRatio, kNearPlane, kFarPlane,
+        interocularDistance, kStereoConvergenceDistance, false);
 }
 
 void Camera::writeView(C3D_Mtx& destination) const {
     Mtx_Identity(&destination);
     Mtx_Translate(&destination, 0.0F, kCameraHeight, kCameraDistance, true);
     Mtx_RotateX(&destination, kCameraPitch, true);
-    Mtx_RotateY(
-        &destination,
-        static_cast<float>(rotationIndex_) * kQuarterTurn,
-        true);
+    Mtx_RotateY(&destination, static_cast<float>(rotationIndex_) * kQuarterTurn, true);
     Mtx_Translate(&destination, -focusX_, 0.0F, -focusZ_, true);
 }
 
-int Camera::rotationIndex() const {
-    return rotationIndex_;
-}
-
-float Camera::focusX() const {
-    return focusX_;
-}
-
-float Camera::focusZ() const {
-    return focusZ_;
-}
+int Camera::rotationIndex() const { return rotationIndex_; }
+float Camera::focusX() const { return focusX_; }
+float Camera::focusZ() const { return focusZ_; }
