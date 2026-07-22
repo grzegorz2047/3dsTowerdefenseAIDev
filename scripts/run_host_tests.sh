@@ -56,6 +56,12 @@ COMMON_FLAGS=(
 
 "$HOST_CXX" \
   "${COMMON_FLAGS[@]}" \
+  "$ROOT/tests/touch_ui_layout_tests.cpp" \
+  "$ROOT/source/TouchUiLayout.cpp" \
+  -o "$BUILD_DIR/touch-ui-layout-tests"
+
+"$HOST_CXX" \
+  "${COMMON_FLAGS[@]}" \
   "$ROOT/tests/tutorial_flow_tests.cpp" \
   "$ROOT/source/BuildFeedback.cpp" \
   "$ROOT/source/TutorialFlow.cpp" \
@@ -102,6 +108,7 @@ COMMON_FLAGS=(
 "$BUILD_DIR/tower-archetype-tests"
 "$BUILD_DIR/tower-economy-tests"
 "$BUILD_DIR/touch-gesture-tests"
+"$BUILD_DIR/touch-ui-layout-tests"
 "$BUILD_DIR/tutorial-flow-tests"
 "$BUILD_DIR/audio-events-tests"
 "$BUILD_DIR/audio-backend-tests"
