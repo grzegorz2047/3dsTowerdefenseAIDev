@@ -36,17 +36,25 @@ enum class TowerType : std::uint8_t {
 
 class Tower {
 public:
+    static constexpr std::uint8_t kMaximumLevel = 3;
+
     Tower() = default;
     Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ, TowerType type = TowerType::Ballista);
 
     void update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles);
     void resetCombat();
+    [[nodiscard]] bool upgrade();
 
     [[nodiscard]] float x() const;
     [[nodiscard]] float z() const;
     [[nodiscard]] std::size_t gridX() const;
     [[nodiscard]] std::size_t gridZ() const;
     [[nodiscard]] TowerType type() const;
+    [[nodiscard]] std::uint8_t level() const;
+    [[nodiscard]] int investedGold() const;
+    [[nodiscard]] int upgradeCost() const;
+    [[nodiscard]] int sellValue() const;
+    [[nodiscard]] bool canUpgrade() const;
     [[nodiscard]] bool valid() const;
     [[nodiscard]] int shotsFired() const;
 
@@ -57,6 +65,8 @@ private:
     std::size_t gridX_ = 0;
     std::size_t gridZ_ = 0;
     TowerType type_ = TowerType::Ballista;
+    std::uint8_t level_ = 1;
+    int investedGold_ = 0;
     int shotsFired_ = 0;
     bool valid_ = false;
 };

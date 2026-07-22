@@ -1,5 +1,7 @@
 #include "Economy.hpp"
 
+#include <limits>
+
 void Economy::reset() {
     gold_ = kInitialGold;
     rewarded_.fill(false);
@@ -13,13 +15,20 @@ bool Economy::trySpend(int amount) {
     return true;
 }
 
+bool Economy::credit(int amount) {
+    if (amount <= 0 || gold_ > std::numeric_limits<int>::max() - amount) {
+        return false;
+    }
+    gold_ += amount;
+    return true;
+}
+
 bool Economy::rewardEnemy(std::size_t enemyIndex) {
     if (enemyIndex >= rewarded_.size() || rewarded_[enemyIndex]) {
         return false;
     }
     rewarded_[enemyIndex] = true;
-    gold_ += kKillReward;
-    return true;
+    return credit(kKillReward);
 }
 
 int Economy::gold() const {
