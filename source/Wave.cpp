@@ -60,6 +60,29 @@ void Wave::reset() {
     baseHealth_ = kInitialBaseHealth;
 }
 
+void Wave::applyAreaEffect(
+    float centerX,
+    float centerZ,
+    float radius,
+    int damage,
+    float slowDurationSeconds,
+    float slowMovementMultiplier) {
+    const float radiusSquared = std::max(radius, 0.0F) * std::max(radius, 0.0F);
+    for (std::size_t index = 0; index < spawnedCount_; ++index) {
+        Enemy& enemy = enemies_[index];
+        if (resolved_[index] || enemy.dead() || enemy.reachedBase()) {
+            continue;
+        }
+        const float dx = enemy.x() - centerX;
+        const float dz = enemy.z() - centerZ;
+        if (dx * dx + dz * dz > radiusSquared) {
+            continue;
+        }
+        enemy.takeDamage(damage);
+        enemy.applySlow(slowDurationSeconds, slowMovementMultiplier);
+    }
+}
+
 std::size_t Wave::spawnedCount() const { return spawnedCount_; }
 std::size_t Wave::enemyCount() const { return enemies_.size(); }
 Enemy& Wave::enemyAt(std::size_t index) { return enemies_.at(index); }
