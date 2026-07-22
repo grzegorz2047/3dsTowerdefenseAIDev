@@ -7,5 +7,6 @@ InputSnapshot InputSystem::poll() const {
     snapshot.down = hidKeysDown();
     snapshot.held = hidKeysHeld();
     hidCircleRead(&snapshot.circle);
+    hidTouchRead(&snapshot.touch);
     return snapshot;
 }
