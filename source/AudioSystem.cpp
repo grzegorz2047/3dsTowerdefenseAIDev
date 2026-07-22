@@ -11,9 +11,6 @@ namespace {
 
 constexpr float kPi = 3.14159265358979323846F;
 
-// Azahar's DSP HLE does not execute the DSP program and only requires a
-// component buffer to pass through libctru's normal NDSP initialization path.
-// This project-owned all-zero buffer contains no Nintendo firmware data.
 alignas(0x80) constexpr std::array<std::uint8_t, 0x400> kSyntheticHleComponent{};
 
 struct CueShape {
@@ -36,6 +33,10 @@ CueShape shapeFor(AudioCue cue) {
         case AudioCue::Count: break;
     }
     return {0.1F, 440.0F, 440.0F, 0.3F, false};
+}
+
+float noteFrequency(int semitoneFromA4) {
+    return 440.0F * std::pow(2.0F, static_cast<float>(semitoneFromA4) / 12.0F);
 }
 
 }  // namespace
@@ -86,15 +87,9 @@ bool AudioSystem::initialize() {
         return false;
     }
 
-    if (!generateSamples() || !generateDiagnosticTone()) {
+    if (!generateSamples() || !generateDiagnosticTone() || !generateMissionMusic()) {
         shutdown();
         return false;
-    }
-
-    if (backend_ == AudioBackend::Ndsp) {
-        playDiagnosticTone();
-    } else {
-        play(AudioCue::BuildSuccess);
     }
     return true;
 }
@@ -120,6 +115,15 @@ void AudioSystem::initializeNdspChannels() {
         mix[1] = 1.0F;
         ndspChnSetMix(channel, mix);
     }
+
+    ndspChnReset(kMusicChannel);
+    ndspChnSetInterp(kMusicChannel, NDSP_INTERP_LINEAR);
+    ndspChnSetRate(kMusicChannel, static_cast<float>(kSampleRate));
+    ndspChnSetFormat(kMusicChannel, NDSP_FORMAT_MONO_PCM16);
+    float musicMix[12]{};
+    musicMix[0] = 0.24F;
+    musicMix[1] = 0.24F;
+    ndspChnSetMix(kMusicChannel, musicMix);
 }
 
 void AudioSystem::play(AudioCue cue) {
@@ -152,6 +156,25 @@ void AudioSystem::playDiagnosticTone() {
 
     if (backend_ == AudioBackend::Csnd) {
         play(AudioCue::BuildSuccess);
+    }
+}
+
+void AudioSystem::startMissionMusic() {
+    if (backend_ != AudioBackend::Ndsp || missionMusic_.data == nullptr || missionMusic_.count == 0U) {
+        return;
+    }
+    ndspChnWaveBufClear(kMusicChannel);
+    std::memset(&musicWaveBuffer_, 0, sizeof(musicWaveBuffer_));
+    musicWaveBuffer_.data_vaddr = missionMusic_.data;
+    musicWaveBuffer_.nsamples = static_cast<u32>(missionMusic_.count);
+    musicWaveBuffer_.looping = true;
+    ndspChnWaveBufAdd(kMusicChannel, &musicWaveBuffer_);
+}
+
+void AudioSystem::stopMusic() {
+    if (backend_ == AudioBackend::Ndsp) {
+        ndspChnWaveBufClear(kMusicChannel);
+        musicWaveBuffer_ = {};
     }
 }
 
@@ -227,6 +250,7 @@ void AudioSystem::updateProbe() {
 
 void AudioSystem::stopAll() {
     if (backend_ == AudioBackend::Ndsp) {
+        stopMusic();
         ndspChnWaveBufClear(kDiagnosticChannel);
         diagnosticWaveBuffer_ = {};
         diagnosticSamplePosition_ = 0;
@@ -268,6 +292,7 @@ void AudioSystem::shutdown() {
     probeResult_ = static_cast<Result>(kAudioResultNotAttempted);
     probeState_ = {};
     diagnosticWaveBuffer_ = {};
+    musicWaveBuffer_ = {};
     diagnosticSamplePosition_ = 0;
 }
 
@@ -358,6 +383,42 @@ bool AudioSystem::generateDiagnosticTone() {
     return true;
 }
 
+bool AudioSystem::generateMissionMusic() {
+    constexpr float kSecondsPerBeat = 0.40F;
+    constexpr std::size_t kBeatCount = 16U;
+    constexpr std::array<int, kBeatCount> melody{
+        -12, -7, -5, -7, -12, -7, -3, -7,
+        -10, -5, -3, -5, -12, -7, -5, -3,
+    };
+    constexpr std::array<int, 4U> bass{-24, -22, -20, -19};
+    const std::size_t samplesPerBeat = static_cast<std::size_t>(kSecondsPerBeat * static_cast<float>(kSampleRate));
+    const std::size_t sampleCount = samplesPerBeat * kBeatCount;
+    auto* data = static_cast<std::int16_t*>(linearAlloc(sampleCount * sizeof(std::int16_t)));
+    if (data == nullptr) return false;
+
+    float melodyPhase = 0.0F;
+    float bassPhase = 0.0F;
+    for (std::size_t index = 0; index < sampleCount; ++index) {
+        const std::size_t beat = index / samplesPerBeat;
+        const float beatProgress = static_cast<float>(index % samplesPerBeat) / static_cast<float>(samplesPerBeat);
+        const float melodyFrequency = noteFrequency(melody[beat]);
+        const float bassFrequency = noteFrequency(bass[beat / 4U]);
+        melodyPhase += 2.0F * kPi * melodyFrequency / static_cast<float>(kSampleRate);
+        bassPhase += 2.0F * kPi * bassFrequency / static_cast<float>(kSampleRate);
+        const float noteEnvelope = std::min(1.0F, beatProgress * 18.0F) *
+            std::min(1.0F, (1.0F - beatProgress) * 5.0F);
+        const float pulse = std::sin(melodyPhase) * 0.23F * noteEnvelope;
+        const float bassTone = std::sin(bassPhase) * 0.15F;
+        const float shimmer = std::sin(melodyPhase * 2.0F) * 0.04F * noteEnvelope;
+        const float sample = std::clamp(pulse + bassTone + shimmer, -0.55F, 0.55F);
+        data[index] = static_cast<std::int16_t>(sample * 32767.0F);
+    }
+
+    DSP_FlushDataCache(data, sampleCount * sizeof(std::int16_t));
+    missionMusic_ = {data, sampleCount};
+    return true;
+}
+
 void AudioSystem::freeSamples() {
     for (Sample& sample : samples_) {
         if (sample.data != nullptr) {
@@ -368,5 +429,9 @@ void AudioSystem::freeSamples() {
     if (diagnosticTone_.data != nullptr) {
         linearFree(diagnosticTone_.data);
         diagnosticTone_ = {};
+    }
+    if (missionMusic_.data != nullptr) {
+        linearFree(missionMusic_.data);
+        missionMusic_ = {};
     }
 }
