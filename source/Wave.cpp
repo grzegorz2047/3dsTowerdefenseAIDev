@@ -55,7 +55,7 @@ void Wave::reset() {
         enemy.reset();
     }
     resolved_.fill(false);
-    spawnedCount_ = enemies_.empty() ? 0U : 1U;
+    spawnedCount_ = 0U;
     spawnTimer_ = 0.0F;
     baseHealth_ = kInitialBaseHealth;
 }
