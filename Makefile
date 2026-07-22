@@ -123,6 +123,8 @@ all: 3dsx
 3dsx: $(OUTPUT).3dsx
 cia: $(OUTPUT).cia
 
+main.o: CXXFLAGS += -include $(TOPDIR)/include/MainOverrides.hpp
+
 $(OUTPUT).3dsx: $(OUTPUT).elf $(_3DSXDEPS)
 $(OFILES_SOURCES): $(HFILES)
 $(OUTPUT).elf: $(OFILES)
