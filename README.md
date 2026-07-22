@@ -16,7 +16,8 @@ Pełna trójwymiarowa gra typu tower defense dla Nintendo 3DS, tworzona jako apl
 ## Dokumentacja
 
 - [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) — plan kampanii, poziomów, mechanik i architektury gry;
-- [`docs/BUILD_AND_RELEASE.md`](docs/BUILD_AND_RELEASE.md) — plan budowania, pakowania i publikowania wersji `.3dsx` oraz `.cia`.
+- [`docs/BUILD_AND_RELEASE.md`](docs/BUILD_AND_RELEASE.md) — plan budowania, pakowania i publikowania wersji `.3dsx` oraz `.cia`;
+- [`docs/PERFORMANCE_TESTING.md`](docs/PERFORMANCE_TESTING.md) — powtarzalny test FPS, renderowania, pamięci i stabilności na oryginalnym Nintendo 3DS XL.
 
 ## Planowany stos technologiczny
 
