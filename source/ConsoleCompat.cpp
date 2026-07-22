@@ -9,16 +9,21 @@
 
 namespace {
 
-constexpr int kSafeConsoleWidth = 30;
 constexpr int kMaximumRows = 30;
 constexpr float kTextScale = 0.46F;
 constexpr float kLineHeight = 9.2F;
 
+enum class BottomUiMode {
+    None,
+    Campaign,
+    Mission,
+};
+
 std::array<std::array<char, 64>, kMaximumRows> gRows{};
 char gLastTitle[64]{};
 bool gClearRequested = false;
-bool gCampaignMode = false;
 bool gCitro2dReady = false;
+BottomUiMode gMode = BottomUiMode::None;
 C3D_RenderTarget* gBottomTarget = nullptr;
 C2D_TextBuf gTextBuffer = nullptr;
 
@@ -40,9 +45,22 @@ void drawTextLine(const char* text, float x, float y, float scale, u32 color) {
     C2D_DrawText(&parsed, C2D_WithColor, x, y, 0.5F, scale, scale, color);
 }
 
-void renderCampaignFrame() {
-    if (!gCitro2dReady || gBottomTarget == nullptr || gTextBuffer == nullptr) {
-        gfxSwapBuffers();
+void drawPanels() {
+    C2D_DrawRectSolid(0.0F, 0.0F, 0.1F, 320.0F, 28.0F, C2D_Color32(24, 43, 62, 255));
+    if (gMode == BottomUiMode::Campaign) {
+        C2D_DrawRectSolid(5.0F, 31.0F, 0.1F, 310.0F, 78.0F, C2D_Color32(20, 29, 40, 255));
+        C2D_DrawRectSolid(5.0F, 112.0F, 0.1F, 310.0F, 78.0F, C2D_Color32(20, 29, 40, 255));
+        C2D_DrawRectSolid(5.0F, 193.0F, 0.1F, 310.0F, 42.0F, C2D_Color32(20, 29, 40, 255));
+    } else {
+        C2D_DrawRectSolid(5.0F, 31.0F, 0.1F, 310.0F, 37.0F, C2D_Color32(20, 29, 40, 255));
+        C2D_DrawRectSolid(5.0F, 72.0F, 0.1F, 310.0F, 58.0F, C2D_Color32(20, 29, 40, 255));
+        C2D_DrawRectSolid(5.0F, 134.0F, 0.1F, 310.0F, 56.0F, C2D_Color32(20, 29, 40, 255));
+        C2D_DrawRectSolid(5.0F, 194.0F, 0.1F, 310.0F, 41.0F, C2D_Color32(20, 29, 40, 255));
+    }
+}
+
+void renderBottomFrame() {
+    if (!gCitro2dReady || gBottomTarget == nullptr || gTextBuffer == nullptr || gMode == BottomUiMode::None) {
         return;
     }
 
@@ -50,11 +68,7 @@ void renderCampaignFrame() {
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
     C2D_TargetClear(gBottomTarget, C2D_Color32(12, 18, 28, 255));
     C2D_SceneBegin(gBottomTarget);
-
-    C2D_DrawRectSolid(0.0F, 0.0F, 0.1F, 320.0F, 28.0F, C2D_Color32(24, 43, 62, 255));
-    C2D_DrawRectSolid(5.0F, 31.0F, 0.1F, 310.0F, 78.0F, C2D_Color32(20, 29, 40, 255));
-    C2D_DrawRectSolid(5.0F, 112.0F, 0.1F, 310.0F, 78.0F, C2D_Color32(20, 29, 40, 255));
-    C2D_DrawRectSolid(5.0F, 193.0F, 0.1F, 310.0F, 42.0F, C2D_Color32(20, 29, 40, 255));
+    drawPanels();
 
     for (int row = 1; row <= 24; ++row) {
         const char* text = gRows[static_cast<std::size_t>(row - 1)].data();
@@ -67,9 +81,13 @@ void renderCampaignFrame() {
                 C2D_Color32(48, 91, 119, 255));
         }
 
-        const u32 color = row == 1
-            ? C2D_Color32(112, 225, 255, 255)
-            : (selected ? C2D_Color32(255, 238, 166, 255) : C2D_Color32(236, 240, 244, 255));
+        u32 color = C2D_Color32(236, 240, 244, 255);
+        if (row == 1) color = C2D_Color32(112, 225, 255, 255);
+        else if (selected) color = C2D_Color32(255, 238, 166, 255);
+        else if (gMode == BottomUiMode::Mission && (row == 3 || row == 4)) {
+            color = C2D_Color32(255, 222, 112, 255);
+        }
+
         drawTextLine(text, 10.0F, y, row == 1 ? 0.50F : kTextScale, color);
     }
 
@@ -109,11 +127,16 @@ void citadelGraphicsFini() {
     if (gCitro2dReady) C2D_Fini();
     gCitro2dReady = false;
     gBottomTarget = nullptr;
+    gMode = BottomUiMode::None;
     C3D_Fini();
 }
 
+void drawBottomUiOverlay() {
+    if (gMode == BottomUiMode::Mission) renderBottomFrame();
+}
+
 void citadelSwapBuffers() {
-    if (gCampaignMode) renderCampaignFrame();
+    if (gMode == BottomUiMode::Campaign) renderBottomFrame();
     else gfxSwapBuffers();
 }
 
@@ -134,33 +157,25 @@ int citadelConsolePrintf(const char* format, ...) {
         const int row = va_arg(arguments, int);
         const char* title = va_arg(arguments, const char*);
         const char* safeTitle = title != nullptr ? title : "";
-        const bool campaignTitle = std::strcmp(safeTitle, "CITADEL DEFENSE 3D") == 0;
+        const BottomUiMode nextMode = std::strcmp(safeTitle, "CITADEL DEFENSE 3D") == 0
+            ? BottomUiMode::Campaign
+            : BottomUiMode::Mission;
 
-        if (campaignTitle) {
-            if (!gCampaignMode || gClearRequested) clearRows();
-            gCampaignMode = true;
-            storeRow(row, safeTitle);
-            std::snprintf(gLastTitle, sizeof(gLastTitle), "%s", safeTitle);
-            gClearRequested = false;
-            va_end(arguments);
-            return 0;
+        if (gMode != nextMode || gClearRequested || std::strncmp(gLastTitle, safeTitle, sizeof(gLastTitle) - 1U) != 0) {
+            clearRows();
         }
-
-        if (gCampaignMode || (gClearRequested && std::strncmp(gLastTitle, safeTitle, sizeof(gLastTitle) - 1U) != 0)) {
-            ::printf("\x1b[2J\x1b[1;1H");
-        }
-        gCampaignMode = false;
+        gMode = nextMode;
+        storeRow(row, safeTitle);
         std::snprintf(gLastTitle, sizeof(gLastTitle), "%s", safeTitle);
         gClearRequested = false;
-        result = ::printf("\x1b[%d;1H\x1b[36m%-30.30s\x1b[0m", row, safeTitle);
         va_end(arguments);
-        return result;
+        return 0;
     }
 
     if (std::strcmp(format, "\x1b[%d;1H%-39.39s") == 0) {
         const int row = va_arg(arguments, int);
         const char* text = va_arg(arguments, const char*);
-        if (gCampaignMode) {
+        if (gMode != BottomUiMode::None) {
             if (gClearRequested) {
                 clearRows();
                 gClearRequested = false;
