@@ -57,6 +57,11 @@ COMMON_FLAGS=(
 
 "$HOST_CXX" \
   "${COMMON_FLAGS[@]}" \
+  "$ROOT/tests/audio_wave_status_tests.cpp" \
+  -o "$BUILD_DIR/audio-wave-status-tests"
+
+"$HOST_CXX" \
+  "${COMMON_FLAGS[@]}" \
   "$ROOT/tests/hud_text_tests.cpp" \
   "$ROOT/source/HudText.cpp" \
   -o "$BUILD_DIR/hud-text-tests"
@@ -67,14 +72,14 @@ COMMON_FLAGS=(
 "$BUILD_DIR/audio-backend-tests"
 "$BUILD_DIR/audio-probe-tests"
 "$BUILD_DIR/audio-ndsp-shim-tests"
+"$BUILD_DIR/audio-wave-status-tests"
 "$BUILD_DIR/hud-text-tests"
 
 # The fallback UI must expose both NDSP attempts and retain the manual tone.
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
-grep -q "v0.1.14-alpha  NDSP-HLE" "$ROOT/source/main.cpp"
+grep -q "v0.1.16-alpha  NDSP-WBUF" "$ROOT/source/main.cpp"
 grep -q "HLE-SHIM" "$ROOT/source/main.cpp"
-grep -q "ndspInitialResult" "$ROOT/source/main.cpp"
-grep -q "ndspShimResult" "$ROOT/source/main.cpp"
+grep -q "WBUF:%s POS:%lu/%lu" "$ROOT/source/main.cpp"
 grep -q "KEY_B" "$ROOT/source/main.cpp"
 grep -q "playDiagnosticTone" "$ROOT/source/main.cpp"
 
@@ -88,6 +93,14 @@ if find "$ROOT" -type f \( -iname 'dspfirm.cdc' -o -iname '*.cdc' \) | grep -q .
   echo "Proprietary DSP firmware must not be committed" >&2
   exit 1
 fi
+
+# Diagnostic path must match the official devkitPro shape: channel 0, stereo
+# PCM16, interleaved L/R and an observable wave-buffer status.
+grep -q "kDiagnosticChannel = 0" "$ROOT/include/AudioSystem.hpp"
+grep -q "NDSP_FORMAT_STEREO_PCM16" "$ROOT/source/AudioSystem.cpp"
+grep -q "frame \* 2U + 1U" "$ROOT/source/AudioSystem.cpp"
+grep -q "ndspChnGetSamplePos" "$ROOT/source/AudioSystem.cpp"
+grep -q "diagnosticWaveBuffer_.status" "$ROOT/source/AudioSystem.cpp"
 
 grep -q "ndspSetOutputMode(NDSP_OUTPUT_STEREO)" "$ROOT/source/AudioSystem.cpp"
 grep -q "csndPlaySound" "$ROOT/source/AudioSystem.cpp"

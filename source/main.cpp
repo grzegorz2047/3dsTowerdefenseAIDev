@@ -39,7 +39,7 @@ void renderFallbackHud(
     consoleSelect(&console);
     std::printf("\x1b[2J\x1b[H");
     std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
-    std::printf("v0.1.14-alpha  NDSP-HLE\n");
+    std::printf("v0.1.16-alpha  NDSP-WBUF\n");
     std::printf("==============================\n");
     std::printf(
         "AUDIO:%s HLE-SHIM:%s\n",
@@ -54,8 +54,13 @@ void renderFallbackHud(
         static_cast<unsigned long>(audioSystem.csndResult()),
         static_cast<unsigned long>(audioSystem.lastPlayResult()));
     std::printf(
-        "CH:%d PROBE:%08lX ACTIVE:%s EVER:%s\n\n",
+        "CH:%d WBUF:%s POS:%lu/%lu\n",
         audioSystem.lastChannel(),
+        audioWaveStatusName(audioSystem.diagnosticWaveStatus()),
+        static_cast<unsigned long>(audioSystem.diagnosticSamplePosition()),
+        static_cast<unsigned long>(audioSystem.diagnosticSampleCount()));
+    std::printf(
+        "PROBE:%08lX ACTIVE:%s EVER:%s\n\n",
         static_cast<unsigned long>(audioSystem.probeResult()),
         audioSystem.channelActive() ? "TAK" : "NIE",
         audioSystem.channelEverActive() ? "TAK" : "NIE");
@@ -77,7 +82,7 @@ void renderFallbackHud(
     std::printf("STATUS: %s\n\n", buildAttemptMessage(buildSystem.lastBuildResult()));
     std::printf("D-PAD  wybierz niebieskie pole\n");
     std::printf("A      zbuduj wieze / efekt\n");
-    std::printf("B      2 sekundy tonu 880 Hz\n");
+    std::printf("B      2 sekundy tonu stereo\n");
     std::printf("X      uruchom fale\n");
     std::printf("Y      restart po wyniku\n");
     std::printf("START  wyjscie\n");
