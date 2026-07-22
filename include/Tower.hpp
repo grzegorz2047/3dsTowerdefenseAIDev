@@ -47,6 +47,8 @@ public:
 
     [[nodiscard]] float x() const;
     [[nodiscard]] float z() const;
+    [[nodiscard]] float aimAngleRadians() const;
+    [[nodiscard]] bool hasTarget() const;
     [[nodiscard]] std::size_t gridX() const;
     [[nodiscard]] std::size_t gridZ() const;
     [[nodiscard]] TowerType type() const;
@@ -61,6 +63,7 @@ public:
 private:
     float x_ = 0.0F;
     float z_ = 0.0F;
+    float aimAngleRadians_ = 0.0F;
     float cooldown_ = 0.0F;
     std::size_t gridX_ = 0;
     std::size_t gridZ_ = 0;
@@ -68,5 +71,6 @@ private:
     std::uint8_t level_ = 1;
     int investedGold_ = 0;
     int shotsFired_ = 0;
+    bool hasTarget_ = false;
     bool valid_ = false;
 };
