@@ -8,6 +8,7 @@
 #include "AudioSystem.hpp"
 #include "BuildSystem.hpp"
 #include "Camera.hpp"
+#include "HudMode.hpp"
 #include "HudText.hpp"
 #include "Input.hpp"
 #include "Level.hpp"
@@ -30,17 +31,7 @@ float calculateFrameSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
     return std::min(elapsed, kMaximumFrameSeconds);
 }
 
-void renderFallbackHud(
-    PrintConsole& console,
-    const Wave& wave,
-    const BuildSystem& buildSystem,
-    const TutorialFlow& tutorialFlow,
-    const AudioSystem& audioSystem) {
-    consoleSelect(&console);
-    std::printf("\x1b[2J\x1b[H");
-    std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
-    std::printf("v0.1.17-alpha  RESULT-FIELDS\n");
-    std::printf("==============================\n");
+void renderAudioDiagnostics(const AudioSystem& audioSystem) {
     std::printf(
         "AUDIO:%s HLE-SHIM:%s\n",
         audioBackendName(audioSystem.backend()),
@@ -64,6 +55,27 @@ void renderFallbackHud(
         static_cast<unsigned long>(audioSystem.probeResult()),
         audioSystem.channelActive() ? "TAK" : "NIE",
         audioSystem.channelEverActive() ? "TAK" : "NIE");
+}
+
+void renderFallbackHud(
+    PrintConsole& console,
+    const Wave& wave,
+    const BuildSystem& buildSystem,
+    const TutorialFlow& tutorialFlow,
+    const AudioSystem& audioSystem,
+    HudMode hudMode) {
+    consoleSelect(&console);
+    std::printf("\x1b[2J\x1b[H");
+    std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
+    std::printf("v0.1.18-alpha  COMPACT-HUD\n");
+    std::printf("==============================\n");
+
+    if (showAudioDiagnostics(hudMode)) {
+        renderAudioDiagnostics(audioSystem);
+    } else {
+        std::printf("DZWIEK: %s\n", audioSystem.available() ? "WLACZONY" : "WYLACZONY");
+        std::printf("SELECT: diagnostyka techniczna\n\n");
+    }
 
     std::printf("\x1b[33mCO TERAZ:\x1b[0m\n%s\n\n", tutorialInstruction(tutorialFlow.phase()));
     std::printf(
@@ -81,10 +93,13 @@ void renderFallbackHud(
 
     std::printf("STATUS: %s\n\n", buildAttemptMessage(buildSystem.lastBuildResult()));
     std::printf("D-PAD  wybierz niebieskie pole\n");
-    std::printf("A      zbuduj wieze / efekt\n");
-    std::printf("B      2 sekundy tonu stereo\n");
+    std::printf("A      zbuduj wieze\n");
     std::printf("X      uruchom fale\n");
     std::printf("Y      restart po wyniku\n");
+    if (showAudioDiagnostics(hudMode)) {
+        std::printf("B      2 sekundy tonu stereo\n");
+    }
+    std::printf("SELECT diagnostyka audio\n");
     std::printf("START  wyjscie\n");
 }
 
@@ -176,7 +191,8 @@ int main() {
             break;
         }
 
-        if (input.pressed(KEY_B)) {
+        const HudMode hudMode = hudModeForSelectHeld(input.isHeld(KEY_SELECT));
+        if (allowDiagnosticTone(hudMode, input.pressed(KEY_B))) {
             audioSystem.playDiagnosticTone();
         }
         if (input.pressed(KEY_X)) {
@@ -220,7 +236,7 @@ int main() {
         audioSystem.playMask(audioRouter.update(audioState));
         audioSystem.updateProbe();
 
-        renderFallbackHud(bottomConsole, wave, buildSystem, tutorialFlow, audioSystem);
+        renderFallbackHud(bottomConsole, wave, buildSystem, tutorialFlow, audioSystem, hudMode);
         renderer.render(camera, wave, buildSystem, tutorialFlow);
     }
 
