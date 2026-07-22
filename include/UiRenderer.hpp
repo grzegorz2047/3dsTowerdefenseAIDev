@@ -30,4 +30,5 @@ private:
 
     C3D_RenderTarget* bottomTarget_ = nullptr;
     C2D_TextBuf textBuffer_ = nullptr;
+    bool composedFrameActive_ = false;
 };
