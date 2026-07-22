@@ -356,6 +356,7 @@ void Renderer::drawScene(const Camera& camera, const Wave& wave, const BuildSyst
         C3D_Mtx towerView{};
         camera.writeView(towerView);
         Mtx_Translate(&towerView, tower.x(), 0.0F, tower.z(), true);
+        Mtx_RotateY(&towerView, tower.aimAngleRadians(), true);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &towerView);
         C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(towerVertexOffset_), static_cast<int>(towerVertexCount_));
     }
