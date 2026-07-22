@@ -39,6 +39,22 @@ bool parseLong(const std::string& value, long& output) {
     return true;
 }
 
+bool parseFloat(const std::string& value, float& output) {
+    if (value.empty()) {
+        return false;
+    }
+
+    errno = 0;
+    char* end = nullptr;
+    const float parsed = std::strtof(value.c_str(), &end);
+    if (errno == ERANGE || end == value.c_str() || *end != '\0') {
+        return false;
+    }
+
+    output = parsed;
+    return true;
+}
+
 bool parseDimensions(const std::string& value, std::uint8_t& width, std::uint8_t& height) {
     const std::size_t separator = value.find(',');
     if (separator == std::string::npos || value.find(',', separator + 1) != std::string::npos) {
@@ -85,6 +101,48 @@ bool parsePoint(const std::string& value, GridPoint& point) {
 
     point.x = static_cast<std::int16_t>(x);
     point.z = static_cast<std::int16_t>(z);
+    return true;
+}
+
+bool parseEnemyType(const std::string& value, EnemyType& type) {
+    if (value == "Scout") {
+        type = EnemyType::Scout;
+        return true;
+    }
+    if (value == "Raider") {
+        type = EnemyType::Raider;
+        return true;
+    }
+    if (value == "Brute") {
+        type = EnemyType::Brute;
+        return true;
+    }
+    return false;
+}
+
+bool parseWaveEntry(const std::string& value, WaveEntry& entry) {
+    const std::size_t first = value.find(',');
+    const std::size_t second = first == std::string::npos ? std::string::npos : value.find(',', first + 1);
+    if (first == std::string::npos || second == std::string::npos ||
+        value.find(',', second + 1) != std::string::npos) {
+        return false;
+    }
+
+    long count = 0;
+    float interval = 0.0F;
+    if (!parseEnemyType(value.substr(0, first), entry.type) ||
+        !parseLong(value.substr(first + 1, second - first - 1), count) ||
+        !parseFloat(value.substr(second + 1), interval)) {
+        return false;
+    }
+
+    if (count <= 0 || count > static_cast<long>(kMaximumWaveEnemies) ||
+        interval < 0.1F || interval > 10.0F) {
+        return false;
+    }
+
+    entry.count = static_cast<std::uint8_t>(count);
+    entry.spawnIntervalSeconds = interval;
     return true;
 }
 
@@ -230,6 +288,27 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
                 }
                 ++result.level.pathLength;
             }
+        } else if (key == "waves") {
+            if (result.level.pathLength == 0) {
+                result.error = "Fale musza wystapic po trasie";
+                return result;
+            }
+            std::stringstream entries(value);
+            std::string entryValue;
+            while (std::getline(entries, entryValue, ';')) {
+                if (entryValue.empty() || result.level.waveEntryCount >= kMaximumWaveEntries) {
+                    result.error = "Nieprawidlowa definicja fal";
+                    return result;
+                }
+                WaveEntry entry{};
+                if (!parseWaveEntry(entryValue, entry) ||
+                    result.level.totalEnemyCount + entry.count > kMaximumWaveEnemies) {
+                    result.error = "Nieprawidlowa definicja fal";
+                    return result;
+                }
+                result.level.waveEntries[result.level.waveEntryCount++] = entry;
+                result.level.totalEnemyCount += entry.count;
+            }
         } else {
             result.error = "Nieznany klucz poziomu";
             return result;
@@ -249,6 +328,10 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
         return result;
     }
     if (!validatePath(result.level, result.error)) {
+        return result;
+    }
+    if (result.level.waveEntryCount == 0 || result.level.totalEnemyCount == 0) {
+        result.error = "Poziom musi definiowac co najmniej jedna fale";
         return result;
     }
 

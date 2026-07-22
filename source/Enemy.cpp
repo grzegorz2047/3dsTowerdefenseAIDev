@@ -4,7 +4,20 @@
 
 namespace {
 
-constexpr float kMovementSpeed = 1.35F;
+struct EnemyStats {
+    int health;
+    int baseDamage;
+    float movementSpeed;
+};
+
+EnemyStats statsFor(EnemyType type) {
+    switch (type) {
+        case EnemyType::Scout: return {2, 1, 1.85F};
+        case EnemyType::Brute: return {5, 2, 0.82F};
+        case EnemyType::Raider:
+        default: return {3, 1, 1.35F};
+    }
+}
 
 float worldX(const LevelData& level, std::int16_t gridX) {
     return -static_cast<float>(level.width) * 0.5F + 0.5F + static_cast<float>(gridX);
@@ -16,7 +29,7 @@ float worldZ(const LevelData& level, std::int16_t gridZ) {
 
 }  // namespace
 
-Enemy::Enemy(const LevelData& level) : level_(&level) {
+Enemy::Enemy(const LevelData& level, EnemyType type) : level_(&level), type_(type) {
     reset();
 }
 
@@ -25,7 +38,7 @@ void Enemy::update(float deltaSeconds) {
         return;
     }
 
-    float remainingDistance = std::max(deltaSeconds, 0.0F) * kMovementSpeed;
+    float remainingDistance = std::max(deltaSeconds, 0.0F) * movementSpeed();
     while (remainingDistance > 0.0F && !reachedBase_) {
         const float available = 1.0F - segmentProgress_;
         const float step = std::min(remainingDistance, available);
@@ -56,7 +69,7 @@ void Enemy::update(float deltaSeconds) {
 void Enemy::reset() {
     segmentIndex_ = 0;
     segmentProgress_ = 0.0F;
-    health_ = kMaximumHealth;
+    health_ = maxHealth();
     reachedBase_ = level_ == nullptr || level_->pathLength < 2;
     if (!reachedBase_) {
         const GridPoint start = level_->path[0];
@@ -72,25 +85,15 @@ void Enemy::takeDamage(int amount) {
     health_ = std::max(health_ - amount, 0);
 }
 
-float Enemy::x() const {
-    return x_;
-}
-
-float Enemy::z() const {
-    return z_;
-}
-
-bool Enemy::reachedBase() const {
-    return reachedBase_;
-}
-
-bool Enemy::dead() const {
-    return health_ <= 0;
-}
-
-int Enemy::health() const {
-    return health_;
-}
+float Enemy::x() const { return x_; }
+float Enemy::z() const { return z_; }
+bool Enemy::reachedBase() const { return reachedBase_; }
+bool Enemy::dead() const { return health_ <= 0; }
+int Enemy::health() const { return health_; }
+int Enemy::maxHealth() const { return statsFor(type_).health; }
+int Enemy::baseDamage() const { return statsFor(type_).baseDamage; }
+float Enemy::movementSpeed() const { return statsFor(type_).movementSpeed; }
+EnemyType Enemy::type() const { return type_; }
 
 float Enemy::pathProgress() const {
     if (level_ == nullptr || level_->pathLength < 2) {

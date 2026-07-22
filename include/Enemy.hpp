@@ -6,7 +6,7 @@
 
 class Enemy {
 public:
-    explicit Enemy(const LevelData& level);
+    Enemy(const LevelData& level, EnemyType type = EnemyType::Raider);
 
     void update(float deltaSeconds);
     void reset();
@@ -17,16 +17,19 @@ public:
     [[nodiscard]] bool reachedBase() const;
     [[nodiscard]] bool dead() const;
     [[nodiscard]] int health() const;
+    [[nodiscard]] int maxHealth() const;
+    [[nodiscard]] int baseDamage() const;
+    [[nodiscard]] float movementSpeed() const;
     [[nodiscard]] float pathProgress() const;
+    [[nodiscard]] EnemyType type() const;
 
 private:
-    static constexpr int kMaximumHealth = 3;
-
     const LevelData* level_ = nullptr;
+    EnemyType type_ = EnemyType::Raider;
     std::size_t segmentIndex_ = 0;
     float segmentProgress_ = 0.0F;
     float x_ = 0.0F;
     float z_ = 0.0F;
-    int health_ = kMaximumHealth;
+    int health_ = 0;
     bool reachedBase_ = false;
 };

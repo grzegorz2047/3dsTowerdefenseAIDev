@@ -8,6 +8,8 @@
 constexpr std::size_t kMaximumMapWidth = 16;
 constexpr std::size_t kMaximumMapHeight = 16;
 constexpr std::size_t kMaximumPathPoints = 64;
+constexpr std::size_t kMaximumWaveEntries = 8;
+constexpr std::size_t kMaximumWaveEnemies = 16;
 
 enum class TileType : std::uint8_t {
     Ground,
@@ -18,9 +20,21 @@ enum class TileType : std::uint8_t {
     Base,
 };
 
+enum class EnemyType : std::uint8_t {
+    Scout,
+    Raider,
+    Brute,
+};
+
 struct GridPoint {
     std::int16_t x = 0;
     std::int16_t z = 0;
+};
+
+struct WaveEntry {
+    EnemyType type = EnemyType::Raider;
+    std::uint8_t count = 0;
+    float spawnIntervalSeconds = 1.0F;
 };
 
 struct LevelData {
@@ -31,6 +45,9 @@ struct LevelData {
     std::array<TileType, kMaximumMapWidth * kMaximumMapHeight> tiles{};
     std::array<GridPoint, kMaximumPathPoints> path{};
     std::size_t pathLength = 0;
+    std::array<WaveEntry, kMaximumWaveEntries> waveEntries{};
+    std::size_t waveEntryCount = 0;
+    std::size_t totalEnemyCount = 0;
 
     [[nodiscard]] TileType tileAt(std::size_t x, std::size_t z) const;
 };

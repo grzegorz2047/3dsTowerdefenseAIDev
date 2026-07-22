@@ -46,6 +46,10 @@ LevelData makeLevel() {
     for (std::size_t x = 0; x < level.pathLength; ++x) {
         level.path[x] = {static_cast<std::int16_t>(x), 2};
     }
+
+    level.waveEntryCount = 1;
+    level.waveEntries[0] = {EnemyType::Raider, 5, 1.15F};
+    level.totalEnemyCount = 5;
     return level;
 }
 
@@ -63,6 +67,11 @@ void testBundledTutorialLevel() {
     require(level.id == "tutorial", "tutorial id should be stable");
     require(level.width == 12 && level.height == 12, "tutorial dimensions should be 12x12");
     require(level.pathLength == 14, "tutorial path length should be 14");
+    require(level.waveEntryCount == 3, "tutorial should define three wave entries");
+    require(level.totalEnemyCount == 5, "tutorial should define five enemies");
+    require(level.waveEntries[0].type == EnemyType::Scout, "tutorial should start with scouts");
+    require(level.waveEntries[1].type == EnemyType::Raider, "tutorial should include raiders");
+    require(level.waveEntries[2].type == EnemyType::Brute, "tutorial should end with a brute");
 
     const GridPoint first = level.path[0];
     const GridPoint second = level.path[1];
@@ -84,6 +93,42 @@ void testEnemyTimePartitioning() {
     require(std::fabs(fine.x() - coarse.x()) < 0.0001F, "enemy X depends on frame partition");
     require(std::fabs(fine.z() - coarse.z()) < 0.0001F, "enemy Z depends on frame partition");
     require(std::fabs(fine.pathProgress() - coarse.pathProgress()) < 0.0001F, "enemy progress depends on frame partition");
+}
+
+void testEnemyClassesHaveDistinctStats() {
+    const LevelData level = makeLevel();
+    const Enemy scout(level, EnemyType::Scout);
+    const Enemy raider(level, EnemyType::Raider);
+    const Enemy brute(level, EnemyType::Brute);
+
+    require(scout.movementSpeed() > raider.movementSpeed(), "scout should be faster than raider");
+    require(raider.movementSpeed() > brute.movementSpeed(), "raider should be faster than brute");
+    require(scout.maxHealth() < raider.maxHealth(), "scout should have less health than raider");
+    require(raider.maxHealth() < brute.maxHealth(), "brute should have the most health");
+    require(brute.baseDamage() == 2, "brute should deal two base damage");
+}
+
+void testWaveUsesLevelDefinitions() {
+    LevelData level = makeLevel();
+    level.waveEntryCount = 3;
+    level.waveEntries[0] = {EnemyType::Scout, 2, 0.25F};
+    level.waveEntries[1] = {EnemyType::Raider, 1, 0.50F};
+    level.waveEntries[2] = {EnemyType::Brute, 1, 0.75F};
+    level.totalEnemyCount = 4;
+
+    Wave wave(level);
+    require(wave.enemyCount() == 4, "wave enemy count should come from level data");
+    require(wave.enemyAt(0).type() == EnemyType::Scout, "first enemy should be a scout");
+    require(wave.enemyAt(1).type() == EnemyType::Scout, "second enemy should be a scout");
+    require(wave.enemyAt(2).type() == EnemyType::Raider, "third enemy should be a raider");
+    require(wave.enemyAt(3).type() == EnemyType::Brute, "fourth enemy should be a brute");
+
+    wave.update(0.24F);
+    require(wave.spawnedCount() == 1, "second scout should respect its spawn interval");
+    wave.update(0.01F);
+    require(wave.spawnedCount() == 2, "second scout should spawn from level timing");
+    wave.update(0.50F);
+    require(wave.spawnedCount() == 3, "raider should spawn from level timing");
 }
 
 void testWaveLossWithoutTowers() {
@@ -187,6 +232,8 @@ void testEconomyRewardsEachEnemyOnce() {
 int main() {
     testBundledTutorialLevel();
     testEnemyTimePartitioning();
+    testEnemyClassesHaveDistinctStats();
+    testWaveUsesLevelDefinitions();
     testWaveLossWithoutTowers();
     testTowerCanWinWave();
     testProjectileDamagesOnlyOnImpact();
