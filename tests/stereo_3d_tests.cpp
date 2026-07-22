@@ -46,6 +46,15 @@ void testDepthLimitCapsSeparation() {
     expect(near(clamped.separation, Stereo3D::kMaximumIod), "slider and depth should clamp to safe maximum");
 }
 
+void testDepthPresetCycle() {
+    expect(Stereo3D::nextDepthLimit(0) == 25, "depth below first preset should become 25");
+    expect(Stereo3D::nextDepthLimit(25) == 50, "25 should advance to 50");
+    expect(Stereo3D::nextDepthLimit(50) == 75, "50 should advance to 75");
+    expect(Stereo3D::nextDepthLimit(70) == 75, "legacy default should normalize to 75");
+    expect(Stereo3D::nextDepthLimit(75) == 100, "75 should advance to 100");
+    expect(Stereo3D::nextDepthLimit(100) == 25, "100 should wrap to 25");
+}
+
 }  // namespace
 
 int main() {
@@ -53,6 +62,7 @@ int main() {
     testDisabledSettingUsesMono();
     testStereoUsesOppositeEyeOffsets();
     testDepthLimitCapsSeparation();
+    testDepthPresetCycle();
     std::cout << "Stereo 3D tests passed\n";
     return 0;
 }
