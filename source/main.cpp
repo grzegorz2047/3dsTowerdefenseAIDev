@@ -33,6 +33,20 @@ constexpr float kMaximumAccumulatorSeconds = kFixedStepSeconds * 5.0F;
 constexpr const char* kSaveDirectory = "sdmc:/3ds/CitadelDefense3D";
 constexpr const char* kSavePath = "sdmc:/3ds/CitadelDefense3D/campaign.sav";
 constexpr int kConsoleLineWidth = 39;
+constexpr std::size_t kExitCampaignSelection = kCampaignMissionCount;
+constexpr std::size_t kPerformanceStressSelection = kCampaignMissionCount + 1U;
+
+constexpr CampaignMission kPerformanceStressMission{
+    "performance_stress",
+    "romfs:/levels/performance_stress.lvl",
+    "TEST WYDAJNOSCI",
+    "Zmierz maksymalne obciazenie Old 3DS XL",
+    "Wszystkie typy, 16 miejsc",
+    "16 wrogow, szybki spawn",
+    "Brak zapisu postepu",
+    3,
+    16,
+};
 
 enum class MissionSessionAction {
     ReturnToCampaign,
@@ -169,6 +183,7 @@ void renderCampaignMenu(PrintConsole& console, const CampaignProgress& progress,
     if (!saveMessage.empty()) printConsoleLine(20, "%.39s", saveMessage.c_str());
     if (saveProblem) printConsoleLine(21, "RESET ZAPISU: SELECT+Y");
     printConsoleLine(23, "D-PAD WYBOR  A GRAJ  START WYJSCIE");
+    printConsoleLine(24, "SELECT+X: TEST WYDAJNOSCI");
 }
 
 std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progress, SaveData& saveData,
@@ -178,7 +193,7 @@ std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progr
 
     while (aptMainLoop()) {
         const InputSnapshot input = inputSystem.poll();
-        if (input.pressed(KEY_START)) return kCampaignMissionCount;
+        if (input.pressed(KEY_START)) return kExitCampaignSelection;
         if (saveProblem && input.isHeld(KEY_SELECT) && input.pressed(KEY_Y)) {
             (void)SaveDataStore::reset(kSavePath);
             progress.reset();
@@ -186,6 +201,8 @@ std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progr
             saveProblem = false;
             saveMessage = "Zapis zresetowany.";
             selected = 0;
+        } else if (input.isHeld(KEY_SELECT) && input.pressed(KEY_X)) {
+            return kPerformanceStressSelection;
         } else if (input.pressed(KEY_X)) {
             saveData.settings.soundEnabled = !saveData.settings.soundEnabled;
             saveProblem = !persistSave(progress, saveData, saveMessage);
@@ -210,13 +227,14 @@ std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progr
         gspWaitForVBlank();
         if (input.pressed(KEY_A)) return selected;
     }
-    return kCampaignMissionCount;
+    return kExitCampaignSelection;
 }
 
 void renderTouchHud(PrintConsole& console, const CampaignMission& mission, const Wave& wave,
     const BuildSystem& buildSystem, const TutorialFlow& tutorialFlow, const AudioSystem& audioSystem,
     const Renderer& renderer, const GameSettings& settings, const PerformanceSnapshot& performance,
-    HudMode hudMode, bool paused, int speedMultiplier, const MissionResult& missionResult) {
+    HudMode hudMode, bool paused, int speedMultiplier, const MissionResult& missionResult,
+    bool recordsCampaignProgress) {
     clearConsoleFrame(console);
     printConsoleTitle(1, mission.title);
     printConsoleLine(2, "[KUSZA] [MOZDZIERZ] [MROZ]");
@@ -237,7 +255,11 @@ void renderTouchHud(PrintConsole& console, const CampaignMission& mission, const
 
     printInstruction(8, tutorialFlow.phase());
     if (tutorialFlow.finished()) {
-        printConsoleLine(11, "WYNIK: %u/3 GWIAZDKI", static_cast<unsigned int>(missionResult.stars));
+        if (recordsCampaignProgress) {
+            printConsoleLine(11, "WYNIK: %u/3 GWIAZDKI", static_cast<unsigned int>(missionResult.stars));
+        } else {
+            printConsoleLine(11, "TEST ZAKONCZONY - BEZ ZAPISU");
+        }
         printConsoleLine(12, "X kampania  Y powtorz");
     } else {
         printConsoleLine(11, "Tryb:%s Tempo:%dx", paused ? "PAUZA" : "GRA", speedMultiplier);
@@ -282,9 +304,9 @@ void applyTouchAction(TouchUiAction action, BuildSystem& buildSystem, TutorialFl
     }
 }
 
-MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t missionIndex, CampaignProgress& progress,
+MissionSessionAction runMission(PrintConsole& bottomConsole, const CampaignMission& mission,
+    std::size_t missionIndex, bool recordsCampaignProgress, CampaignProgress& progress,
     SaveData& saveData, bool& saveProblem, std::string& saveMessage) {
-    const CampaignMission& mission = CampaignCatalog::mission(missionIndex);
     clearConsoleFrame(bottomConsole);
     printConsoleLine(3, "Ladowanie poziomu...");
     printConsoleLine(4, "%.34s", mission.title);
@@ -375,7 +397,7 @@ MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t mission
         }
 
         if (tutorialFlow.finished() && !resultRecorded) {
-            if (tutorialFlow.phase() == TutorialPhase::Victory) {
+            if (recordsCampaignProgress && tutorialFlow.phase() == TutorialPhase::Victory) {
                 missionResult = progress.complete(missionIndex, wave.baseHealth(), buildSystem.towerCount());
                 saveProblem = !persistSave(progress, saveData, saveMessage);
             }
@@ -386,7 +408,8 @@ MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t mission
         if (saveData.settings.soundEnabled) audioSystem.playMask(audioRouter.update(audioState));
         audioSystem.updateProbe();
         renderTouchHud(bottomConsole, mission, wave, buildSystem, tutorialFlow, audioSystem,
-            renderer, saveData.settings, performanceSnapshot, hudMode, paused, speedMultiplier, missionResult);
+            renderer, saveData.settings, performanceSnapshot, hudMode, paused, speedMultiplier,
+            missionResult, recordsCampaignProgress);
         const u64 renderStartMilliseconds = osGetTime();
         renderer.render(camera, wave, buildSystem, tutorialFlow,
             saveData.settings.stereoEnabled, saveData.settings.maximum3DDepthPercent);
@@ -463,11 +486,18 @@ int main() {
     while (aptMainLoop() && !exitApplication) {
         selectedMission = selectCampaignMission(bottomConsole, progress, saveData, selectedMission,
             saveProblem, saveMessage);
-        if (selectedMission >= kCampaignMissionCount) break;
+        if (selectedMission == kExitCampaignSelection) break;
+
+        const bool stressTest = selectedMission == kPerformanceStressSelection;
+        const CampaignMission& mission = stressTest
+            ? kPerformanceStressMission
+            : CampaignCatalog::mission(selectedMission);
+        const std::size_t progressMissionIndex = stressTest ? 0U : selectedMission;
+
         bool replay = true;
         while (aptMainLoop() && replay) {
-            const MissionSessionAction action = runMission(bottomConsole, selectedMission, progress,
-                saveData, saveProblem, saveMessage);
+            const MissionSessionAction action = runMission(bottomConsole, mission, progressMissionIndex,
+                !stressTest, progress, saveData, saveProblem, saveMessage);
             replay = action == MissionSessionAction::Replay;
             if (action == MissionSessionAction::ExitApplication) { exitApplication = true; break; }
         }
