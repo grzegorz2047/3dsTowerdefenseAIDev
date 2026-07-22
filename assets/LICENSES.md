@@ -21,8 +21,9 @@ Każdy asset wizualny, dźwiękowy lub font używany przez grę musi mieć wpis 
 | ID | Typ | Autor | Licencja | Źródło | Modyfikacje | Pliki wynikowe |
 | --- | --- | --- | --- | --- | --- | --- |
 | `tutorial_procedural_tiles` | mesh / vertex colors | grzegorz2047 | Project | proceduralnie generowane w `source/Renderer.cpp` | brak zewnętrznego źródła | runtime VBO |
-| `tutorial_placeholder_tower` | mesh / vertex colors | grzegorz2047 | Project | proceduralnie generowane w `source/Renderer.cpp` | bryła testowa | runtime VBO |
-| `tutorial_placeholder_enemy` | mesh / vertex colors | grzegorz2047 | Project | proceduralnie generowane w `source/Renderer.cpp` | bryła testowa | runtime VBO |
+| `tutorial_watchtower` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | podstawa, trzon, blanki i kusza | runtime VBO |
+| `tutorial_raider` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | humanoidalna sylwetka z tarczą | runtime VBO |
+| `tutorial_bolt` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | grot i drewniany trzon | runtime VBO |
 | `release_icon_banner` | image/audio | grzegorz2047 | Project | `scripts/generate_release_assets.py` | generowane deterministycznie | `build/release-assets/*` |
 
 ## Szablon nowego wpisu
