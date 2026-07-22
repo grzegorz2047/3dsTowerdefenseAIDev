@@ -57,14 +57,11 @@ bool AudioSystem::initialize() {
         return false;
     }
 
-    if (!generateSamples()) {
+    if (!generateSamples() || !generateDiagnosticTone()) {
         shutdown();
         return false;
     }
 
-    // An audible startup cue makes backend verification independent from any
-    // gameplay action. It also confirms that initialization and playback both
-    // succeeded rather than merely reporting that a service handle opened.
     play(AudioCue::BuildSuccess);
     return true;
 }
@@ -86,14 +83,23 @@ void AudioSystem::play(AudioCue cue) {
         return;
     }
 
-    const std::size_t cueIndex = static_cast<std::size_t>(cue);
-    const Sample& sample = samples_[cueIndex];
-    if (sample.data == nullptr || sample.count == 0U) {
+    const Sample& sample = samples_[static_cast<std::size_t>(cue)];
+    playSample(sample);
+}
+
+void AudioSystem::playDiagnosticTone() {
+    playSample(diagnosticTone_);
+}
+
+void AudioSystem::playSample(const Sample& sample) {
+    if (backend_ == AudioBackend::None || sample.data == nullptr || sample.count == 0U) {
         return;
     }
 
     const std::size_t slot = nextChannel_++ % kSfxChannelCount;
     const int channel = kFirstSfxChannel + static_cast<int>(slot);
+    lastChannel_ = channel;
+    probeState_ = {};
 
     if (backend_ == AudioBackend::Ndsp) {
         ndspChnWaveBufClear(channel);
@@ -134,6 +140,17 @@ void AudioSystem::playMask(std::uint32_t cueMask) {
     }
 }
 
+void AudioSystem::updateProbe() {
+    if (backend_ != AudioBackend::Csnd || lastChannel_ < 0) {
+        return;
+    }
+
+    CSND_ChnInfo info{};
+    probeResult_ = csndGetState(static_cast<u32>(lastChannel_), &info);
+    const bool querySucceeded = R_SUCCEEDED(probeResult_);
+    probeState_ = updateAudioProbeState(probeState_, querySucceeded, querySucceeded && info.active != 0U);
+}
+
 void AudioSystem::stopAll() {
     if (backend_ == AudioBackend::Ndsp) {
         for (std::size_t index = 0; index < kSfxChannelCount; ++index) {
@@ -163,6 +180,9 @@ void AudioSystem::shutdown() {
 
     backend_ = AudioBackend::None;
     nextChannel_ = 0;
+    lastChannel_ = -1;
+    probeResult_ = 0;
+    probeState_ = {};
 }
 
 bool AudioSystem::available() const {
@@ -183,6 +203,22 @@ Result AudioSystem::csndResult() const {
 
 Result AudioSystem::lastPlayResult() const {
     return lastPlayResult_;
+}
+
+Result AudioSystem::probeResult() const {
+    return probeResult_;
+}
+
+int AudioSystem::lastChannel() const {
+    return lastChannel_;
+}
+
+bool AudioSystem::channelActive() const {
+    return probeState_.active;
+}
+
+bool AudioSystem::channelEverActive() const {
+    return probeState_.everActive;
 }
 
 bool AudioSystem::generateSamples() {
@@ -224,12 +260,39 @@ bool AudioSystem::generateSample(AudioCue cue) {
     return true;
 }
 
+bool AudioSystem::generateDiagnosticTone() {
+    constexpr float kDurationSeconds = 2.0F;
+    constexpr float kFrequency = 880.0F;
+    constexpr float kAmplitude = 0.75F;
+    const std::size_t sampleCount = static_cast<std::size_t>(kDurationSeconds * static_cast<float>(kSampleRate));
+    auto* data = static_cast<std::int16_t*>(linearAlloc(sampleCount * sizeof(std::int16_t)));
+    if (data == nullptr) {
+        return false;
+    }
+
+    for (std::size_t index = 0; index < sampleCount; ++index) {
+        const float progress = static_cast<float>(index) / static_cast<float>(sampleCount);
+        const float attack = std::min(1.0F, progress * 100.0F);
+        const float release = std::min(1.0F, (1.0F - progress) * 100.0F);
+        const float envelope = attack * release;
+        const float phase = 2.0F * kPi * kFrequency * static_cast<float>(index) / static_cast<float>(kSampleRate);
+        data[index] = static_cast<std::int16_t>(std::sin(phase) * envelope * kAmplitude * 32767.0F);
+    }
+
+    DSP_FlushDataCache(data, sampleCount * sizeof(std::int16_t));
+    diagnosticTone_ = {data, sampleCount};
+    return true;
+}
+
 void AudioSystem::freeSamples() {
     for (Sample& sample : samples_) {
         if (sample.data != nullptr) {
             linearFree(sample.data);
-            sample.data = nullptr;
-            sample.count = 0;
+            sample = {};
         }
+    }
+    if (diagnosticTone_.data != nullptr) {
+        linearFree(diagnosticTone_.data);
+        diagnosticTone_ = {};
     }
 }
