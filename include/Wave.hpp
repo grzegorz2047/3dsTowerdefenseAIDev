@@ -23,12 +23,12 @@ public:
     [[nodiscard]] bool lost() const;
 
 private:
-    static constexpr std::size_t kEnemyCount = 5;
     static constexpr int kInitialBaseHealth = 5;
 
     const LevelData* level_ = nullptr;
     std::vector<Enemy> enemies_;
-    std::array<bool, kEnemyCount> resolved_{};
+    std::array<float, kMaximumWaveEnemies> spawnIntervals_{};
+    std::array<bool, kMaximumWaveEnemies> resolved_{};
     std::size_t spawnedCount_ = 0;
     float spawnTimer_ = 0.0F;
     int baseHealth_ = kInitialBaseHealth;
