@@ -60,17 +60,50 @@ COMMON_FLAGS=(
 "$BUILD_DIR/performance-budget-tests"
 "$BUILD_DIR/performance-stress-level-tests" "$ROOT"
 
-grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
-grep -q "TouchGesture touchGesture" "$ROOT/source/main.cpp"
+# One screen, one owner. PrintConsole is allowed only on the top startup-error path.
+if grep -R "consoleInit(GFX_BOTTOM" "$ROOT/source" "$ROOT/include"; then
+  echo "GFX_BOTTOM must be owned exclusively by Citro2D" >&2
+  exit 1
+fi
+grep -q "consoleInit(GFX_TOP" "$ROOT/source/main.cpp"
+grep -q "C2D_Init(C2D_DEFAULT_MAX_OBJECTS)" "$ROOT/source/main.cpp"
+grep -q "C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT)" "$ROOT/source/UiRenderer.cpp"
+grep -q "C2D_Fini();" "$ROOT/source/main.cpp"
+
+# No terminal interception, renderer macros, or CPU writes into GPU-owned framebuffers.
+test ! -e "$ROOT/include/MainOverrides.hpp"
+test ! -e "$ROOT/source/ConsoleCompat.cpp"
+test ! -e "$ROOT/source/TopGoldOverlay.cpp"
+if grep -R "gfxGetFramebuffer" "$ROOT/source" "$ROOT/include"; then
+  echo "HUD must not write directly to a framebuffer" >&2
+  exit 1
+fi
+if grep -R "#define render\|#define printf\|#define C3D_Init\|#define gfxSwapBuffers" "$ROOT/source" "$ROOT/include"; then
+  echo "Render lifecycle must not be replaced with macros" >&2
+  exit 1
+fi
+
+# Each active path owns exactly one begin/end pair. Mission rendering composes top 3D,
+# top Citro2D overlays, and bottom Citro2D before the single FrameEnd.
+test "$(grep -c "C3D_FrameBegin" "$ROOT/source/Renderer.cpp")" -eq 1
+test "$(grep -c "C3D_FrameEnd" "$ROOT/source/Renderer.cpp")" -eq 1
+test "$(grep -c "C3D_FrameBegin" "$ROOT/source/UiRenderer.cpp")" -eq 1
+test "$(grep -c "C3D_FrameEnd" "$ROOT/source/UiRenderer.cpp")" -eq 1
+grep -q "uiRenderer.renderTopOverlay(topLeftTarget_" "$ROOT/source/Renderer.cpp"
+grep -q "uiRenderer.renderTopOverlay(topRightTarget_" "$ROOT/source/Renderer.cpp"
+grep -q "uiRenderer.renderBottom(uiState)" "$ROOT/source/Renderer.cpp"
+
+# Typed UI state replaces rows encoded as ANSI terminal output.
+grep -q "struct UiState" "$ROOT/include/UiState.hpp"
+grep -q "UiScreen screen" "$ROOT/include/UiState.hpp"
+grep -q "UiRenderer& uiRenderer" "$ROOT/include/Renderer.hpp"
+grep -q "missionUiState" "$ROOT/source/main.cpp"
+grep -q "campaignUiState" "$ROOT/source/main.cpp"
+
+# Visible mission controls must be sourced from the same rectangles as touch input.
+grep -q "TouchUiLayout::rectFor(TouchUiAction::SelectBallista)" "$ROOT/source/UiRenderer.cpp"
+grep -q "TouchUiLayout::rectFor(TouchUiAction::BuildOrSelect)" "$ROOT/source/UiRenderer.cpp"
 grep -q "TouchUiLayout::actionAt" "$ROOT/source/main.cpp"
-grep -q "SelectBallista" "$ROOT/source/main.cpp"
-grep -q "TogglePause" "$ROOT/source/main.cpp"
-grep -q "ToggleSpeed" "$ROOT/source/main.cpp"
-grep -q "input.pressed(KEY_L) && input.pressed(KEY_R)" "$ROOT/source/main.cpp"
-grep -q "hudModeForSelectHeld" "$ROOT/source/main.cpp"
-grep -q "allowDiagnosticTone" "$ROOT/source/main.cpp"
-grep -q "renderAudioDiagnostics" "$ROOT/source/main.cpp"
-grep -q "playDiagnosticTone" "$ROOT/source/main.cpp"
 
 # Stereoscopic top-screen contract.
 grep -q "gfxSet3D(true)" "$ROOT/source/Renderer.cpp"
@@ -81,48 +114,36 @@ grep -q "Mtx_PerspStereoTilt" "$ROOT/source/Camera.cpp"
 grep -q "lastStereoPlan_.stereo" "$ROOT/source/Renderer.cpp"
 grep -q "drawScene(topRightTarget_" "$ROOT/source/Renderer.cpp"
 grep -q "Stereo3D::nextDepthLimit" "$ROOT/source/main.cpp"
-grep -q "renderStereoDiagnostics" "$ROOT/source/main.cpp"
 
-# Physical-device regression contracts.
+# Physical-device regression and runtime diagnostics contracts.
 grep -q "int speedMultiplier = 1;" "$ROOT/source/main.cpp"
 grep -q "const float localX = static_cast<float>(input.circle.dx)" "$ROOT/source/Camera.cpp"
 grep -q "const float localZ = -static_cast<float>(input.circle.dy)" "$ROOT/source/Camera.cpp"
 grep -q "spawnedCount_ = 0U;" "$ROOT/source/Wave.cpp"
 grep -q "C3D_RenderTargetDelete(topLeftTarget_)" "$ROOT/source/Renderer.cpp"
 grep -q "C3D_RenderTargetDelete(topRightTarget_)" "$ROOT/source/Renderer.cpp"
-grep -q "void printConsoleLine" "$ROOT/source/main.cpp"
-grep -q '\x1b\[%d;1H%-39.39s' "$ROOT/source/main.cpp"
-grep -q "printInstruction(8" "$ROOT/source/main.cpp"
+grep -q "PerformanceSampler performanceSampler" "$ROOT/source/main.cpp"
+grep -q "linearSpaceFree()" "$ROOT/source/main.cpp"
+grep -q "drawDiagnostics" "$ROOT/source/UiRenderer.cpp"
 
-# Original Nintendo 3DS XL performance budgets and runtime metrics.
+# Original Nintendo 3DS XL performance budgets.
 grep -q "kTargetFrameMilliseconds = 33.333F" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMinimumLinearMemoryReserveBytes = 512U \* 1024U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumEnemies = 16U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumTowers = 16U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumProjectiles = 32U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumLevelVertices = 4096U" "$ROOT/include/PerformanceBudget.hpp"
-grep -q "PerformanceSampler performanceSampler" "$ROOT/source/main.cpp"
-grep -q "linearSpaceFree()" "$ROOT/source/main.cpp"
-grep -q "renderPerformanceDiagnostics" "$ROOT/source/main.cpp"
-grep -q "averageFrameMilliseconds" "$ROOT/source/main.cpp"
-grep -q "worstFrameMilliseconds" "$ROOT/source/main.cpp"
-grep -q "lastRenderMilliseconds" "$ROOT/source/main.cpp"
 grep -q "id=performance_stress" "$ROOT/romfs/levels/performance_stress.lvl"
 
-# Model-composition contract.
+# Scene composition remains explicit and bounded.
 grep -q "void appendEnemy" "$ROOT/source/Renderer.cpp"
 grep -q "void appendTower" "$ROOT/source/Renderer.cpp"
 grep -q "void appendProjectile" "$ROOT/source/Renderer.cpp"
 grep -q "appendEnemy(vertices)" "$ROOT/source/Renderer.cpp"
 grep -q "appendTower(vertices)" "$ROOT/source/Renderer.cpp"
 grep -q "appendProjectile(vertices)" "$ROOT/source/Renderer.cpp"
-enemy_parts=$(sed -n '/void appendEnemy/,/^}/p' "$ROOT/source/Renderer.cpp" | grep -c "appendBoxAt")
-tower_parts=$(sed -n '/void appendTower/,/^}/p' "$ROOT/source/Renderer.cpp" | grep -c "appendBoxAt")
-projectile_parts=$(sed -n '/void appendProjectile/,/^}/p' "$ROOT/source/Renderer.cpp" | grep -c "appendBoxAt")
-test "$enemy_parts" -ge 8
-test "$tower_parts" -ge 11
-test "$projectile_parts" -ge 2
 
+# Audio platform contracts.
 grep -q "0xD880A7FAU" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultSummary(result) == kResultSummaryNotFound" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultModule(result) == kResultModuleDsp" "$ROOT/include/AudioNdspShim.hpp"

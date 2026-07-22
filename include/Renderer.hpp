@@ -10,7 +10,10 @@
 #include "Level.hpp"
 #include "Stereo3D.hpp"
 #include "TutorialFlow.hpp"
+#include "UiState.hpp"
 #include "Wave.hpp"
+
+class UiRenderer;
 
 class Renderer {
 public:
@@ -27,7 +30,9 @@ public:
         const BuildSystem& buildSystem,
         const TutorialFlow& tutorialFlow,
         bool stereoEnabled,
-        std::uint8_t maximum3DDepthPercent);
+        std::uint8_t maximum3DDepthPercent,
+        UiRenderer& uiRenderer,
+        const UiState& uiState);
     void shutdown();
 
     [[nodiscard]] std::uint8_t lastEyeCount() const;
