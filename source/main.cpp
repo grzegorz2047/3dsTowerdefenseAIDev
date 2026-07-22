@@ -130,11 +130,12 @@ void renderPerformanceDiagnostics(const PerformanceSnapshot& performance, int fi
         ? 1000.0F / performance.averageFrameMilliseconds
         : 0.0F;
     printConsoleLine(firstRow, "FPS:%4.1f AVG:%5.1fms %s", fps, performance.averageFrameMilliseconds,
-        performance.frameBudgetExceeded ? "WOLNO" : "OK");
+        performance.frameBudgetExceeded() ? "WOLNO" : "OK");
     printConsoleLine(firstRow + 1, "MAX:%5.1fms RENDER:%5.1fms", performance.worstFrameMilliseconds,
         performance.lastRenderMilliseconds);
-    printConsoleLine(firstRow + 2, "MEM:%luKB %s", static_cast<unsigned long>(performance.linearFreeBytes / 1024U),
-        performance.lowLinearMemory ? "NISKA" : "OK");
+    printConsoleLine(firstRow + 2, "MEM:%luKB %s",
+        static_cast<unsigned long>(performance.freeLinearMemoryBytes / 1024U),
+        performance.memoryReserveLow() ? "NISKA" : "OK");
 }
 
 void renderCampaignMenu(PrintConsole& console, const CampaignProgress& progress, const SaveData& saveData,
