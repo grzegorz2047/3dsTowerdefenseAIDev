@@ -38,6 +38,7 @@ COMMON_FLAGS=(
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/hud_mode_tests.cpp" -o "$BUILD_DIR/hud-mode-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/hud_text_tests.cpp" "$ROOT/source/HudText.cpp" -o "$BUILD_DIR/hud-text-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/performance_budget_tests.cpp" -o "$BUILD_DIR/performance-budget-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/performance_stress_level_tests.cpp" "$ROOT/source/Level.cpp" -o "$BUILD_DIR/performance-stress-level-tests"
 
 "$BUILD_DIR/gameplay-tests"
 "$BUILD_DIR/tower-archetype-tests"
@@ -57,6 +58,7 @@ COMMON_FLAGS=(
 "$BUILD_DIR/hud-mode-tests"
 "$BUILD_DIR/hud-text-tests"
 "$BUILD_DIR/performance-budget-tests"
+"$BUILD_DIR/performance-stress-level-tests" "$ROOT"
 
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
 grep -q "TouchGesture touchGesture" "$ROOT/source/main.cpp"
@@ -95,7 +97,7 @@ grep -q "printInstruction(8" "$ROOT/source/main.cpp"
 # Original Nintendo 3DS XL performance budgets and runtime metrics.
 grep -q "kTargetFrameMilliseconds = 33.333F" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMinimumLinearMemoryReserveBytes = 512U \* 1024U" "$ROOT/include/PerformanceBudget.hpp"
-grep -q "kMaximumEnemies = 64U" "$ROOT/include/PerformanceBudget.hpp"
+grep -q "kMaximumEnemies = 16U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumTowers = 16U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumProjectiles = 32U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumLevelVertices = 4096U" "$ROOT/include/PerformanceBudget.hpp"
@@ -105,6 +107,7 @@ grep -q "renderPerformanceDiagnostics" "$ROOT/source/main.cpp"
 grep -q "averageFrameMilliseconds" "$ROOT/source/main.cpp"
 grep -q "worstFrameMilliseconds" "$ROOT/source/main.cpp"
 grep -q "lastRenderMilliseconds" "$ROOT/source/main.cpp"
+grep -q "id=performance_stress" "$ROOT/romfs/levels/performance_stress.lvl"
 
 # Model-composition contract.
 grep -q "void appendEnemy" "$ROOT/source/Renderer.cpp"
