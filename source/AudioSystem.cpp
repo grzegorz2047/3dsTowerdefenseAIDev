@@ -99,7 +99,7 @@ void AudioSystem::playSample(const Sample& sample) {
     const std::size_t slot = nextChannel_++ % kSfxChannelCount;
     const int channel = kFirstSfxChannel + static_cast<int>(slot);
     lastChannel_ = channel;
-    probeState_ = {};
+    probeState_ = {false, false, probeState_.everActive};
 
     if (backend_ == AudioBackend::Ndsp) {
         ndspChnWaveBufClear(channel);
