@@ -16,7 +16,7 @@ constexpr std::array<CampaignMission, kCampaignMissionCount> kMissions{{
     {"echo_valley", "romfs:/levels/echo_valley.lvl", "Dolina Echa", "Przetrwaj dluga trase i mieszane fale.",
         "Kusza, Mozdzierz, Mroz", "Mieszane, geste fale", "Dostep do Ostatniej Cytadeli", 5, 7},
     {"last_citadel", "romfs:/levels/last_citadel.lvl", "Ostatnia Cytadela", "Pokonaj finalne natarcie regionu.",
-        "Kusza, Mozdzierz, Mroz", "Najsilniejsze fale i Brute", "Pieczec obroncy Asterii", 6, 8},
+        "Kusza, Mozdzierz, Mroz", "Najsilniejsze fale i Brute", "Pieczec obroncy Asterii", 5, 8},
 }};
 
 }  // namespace
