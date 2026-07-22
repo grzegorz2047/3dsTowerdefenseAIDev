@@ -24,7 +24,8 @@ COMMON_FLAGS=(
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/tutorial_flow_tests.cpp" "$ROOT/source/BuildFeedback.cpp" "$ROOT/source/TutorialFlow.cpp" -o "$BUILD_DIR/tutorial-flow-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/campaign_tests.cpp" "$ROOT/source/Campaign.cpp" -o "$BUILD_DIR/campaign-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/campaign_level_files_tests.cpp" "$ROOT/source/Campaign.cpp" "$ROOT/source/Level.cpp" -o "$BUILD_DIR/campaign-level-files-tests"
-"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/save_data_tests.cpp" "$ROOT/source/Campaign.cpp" "$ROOT/source/SaveData.cpp" -o "$BUILD_DIR/save-data-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/save_data_tests.cpp" "$ROOT/source/Campaign.cpp" "$ROOT/source/SaveData.cpp" "$ROOT/source/Stereo3D.cpp" -o "$BUILD_DIR/save-data-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/stereo_3d_tests.cpp" "$ROOT/source/Stereo3D.cpp" -o "$BUILD_DIR/stereo-3d-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/audio_events_tests.cpp" "$ROOT/source/AudioEvents.cpp" -o "$BUILD_DIR/audio-events-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/audio_backend_tests.cpp" -o "$BUILD_DIR/audio-backend-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/audio_probe_tests.cpp" -o "$BUILD_DIR/audio-probe-tests"
@@ -42,6 +43,7 @@ COMMON_FLAGS=(
 "$BUILD_DIR/campaign-tests"
 "$BUILD_DIR/campaign-level-files-tests" "$ROOT"
 "$BUILD_DIR/save-data-tests" "$ROOT"
+"$BUILD_DIR/stereo-3d-tests"
 "$BUILD_DIR/audio-events-tests"
 "$BUILD_DIR/audio-backend-tests"
 "$BUILD_DIR/audio-probe-tests"
@@ -50,8 +52,6 @@ COMMON_FLAGS=(
 "$BUILD_DIR/hud-mode-tests"
 "$BUILD_DIR/hud-text-tests"
 
-# Bottom-screen interaction contract: touch gestures, fixed hitboxes and button
-# equivalents must all be connected to the live gameplay loop.
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
 grep -q "TouchGesture touchGesture" "$ROOT/source/main.cpp"
 grep -q "TouchUiLayout::actionAt" "$ROOT/source/main.cpp"
@@ -71,8 +71,6 @@ grep -q "renderAudioDiagnostics" "$ROOT/source/main.cpp"
 grep -q "WBUF:%s POS:%lu/%lu" "$ROOT/source/main.cpp"
 grep -q "playDiagnosticTone" "$ROOT/source/main.cpp"
 
-# The shim is permitted only for a semantic DSP/NOTFOUND/NOT_FOUND result and
-# must contain no external firmware data.
 grep -q "0xD880A7FAU" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultSummary(result) == kResultSummaryNotFound" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultModule(result) == kResultModuleDsp" "$ROOT/include/AudioNdspShim.hpp"

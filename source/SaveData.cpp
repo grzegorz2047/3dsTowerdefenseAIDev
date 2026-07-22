@@ -61,6 +61,10 @@ std::string payloadFor(const SaveData& data, std::uint32_t version) {
         stream << "sound=" << (data.settings.soundEnabled ? 1 : 0) << '\n';
         stream << "speed=" << static_cast<unsigned int>(data.settings.preferredSpeed) << '\n';
     }
+    if (version >= 3) {
+        stream << "stereo=" << (data.settings.stereoEnabled ? 1 : 0) << '\n';
+        stream << "stereo_depth=" << static_cast<unsigned int>(data.settings.maximum3DDepthPercent) << '\n';
+    }
     return stream.str();
 }
 
@@ -123,10 +127,8 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
     data.campaign.unlockedCount = static_cast<std::size_t>(unlocked);
     if (!parseArray(values["stars"], data.campaign.bestStars)) return corrupt("Nieprawidlowe gwiazdki");
 
-    bool migrated = false;
-    if (version == 1) {
-        migrated = true;
-    } else {
+    bool migrated = version < kCurrentSaveVersion;
+    if (version >= 2) {
         if (!parseArray(values["base_health"], data.campaign.bestBaseHealth) ||
             !parseArray(values["fewest_towers"], data.campaign.fewestTowers)) {
             return corrupt("Nieprawidlowe rekordy misji");
@@ -139,6 +141,16 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
         }
         data.settings.soundEnabled = sound == 1;
         data.settings.preferredSpeed = static_cast<std::uint8_t>(speed);
+    }
+    if (version >= 3) {
+        unsigned long stereo = 0;
+        unsigned long depth = 0;
+        if (!parseUnsigned(values["stereo"], stereo) || stereo > 1 ||
+            !parseUnsigned(values["stereo_depth"], depth) || depth > 100) {
+            return corrupt("Nieprawidlowe ustawienia 3D");
+        }
+        data.settings.stereoEnabled = stereo == 1;
+        data.settings.maximum3DDepthPercent = static_cast<std::uint8_t>(depth);
     }
 
     CampaignProgress validator;
