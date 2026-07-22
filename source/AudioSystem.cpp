@@ -1,12 +1,20 @@
 #include "AudioSystem.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
+
+#include "AudioNdspShim.hpp"
 
 namespace {
 
 constexpr float kPi = 3.14159265358979323846F;
+
+// Azahar's DSP HLE does not execute the DSP program and only requires a
+// component buffer to pass through libctru's normal NDSP initialization path.
+// This project-owned all-zero buffer contains no Nintendo firmware data.
+alignas(0x80) constexpr std::array<std::uint8_t, 0x400> kSyntheticHleComponent{};
 
 struct CueShape {
     float durationSeconds;
@@ -41,10 +49,26 @@ bool AudioSystem::initialize() {
         return true;
     }
 
-    ndspResult_ = ndspInit();
+    ndspInitialResult_ = ndspInit();
+    ndspResult_ = ndspInitialResult_;
+
+    if (R_FAILED(ndspInitialResult_) &&
+        shouldAttemptNdspHleShim(static_cast<std::uint32_t>(ndspInitialResult_))) {
+        ndspShimAttempted_ = true;
+        ndspUseComponent(
+            kSyntheticHleComponent.data(),
+            static_cast<u32>(kSyntheticHleComponent.size()),
+            0x00FFU,
+            0x00FFU);
+        ndspShimResult_ = ndspInit();
+        ndspResult_ = ndspShimResult_;
+        ndspShimActive_ = R_SUCCEEDED(ndspShimResult_);
+    }
+
     if (R_SUCCEEDED(ndspResult_)) {
         backend_ = AudioBackend::Ndsp;
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
+        ndspSetMasterVol(1.0F);
         initializeNdspChannels();
     } else {
         csndResult_ = csndInit();
@@ -183,6 +207,7 @@ void AudioSystem::shutdown() {
     lastChannel_ = -1;
     probeResult_ = 0;
     probeState_ = {};
+    ndspShimActive_ = false;
 }
 
 bool AudioSystem::available() const {
@@ -195,6 +220,22 @@ AudioBackend AudioSystem::backend() const {
 
 Result AudioSystem::ndspResult() const {
     return ndspResult_;
+}
+
+Result AudioSystem::ndspInitialResult() const {
+    return ndspInitialResult_;
+}
+
+Result AudioSystem::ndspShimResult() const {
+    return ndspShimResult_;
+}
+
+bool AudioSystem::ndspShimAttempted() const {
+    return ndspShimAttempted_;
+}
+
+bool AudioSystem::ndspShimActive() const {
+    return ndspShimActive_;
 }
 
 Result AudioSystem::csndResult() const {
