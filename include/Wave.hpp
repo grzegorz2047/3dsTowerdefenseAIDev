@@ -13,6 +13,13 @@ public:
 
     void update(float deltaSeconds);
     void reset();
+    void applyAreaEffect(
+        float centerX,
+        float centerZ,
+        float radius,
+        int damage,
+        float slowDurationSeconds = 0.0F,
+        float slowMovementMultiplier = 1.0F);
 
     [[nodiscard]] std::size_t spawnedCount() const;
     [[nodiscard]] std::size_t enemyCount() const;
