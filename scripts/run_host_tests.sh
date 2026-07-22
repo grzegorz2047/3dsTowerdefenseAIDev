@@ -65,7 +65,7 @@ grep -q "renderAudioDiagnostics" "$ROOT/source/main.cpp"
 grep -q "playDiagnosticTone" "$ROOT/source/main.cpp"
 
 # Stereoscopic top-screen contract: physical slider, two eye targets, asymmetric
-# projections, and a one-eye mono fallback. Bottom-screen PrintConsole remains 2D.
+# projections, settings controls, runtime diagnostics, and a one-eye mono fallback.
 grep -q "gfxSet3D(true)" "$ROOT/source/Renderer.cpp"
 grep -q "osGet3DSliderState" "$ROOT/source/Renderer.cpp"
 grep -q "GFX_LEFT" "$ROOT/source/Renderer.cpp"
@@ -73,6 +73,13 @@ grep -q "GFX_RIGHT" "$ROOT/source/Renderer.cpp"
 grep -q "Mtx_PerspStereoTilt" "$ROOT/source/Camera.cpp"
 grep -q "lastStereoPlan_.stereo" "$ROOT/source/Renderer.cpp"
 grep -q "drawScene(topRightTarget_" "$ROOT/source/Renderer.cpp"
+grep -q "Stereo3D::nextDepthLimit" "$ROOT/source/main.cpp"
+grep -q "input.pressed(KEY_L)" "$ROOT/source/main.cpp"
+grep -q "input.pressed(KEY_R)" "$ROOT/source/main.cpp"
+grep -q "renderStereoDiagnostics" "$ROOT/source/main.cpp"
+grep -q "lastEyeCount" "$ROOT/source/main.cpp"
+grep -q "lastStereoSlider" "$ROOT/source/main.cpp"
+grep -q "lastStereoSeparation" "$ROOT/source/main.cpp"
 
 # Model-composition contract: gameplay entities must remain recognizable
 # multi-part geometry, not regress to one generic placeholder box.
