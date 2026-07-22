@@ -11,6 +11,8 @@ enum class TouchUiAction : std::uint8_t {
     Upgrade,
     Sell,
     StartWave,
+    TogglePause,
+    ToggleSpeed,
     Cancel,
 };
 

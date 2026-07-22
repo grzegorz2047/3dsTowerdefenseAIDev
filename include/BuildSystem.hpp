@@ -29,6 +29,9 @@ public:
     void handleInput(const InputSnapshot& input);
     void update(float deltaSeconds, Wave& wave);
     void reset();
+    void selectTowerType(TowerType type);
+    void buildOrSelectCursor();
+    void cancelAction();
     [[nodiscard]] TowerActionResult upgradeCursorTower();
     [[nodiscard]] TowerActionResult sellCursorTower();
 
@@ -54,7 +57,6 @@ private:
     [[nodiscard]] std::size_t towerIndexAt(std::size_t x, std::size_t z) const;
     [[nodiscard]] bool occupied(std::size_t x, std::size_t z) const;
     void moveCursor(int delta);
-    void selectTower(TowerType type);
     void tryBuild();
 
     const LevelData* level_ = nullptr;
