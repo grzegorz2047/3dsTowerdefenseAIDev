@@ -1,0 +1,23 @@
+; Citadel Defense 3D diagnostic stress level
+id=performance_stress
+name=Test wydajnosci Old 3DS XL
+size=16,16
+grid=begin
+################
+#..............#
+#..BBBB..BBBB..#
+#SRRRRRRRRRRRR.#
+#..BBBB..BBBBR.#
+#............R.#
+#..BBBB..BBBBR.#
+#............R.#
+#............R.#
+#............R.#
+#............R.#
+#............R.#
+#............R.#
+#............E.#
+#..............#
+################
+path=1,3;2,3;3,3;4,3;5,3;6,3;7,3;8,3;9,3;10,3;11,3;12,3;13,3;13,4;13,5;13,6;13,7;13,8;13,9;13,10;13,11;13,12;13,13
+waves=Scout,2,0.10;Raider,2,0.10;Brute,2,0.10;Scout,2,0.10;Raider,2,0.10;Brute,2,0.10;Scout,2,0.10;Raider,2,0.10
