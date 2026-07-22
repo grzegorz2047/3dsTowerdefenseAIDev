@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "id": "tutorial_bolt",
+  "kind": "projectile",
+  "display_name": "Bełt",
+  "author": "grzegorz2047",
+  "license": "Project",
+  "source": "source/Renderer.cpp",
+  "generated": "runtime:shared-vbo",
+  "forward_axis": "+Z",
+  "up_axis": "+Y",
+  "pivot": "center",
+  "triangle_count": 20,
+  "material_count": 1,
+  "bounds": {
+    "min": [-0.07, -0.05, -0.21],
+    "max": [0.07, 0.05, 0.13]
+  }
+}
