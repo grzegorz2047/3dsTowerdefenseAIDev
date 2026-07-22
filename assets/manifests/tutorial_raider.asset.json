@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "id": "tutorial_raider",
+  "kind": "enemy",
+  "display_name": "Najeźdźca",
+  "author": "grzegorz2047",
+  "license": "Project",
+  "source": "source/Renderer.cpp",
+  "generated": "runtime:shared-vbo",
+  "forward_axis": "+Z",
+  "up_axis": "+Y",
+  "pivot": "base_center",
+  "triangle_count": 80,
+  "material_count": 1,
+  "bounds": {
+    "min": [-0.42, 0.06, -0.23],
+    "max": [0.35, 0.97, 0.25]
+  }
+}
