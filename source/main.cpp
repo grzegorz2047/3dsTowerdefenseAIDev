@@ -2,7 +2,9 @@
 #include <citro3d.h>
 
 #include <algorithm>
+#include <cstdarg>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <sys/stat.h>
 
@@ -29,12 +31,53 @@ constexpr float kMaximumFrameSeconds = 1.0F / 15.0F;
 constexpr float kMaximumAccumulatorSeconds = kFixedStepSeconds * 5.0F;
 constexpr const char* kSaveDirectory = "sdmc:/3ds/CitadelDefense3D";
 constexpr const char* kSavePath = "sdmc:/3ds/CitadelDefense3D/campaign.sav";
+constexpr int kConsoleLineWidth = 39;
 
 enum class MissionSessionAction {
     ReturnToCampaign,
     Replay,
     ExitApplication,
 };
+
+void clearConsoleFrame(PrintConsole& console) {
+    consoleSelect(&console);
+    std::printf("\x1b[2J\x1b[1;1H");
+}
+
+void printConsoleLine(int row, const char* format, ...) {
+    char text[160]{};
+    va_list arguments;
+    va_start(arguments, format);
+    std::vsnprintf(text, sizeof(text), format, arguments);
+    va_end(arguments);
+
+    for (char* cursor = text; *cursor != '\0'; ++cursor) {
+        if (*cursor == '\n' || *cursor == '\r') *cursor = ' ';
+    }
+
+    std::printf("\x1b[%d;1H%-39.39s", row, text);
+}
+
+void printConsoleTitle(int row, const char* title) {
+    std::printf("\x1b[%d;1H\x1b[36m%-39.39s\x1b[0m", row, title);
+}
+
+void printInstruction(int firstRow, TutorialPhase phase) {
+    const char* instruction = tutorialInstruction(phase);
+    const char* separator = std::strchr(instruction, '\n');
+    if (separator == nullptr) {
+        printConsoleLine(firstRow, "Cel: %.34s", instruction);
+        printConsoleLine(firstRow + 1, "");
+        return;
+    }
+
+    char firstLine[40]{};
+    const std::size_t firstLength = std::min<std::size_t>(
+        static_cast<std::size_t>(separator - instruction), 34U);
+    std::memcpy(firstLine, instruction, firstLength);
+    printConsoleLine(firstRow, "Cel: %s", firstLine);
+    printConsoleLine(firstRow + 1, "     %.34s", separator + 1);
+}
 
 float calculateFrameSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
     if (previousMilliseconds == 0U || nowMilliseconds <= previousMilliseconds) return kFixedStepSeconds;
@@ -53,60 +96,60 @@ bool persistSave(const CampaignProgress& progress, SaveData& saveData, std::stri
     return true;
 }
 
-void renderAudioDiagnostics(const AudioSystem& audioSystem) {
-    std::printf("AUDIO:%s HLE:%s\n", audioBackendName(audioSystem.backend()),
+void renderAudioDiagnostics(const AudioSystem& audioSystem, int firstRow) {
+    printConsoleLine(firstRow, "AUDIO:%s HLE:%s", audioBackendName(audioSystem.backend()),
         audioSystem.ndspShimActive() ? "ON" : (audioSystem.ndspShimAttempted() ? "BLAD" : "NIE"));
-    std::printf("NDSP:%08lX/%08lX\n", static_cast<unsigned long>(audioSystem.ndspInitialResult()),
+    printConsoleLine(firstRow + 1, "NDSP:%08lX/%08lX", static_cast<unsigned long>(audioSystem.ndspInitialResult()),
         static_cast<unsigned long>(audioSystem.ndspShimResult()));
-    std::printf("CSND:%08lX PLAY:%08lX\n", static_cast<unsigned long>(audioSystem.csndResult()),
+    printConsoleLine(firstRow + 2, "CSND:%08lX PLAY:%08lX", static_cast<unsigned long>(audioSystem.csndResult()),
         static_cast<unsigned long>(audioSystem.lastPlayResult()));
-    std::printf("CH:%d BUF:%s %lu/%lu\n", audioSystem.lastChannel(),
+    printConsoleLine(firstRow + 3, "CH:%d BUF:%s %lu/%lu", audioSystem.lastChannel(),
         audioWaveStatusName(audioSystem.diagnosticWaveStatus()),
         static_cast<unsigned long>(audioSystem.diagnosticSamplePosition()),
         static_cast<unsigned long>(audioSystem.diagnosticSampleCount()));
-    std::printf("PROBE:%08lX A:%s E:%s\n", static_cast<unsigned long>(audioSystem.probeResult()),
+    printConsoleLine(firstRow + 4, "PROBE:%08lX A:%s E:%s", static_cast<unsigned long>(audioSystem.probeResult()),
         audioSystem.channelActive() ? "T" : "N", audioSystem.channelEverActive() ? "T" : "N");
 }
 
-void renderStereoDiagnostics(const Renderer& renderer, const GameSettings& settings) {
-    std::printf("3D:%s LIMIT:%u%% OCZY:%u\n", settings.stereoEnabled ? "ON" : "OFF",
+void renderStereoDiagnostics(const Renderer& renderer, const GameSettings& settings, int firstRow) {
+    printConsoleLine(firstRow, "3D:%s LIMIT:%u%% OCZY:%u", settings.stereoEnabled ? "ON" : "OFF",
         static_cast<unsigned int>(settings.maximum3DDepthPercent),
         static_cast<unsigned int>(renderer.lastEyeCount()));
-    std::printf("SUWAK:%3.0f%% SEP:%.4f\n", renderer.lastStereoSlider() * 100.0F,
+    printConsoleLine(firstRow + 1, "SUWAK:%3.0f%% SEP:%.4f", renderer.lastStereoSlider() * 100.0F,
         renderer.lastStereoSeparation());
 }
 
 void renderCampaignMenu(PrintConsole& console, const CampaignProgress& progress, const SaveData& saveData,
     std::size_t selected, bool saveProblem, const std::string& saveMessage) {
-    consoleSelect(&console);
-    std::printf("\x1b[2J\x1b[H");
-    std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
-    std::printf("KAMPANIA\n\n");
+    clearConsoleFrame(console);
+    printConsoleTitle(1, "CITADEL DEFENSE 3D");
+    printConsoleLine(2, "KAMPANIA");
 
     const auto& missions = CampaignCatalog::missions();
     for (std::size_t index = 0; index < missions.size(); ++index) {
         const bool unlocked = progress.unlocked(index);
-        std::printf("%c%zu %-18.18s %u/3\n", index == selected ? '>' : ' ', index + 1U,
+        printConsoleLine(4 + static_cast<int>(index), "%c%zu %-18.18s %u/3",
+            index == selected ? '>' : ' ', index + 1U,
             unlocked ? missions[index].title : "ZABLOKOWANE",
             static_cast<unsigned int>(progress.bestStars(index)));
     }
 
     const CampaignMission& mission = missions[selected];
-    std::printf("\nMISJA: %.32s\n", mission.title);
-    std::printf("CEL: %.34s\n", mission.objective);
-    std::printf("WIEZE: %.32s\n", mission.availableTowers);
-    std::printf("WROGOWIE: %.29s\n", mission.threats);
-    std::printf("GWIAZDKI: HP>=%u WIEZE<=%u\n",
+    printConsoleLine(11, "MISJA: %.32s", mission.title);
+    printConsoleLine(12, "CEL: %.34s", mission.objective);
+    printConsoleLine(13, "WIEZE: %.32s", mission.availableTowers);
+    printConsoleLine(14, "WROGOWIE: %.29s", mission.threats);
+    printConsoleLine(15, "GWIAZDKI: HP>=%u WIEZE<=%u",
         static_cast<unsigned int>(mission.fullHealthThreshold),
         static_cast<unsigned int>(mission.efficientTowerLimit));
-    std::printf("\nDZWIEK:%s [X]  3D:%s [L]\n",
+    printConsoleLine(17, "DZWIEK:%s [X]  3D:%s [L]",
         saveData.settings.soundEnabled ? "ON" : "OFF",
         saveData.settings.stereoEnabled ? "ON" : "OFF");
-    std::printf("GLEBIA:%u%% [R]  START:1x\n",
+    printConsoleLine(18, "GLEBIA:%u%% [R]  START:1x",
         static_cast<unsigned int>(saveData.settings.maximum3DDepthPercent));
-    if (!saveMessage.empty()) std::printf("%.39s\n", saveMessage.c_str());
-    if (saveProblem) std::printf("RESET ZAPISU: SELECT+Y\n");
-    std::printf("D-PAD WYBOR  A GRAJ  START WYJSCIE\n");
+    if (!saveMessage.empty()) printConsoleLine(20, "%.39s", saveMessage.c_str());
+    if (saveProblem) printConsoleLine(21, "RESET ZAPISU: SELECT+Y");
+    printConsoleLine(23, "D-PAD WYBOR  A GRAJ  START WYJSCIE");
 }
 
 std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progress, SaveData& saveData,
@@ -155,43 +198,42 @@ void renderTouchHud(PrintConsole& console, const CampaignMission& mission, const
     const BuildSystem& buildSystem, const TutorialFlow& tutorialFlow, const AudioSystem& audioSystem,
     const Renderer& renderer, const GameSettings& settings, HudMode hudMode, bool paused,
     int speedMultiplier, const MissionResult& missionResult) {
-    consoleSelect(&console);
-    std::printf("\x1b[2J\x1b[H");
-    std::printf("\x1b[36m%.38s\x1b[0m\n", mission.title);
-    std::printf("[KUSZA] [MOZDZIERZ] [MROZ]\n");
-    std::printf("Wybrano:%-9.9s K:%d Z:%d\n", buildSystem.selectedTowerName(),
+    clearConsoleFrame(console);
+    printConsoleTitle(1, mission.title);
+    printConsoleLine(2, "[KUSZA] [MOZDZIERZ] [MROZ]");
+    printConsoleLine(3, "Wybrano:%-9.9s K:%d Z:%d", buildSystem.selectedTowerName(),
         buildSystem.towerCost(), buildSystem.gold());
-    std::printf("Baza:%d Wieze:%zu Wrog:%zu/%zu\n", wave.baseHealth(), buildSystem.towerCount(),
+    printConsoleLine(4, "Baza:%d Wieze:%zu Wrog:%zu/%zu", wave.baseHealth(), buildSystem.towerCount(),
         wave.spawnedCount(), wave.enemyCount());
-    std::printf("Pole:%zu,%zu %s\n", buildSystem.cursorX(), buildSystem.cursorZ(),
+    printConsoleLine(5, "Pole:%zu,%zu %s", buildSystem.cursorX(), buildSystem.cursorZ(),
         buildSystem.cursorOccupied() ? "WIEZA" : "BUDOWA");
 
     const Tower* tower = buildSystem.cursorTower();
     if (tower != nullptr) {
-        std::printf("%.9s L:%u U:%d S:%d\n", towerName(tower->type()),
+        printConsoleLine(6, "%.9s L:%u U:%d S:%d", towerName(tower->type()),
             static_cast<unsigned int>(tower->level()), tower->upgradeCost(), tower->sellValue());
     } else {
-        std::printf("Status: %.31s\n", buildAttemptMessage(buildSystem.lastBuildResult()));
+        printConsoleLine(6, "Status: %.31s", buildAttemptMessage(buildSystem.lastBuildResult()));
     }
 
-    std::printf("Cel: %.35s\n", tutorialInstruction(tutorialFlow.phase()));
+    printInstruction(8, tutorialFlow.phase());
     if (tutorialFlow.finished()) {
-        std::printf("WYNIK: %u/3 GWIAZDKI\n", static_cast<unsigned int>(missionResult.stars));
-        std::printf("X kampania  Y powtorz\n");
+        printConsoleLine(11, "WYNIK: %u/3 GWIAZDKI", static_cast<unsigned int>(missionResult.stars));
+        printConsoleLine(12, "X kampania  Y powtorz");
     } else {
-        std::printf("Tryb:%s Tempo:%dx\n", paused ? "PAUZA" : "GRA", speedMultiplier);
-        std::printf("X pauza/start  L+R tempo\n");
-        std::printf("A buduj  B ulepsz  Y sprzedaj\n");
+        printConsoleLine(11, "Tryb:%s Tempo:%dx", paused ? "PAUZA" : "GRA", speedMultiplier);
+        printConsoleLine(12, "X pauza/start  L+R tempo");
+        printConsoleLine(13, "A buduj  B ulepsz  Y sprzedaj");
     }
 
     if (showAudioDiagnostics(hudMode)) {
-        renderStereoDiagnostics(renderer, settings);
-        renderAudioDiagnostics(audioSystem);
+        renderStereoDiagnostics(renderer, settings, 15);
+        renderAudioDiagnostics(audioSystem, 17);
     } else {
-        std::printf("3D:%s %u%% DZW:%s\n", settings.stereoEnabled ? "ON" : "OFF",
+        printConsoleLine(16, "3D:%s %u%% DZW:%s", settings.stereoEnabled ? "ON" : "OFF",
             static_cast<unsigned int>(settings.maximum3DDepthPercent),
             audioSystem.available() ? "ON" : "OFF");
-        std::printf("SELECT: diagnostyka\n");
+        printConsoleLine(17, "SELECT: diagnostyka");
     }
 }
 
@@ -223,8 +265,9 @@ void applyTouchAction(TouchUiAction action, BuildSystem& buildSystem, TutorialFl
 MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t missionIndex, CampaignProgress& progress,
     SaveData& saveData, bool& saveProblem, std::string& saveMessage) {
     const CampaignMission& mission = CampaignCatalog::mission(missionIndex);
-    consoleSelect(&bottomConsole);
-    std::printf("\x1b[2J\x1b[H\n\nLadowanie poziomu...\n%.34s\n", mission.title);
+    clearConsoleFrame(bottomConsole);
+    printConsoleLine(3, "Ladowanie poziomu...");
+    printConsoleLine(4, "%.34s", mission.title);
     gfxFlushBuffers();
     gfxSwapBuffers();
     gspWaitForVBlank();
@@ -335,10 +378,10 @@ int showStartupError(const char* stage, const char* detail, bool citro3dInitiali
     if (romfsInitialized) romfsExit();
     consoleInit(GFX_TOP, nullptr);
     consoleClear();
-    std::printf("CITADEL DEFENSE 3D\n==================\n\nBLAD STARTU: %s\n\n",
+    std::printf("CITADEL DEFENSE 3D\r\n==================\r\n\r\nBLAD STARTU: %s\r\n\r\n",
         stage != nullptr ? stage : "nieznany etap");
-    if (detail != nullptr && detail[0] != '\0') std::printf("%s\n\n", detail);
-    std::printf("Nacisnij START, aby zamknac.\n");
+    if (detail != nullptr && detail[0] != '\0') std::printf("%s\r\n\r\n", detail);
+    std::printf("Nacisnij START, aby zamknac.\r\n");
     while (aptMainLoop()) {
         hidScanInput();
         if ((hidKeysDown() & KEY_START) != 0U) break;
