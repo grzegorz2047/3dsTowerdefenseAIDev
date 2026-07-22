@@ -42,6 +42,11 @@ COMMON_FLAGS=(
 
 "$HOST_CXX" \
   "${COMMON_FLAGS[@]}" \
+  "$ROOT/tests/audio_backend_tests.cpp" \
+  -o "$BUILD_DIR/audio-backend-tests"
+
+"$HOST_CXX" \
+  "${COMMON_FLAGS[@]}" \
   "$ROOT/tests/hud_text_tests.cpp" \
   "$ROOT/source/HudText.cpp" \
   -o "$BUILD_DIR/hud-text-tests"
@@ -49,12 +54,19 @@ COMMON_FLAGS=(
 "$BUILD_DIR/gameplay-tests"
 "$BUILD_DIR/tutorial-flow-tests"
 "$BUILD_DIR/audio-events-tests"
+"$BUILD_DIR/audio-backend-tests"
 "$BUILD_DIR/hud-text-tests"
 
-# The fallback UI must stay independent from the custom GPU pipeline and expose
-# enough diagnostics to distinguish a DSP permission failure from muted output.
+# The fallback UI must expose the active backend and raw service results.
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
-grep -q "v0.1.11-alpha  AUDIO-DSP" "$ROOT/source/main.cpp"
-grep -q "audioStatusMessage(audioAvailable)" "$ROOT/source/main.cpp"
+grep -q "v0.1.12-alpha  AUDIO-FALLBACK" "$ROOT/source/main.cpp"
+grep -q "audioBackendName(audioSystem.backend())" "$ROOT/source/main.cpp"
+grep -q "ndspSetOutputMode(NDSP_OUTPUT_STEREO)" "$ROOT/source/AudioSystem.cpp"
+grep -q "csndPlaySound" "$ROOT/source/AudioSystem.cpp"
+
+# CIA builds must be allowed to use both services. NDSP remains preferred,
+# while CSND provides an emulator and firmware compatibility fallback.
 grep -q "dsp::DSP" "$ROOT/config/application.rsf"
 grep -q "dsp: 0x0004013000001a02" "$ROOT/config/application.rsf"
+grep -q "csnd:SND" "$ROOT/config/application.rsf"
+grep -q "csnd: 0x0004013000001802" "$ROOT/config/application.rsf"
