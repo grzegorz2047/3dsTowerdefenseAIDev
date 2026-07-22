@@ -7,8 +7,11 @@ enum class HudMode : std::uint8_t {
     AudioDiagnostics,
 };
 
-[[nodiscard]] constexpr HudMode hudModeForSelectHeld(bool selectHeld) {
-    return selectHeld ? HudMode::AudioDiagnostics : HudMode::Gameplay;
+[[nodiscard]] constexpr HudMode toggleHudMode(HudMode current, bool selectPressed) {
+    if (!selectPressed) {
+        return current;
+    }
+    return current == HudMode::Gameplay ? HudMode::AudioDiagnostics : HudMode::Gameplay;
 }
 
 [[nodiscard]] constexpr bool showAudioDiagnostics(HudMode mode) {
