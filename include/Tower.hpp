@@ -1,15 +1,43 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
 #include "Level.hpp"
 #include "Projectile.hpp"
 #include "Wave.hpp"
 
+enum class TowerType : std::uint8_t {
+    Ballista,
+    Mortar,
+    Frost,
+};
+
+[[nodiscard]] constexpr TowerType nextTowerType(TowerType type) {
+    switch (type) {
+        case TowerType::Ballista: return TowerType::Mortar;
+        case TowerType::Mortar: return TowerType::Frost;
+        case TowerType::Frost:
+        default: return TowerType::Ballista;
+    }
+}
+
+[[nodiscard]] constexpr TowerType previousTowerType(TowerType type) {
+    switch (type) {
+        case TowerType::Ballista: return TowerType::Frost;
+        case TowerType::Mortar: return TowerType::Ballista;
+        case TowerType::Frost:
+        default: return TowerType::Mortar;
+    }
+}
+
+[[nodiscard]] int towerCost(TowerType type);
+[[nodiscard]] const char* towerName(TowerType type);
+
 class Tower {
 public:
     Tower() = default;
-    Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ);
+    Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ, TowerType type = TowerType::Ballista);
 
     void update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles);
     void resetCombat();
@@ -18,6 +46,7 @@ public:
     [[nodiscard]] float z() const;
     [[nodiscard]] std::size_t gridX() const;
     [[nodiscard]] std::size_t gridZ() const;
+    [[nodiscard]] TowerType type() const;
     [[nodiscard]] bool valid() const;
     [[nodiscard]] int shotsFired() const;
 
@@ -27,6 +56,7 @@ private:
     float cooldown_ = 0.0F;
     std::size_t gridX_ = 0;
     std::size_t gridZ_ = 0;
+    TowerType type_ = TowerType::Ballista;
     int shotsFired_ = 0;
     bool valid_ = false;
 };

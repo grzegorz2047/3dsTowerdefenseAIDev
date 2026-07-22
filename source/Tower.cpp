@@ -5,11 +5,23 @@
 
 namespace {
 
-constexpr float kRange = 3.4F;
-constexpr float kRangeSquared = kRange * kRange;
-constexpr float kAttackIntervalSeconds = 0.55F;
-constexpr int kDamage = 1;
-constexpr float kMuzzleHeight = 1.05F;
+struct TowerStats {
+    float range;
+    float attackIntervalSeconds;
+    ProjectilePayload payload;
+};
+
+TowerStats statsFor(TowerType type) {
+    switch (type) {
+        case TowerType::Mortar:
+            return {2.85F, 1.25F, {ProjectileEffect::Splash, 2, 1.15F, 0.0F, 1.0F}};
+        case TowerType::Frost:
+            return {3.05F, 0.90F, {ProjectileEffect::Frost, 1, 0.85F, 2.20F, 0.55F}};
+        case TowerType::Ballista:
+        default:
+            return {3.40F, 0.55F, {ProjectileEffect::Direct, 1, 0.0F, 0.0F, 1.0F}};
+    }
+}
 
 float worldX(const LevelData& level, std::size_t gridX) {
     return -static_cast<float>(level.width) * 0.5F + 0.5F + static_cast<float>(gridX);
@@ -19,10 +31,30 @@ float worldZ(const LevelData& level, std::size_t gridZ) {
     return -static_cast<float>(level.height) * 0.5F + 0.5F + static_cast<float>(gridZ);
 }
 
+constexpr float kMuzzleHeight = 1.05F;
+
 }  // namespace
 
-Tower::Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ)
-    : gridX_(gridX), gridZ_(gridZ) {
+int towerCost(TowerType type) {
+    switch (type) {
+        case TowerType::Mortar: return 90;
+        case TowerType::Frost: return 75;
+        case TowerType::Ballista:
+        default: return 60;
+    }
+}
+
+const char* towerName(TowerType type) {
+    switch (type) {
+        case TowerType::Mortar: return "MOZDZIERZ";
+        case TowerType::Frost: return "MROZ";
+        case TowerType::Ballista:
+        default: return "KUSZA";
+    }
+}
+
+Tower::Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ, TowerType type)
+    : gridX_(gridX), gridZ_(gridZ), type_(type) {
     if (gridX >= level.width || gridZ >= level.height ||
         level.tileAt(gridX, gridZ) != TileType::BuildSpot) {
         return;
@@ -38,6 +70,8 @@ void Tower::update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles) 
         return;
     }
 
+    const TowerStats stats = statsFor(type_);
+    const float rangeSquared = stats.range * stats.range;
     cooldown_ = std::max(cooldown_ - std::max(deltaSeconds, 0.0F), 0.0F);
     if (cooldown_ > 0.0F) {
         return;
@@ -53,7 +87,7 @@ void Tower::update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles) 
 
         const float dx = enemy.x() - x_;
         const float dz = enemy.z() - z_;
-        if (dx * dx + dz * dz > kRangeSquared) {
+        if (dx * dx + dz * dz > rangeSquared) {
             continue;
         }
 
@@ -65,8 +99,8 @@ void Tower::update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles) 
     }
 
     if (targetIndex < wave.spawnedCount() &&
-        projectiles.launch(x_, kMuzzleHeight, z_, targetIndex, kDamage)) {
-        cooldown_ = kAttackIntervalSeconds;
+        projectiles.launch(x_, kMuzzleHeight, z_, targetIndex, stats.payload)) {
+        cooldown_ = stats.attackIntervalSeconds;
         ++shotsFired_;
     }
 }
@@ -80,5 +114,6 @@ float Tower::x() const { return x_; }
 float Tower::z() const { return z_; }
 std::size_t Tower::gridX() const { return gridX_; }
 std::size_t Tower::gridZ() const { return gridZ_; }
+TowerType Tower::type() const { return type_; }
 bool Tower::valid() const { return valid_; }
 int Tower::shotsFired() const { return shotsFired_; }

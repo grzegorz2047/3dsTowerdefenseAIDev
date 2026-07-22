@@ -12,13 +12,22 @@ constexpr float kTargetHeight = 0.48F;
 
 }  // namespace
 
-void Projectile::launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage) {
+void Projectile::launch(
+    float startX,
+    float startY,
+    float startZ,
+    std::size_t targetIndex,
+    const ProjectilePayload& payload) {
     x_ = startX;
     y_ = startY;
     z_ = startZ;
     targetIndex_ = targetIndex;
-    damage_ = damage;
-    active_ = damage > 0;
+    payload_ = payload;
+    active_ = payload.damage > 0 || payload.slowDurationSeconds > 0.0F;
+}
+
+void Projectile::launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage) {
+    launch(startX, startY, startZ, targetIndex, {ProjectileEffect::Direct, damage, 0.0F, 0.0F, 1.0F});
 }
 
 void Projectile::update(float deltaSeconds, Wave& wave) {
@@ -40,7 +49,7 @@ void Projectile::update(float deltaSeconds, Wave& wave) {
     const float dz = target.z() - z_;
     const float distanceSquared = dx * dx + dy * dy + dz * dz;
     if (distanceSquared <= kImpactRadiusSquared) {
-        target.takeDamage(damage_);
+        resolveImpact(wave, target);
         active_ = false;
         return;
     }
@@ -53,9 +62,24 @@ void Projectile::update(float deltaSeconds, Wave& wave) {
     z_ += dz * scale;
 
     if (travel >= distance) {
-        target.takeDamage(damage_);
+        resolveImpact(wave, target);
         active_ = false;
     }
+}
+
+void Projectile::resolveImpact(Wave& wave, Enemy& target) {
+    if (payload_.effect == ProjectileEffect::Direct) {
+        target.takeDamage(payload_.damage);
+        return;
+    }
+
+    wave.applyAreaEffect(
+        target.x(),
+        target.z(),
+        payload_.radius,
+        payload_.damage,
+        payload_.slowDurationSeconds,
+        payload_.slowMovementMultiplier);
 }
 
 void Projectile::reset() {
@@ -63,7 +87,7 @@ void Projectile::reset() {
     y_ = 0.0F;
     z_ = 0.0F;
     targetIndex_ = 0;
-    damage_ = 0;
+    payload_ = {};
     active_ = false;
 }
 
@@ -72,15 +96,25 @@ float Projectile::x() const { return x_; }
 float Projectile::y() const { return y_; }
 float Projectile::z() const { return z_; }
 std::size_t Projectile::targetIndex() const { return targetIndex_; }
+ProjectileEffect Projectile::effect() const { return payload_.effect; }
 
-bool ProjectilePool::launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage) {
+bool ProjectilePool::launch(
+    float startX,
+    float startY,
+    float startZ,
+    std::size_t targetIndex,
+    const ProjectilePayload& payload) {
     for (Projectile& projectile : projectiles_) {
         if (!projectile.active()) {
-            projectile.launch(startX, startY, startZ, targetIndex, damage);
+            projectile.launch(startX, startY, startZ, targetIndex, payload);
             return true;
         }
     }
     return false;
+}
+
+bool ProjectilePool::launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage) {
+    return launch(startX, startY, startZ, targetIndex, {ProjectileEffect::Direct, damage, 0.0F, 0.0F, 1.0F});
 }
 
 void ProjectilePool::update(float deltaSeconds, Wave& wave) {
