@@ -13,6 +13,7 @@ namespace {
 constexpr u32 kTopClearColor = 0x182030FF;
 constexpr u32 kHudBackground = C2D_Color32(14, 20, 32, 255);
 constexpr u32 kHudPanel = C2D_Color32(28, 38, 56, 255);
+constexpr u32 kHudAccent = C2D_Color32(45, 73, 105, 255);
 constexpr u32 kHudText = C2D_Color32(236, 241, 248, 255);
 constexpr u32 kHudMuted = C2D_Color32(166, 181, 202, 255);
 constexpr u32 kHudGood = C2D_Color32(82, 212, 126, 255);
@@ -149,12 +150,10 @@ void appendTower(std::vector<Vertex>& vertices) {
     appendBoxAt(vertices, 0.0F, 0.0F, 0.42F, 0.42F, 0.06F, 0.22F, darkStoneR, darkStoneG, darkStoneB);
     appendBoxAt(vertices, 0.0F, 0.0F, 0.31F, 0.31F, 0.20F, 0.88F, stoneR, stoneG, stoneB);
     appendBoxAt(vertices, 0.0F, 0.0F, 0.39F, 0.39F, 0.86F, 1.00F, darkStoneR, darkStoneG, darkStoneB);
-
     appendBoxAt(vertices, -0.30F, -0.30F, 0.09F, 0.09F, 0.98F, 1.19F, stoneR, stoneG, stoneB);
     appendBoxAt(vertices,  0.30F, -0.30F, 0.09F, 0.09F, 0.98F, 1.19F, stoneR, stoneG, stoneB);
     appendBoxAt(vertices, -0.30F,  0.30F, 0.09F, 0.09F, 0.98F, 1.19F, stoneR, stoneG, stoneB);
     appendBoxAt(vertices,  0.30F,  0.30F, 0.09F, 0.09F, 0.98F, 1.19F, stoneR, stoneG, stoneB);
-
     appendBoxAt(vertices, 0.0F, 0.0F, 0.08F, 0.27F, 1.02F, 1.11F, woodR, woodG, woodB);
     appendBoxAt(vertices, -0.22F, 0.0F, 0.22F, 0.04F, 1.05F, 1.13F, metalR, metalG, metalB);
     appendBoxAt(vertices,  0.22F, 0.0F, 0.22F, 0.04F, 1.05F, 1.13F, metalR, metalG, metalB);
@@ -179,6 +178,40 @@ void drawDynamicText(C2D_TextBuf buffer, const char* value, float x, float y, fl
     C2D_TextParse(&text, buffer, value);
     C2D_TextOptimize(&text);
     C2D_DrawText(&text, C2D_WithColor, x, y, 0.5F, scale, scale, color);
+}
+
+const char* instructionFor(const TutorialFlow& flow) {
+    switch (flow.phase()) {
+        case TutorialPhase::BuildFirstTower: return "1. D-PAD: WYBIERZ NIEBIESKIE POLE\n2. A: ZBUDUJ PIERWSZA WIEZE";
+        case TutorialPhase::ReadyToStart: return "WIEZA GOTOWA\nNACISNIJ X, ABY URUCHOMIC FALE";
+        case TutorialPhase::WaveRunning: return "BRON CYTADELI\nWIEZE STRZELAJA AUTOMATYCZNIE";
+        case TutorialPhase::Victory: return "ZWYCIESTWO!\nNACISNIJ Y, ABY ZAGRAC PONOWNIE";
+        case TutorialPhase::Defeat: return "PORAZKA - BAZA UPADLA\nNACISNIJ Y, ABY SPROBOWAC PONOWNIE";
+    }
+    return "";
+}
+
+const char* buildFeedbackText(BuildAttemptResult result) {
+    switch (result) {
+        case BuildAttemptResult::Built: return "WIEZA ZBUDOWANA";
+        case BuildAttemptResult::NoBuildSpot: return "BRAK POLA BUDOWY";
+        case BuildAttemptResult::Occupied: return "TO POLE JEST JUZ ZAJETE";
+        case BuildAttemptResult::InsufficientGold: return "ZA MALO ZLOTA";
+        case BuildAttemptResult::TowerLimitReached: return "OSIAGNIETO LIMIT WIEZ";
+        case BuildAttemptResult::InvalidTower: return "NIE MOZNA TU ZBUDOWAC";
+        case BuildAttemptResult::None:
+        default: return "NIEBIESKIE = BUDOWA | BRAZOWE = DROGA";
+    }
+}
+
+u32 buildFeedbackColor(BuildAttemptResult result) {
+    if (result == BuildAttemptResult::Built) {
+        return kHudGood;
+    }
+    if (result == BuildAttemptResult::None) {
+        return kHudMuted;
+    }
+    return kHudWarning;
 }
 
 }  // namespace
@@ -230,8 +263,8 @@ bool Renderer::initializeHud() {
         return false;
     }
 
-    staticTextBuffer_ = C2D_TextBufNew(256);
-    dynamicTextBuffer_ = C2D_TextBufNew(768);
+    staticTextBuffer_ = C2D_TextBufNew(384);
+    dynamicTextBuffer_ = C2D_TextBufNew(1024);
     if (staticTextBuffer_ == nullptr || dynamicTextBuffer_ == nullptr) {
         return false;
     }
@@ -241,7 +274,7 @@ bool Renderer::initializeHud() {
     C2D_TextParse(
         &controlsText_,
         staticTextBuffer_,
-        "D-PAD: WYBOR POLA   A: BUDUJ\nL/R: OBROT   CIRCLE PAD: KAMERA\nSTART: WYJSCIE");
+        "D-PAD: POLE   A: BUDUJ   X: START FALI\nL/R: OBROT   CIRCLE PAD: KAMERA   START: WYJSCIE");
     C2D_TextOptimize(&controlsText_);
     return true;
 }
@@ -278,9 +311,13 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
     return true;
 }
 
-void Renderer::render(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem) {
+void Renderer::render(
+    const Camera& camera,
+    const Wave& wave,
+    const BuildSystem& buildSystem,
+    const TutorialFlow& tutorialFlow) {
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-    drawBottomPanel(camera, wave, buildSystem);
+    drawBottomPanel(camera, wave, buildSystem, tutorialFlow);
     drawScene(camera, wave, buildSystem);
     C3D_FrameEnd(0);
 }
@@ -341,7 +378,6 @@ void Renderer::drawScene(const Camera& camera, const Wave& wave, const BuildSyst
         if (enemy.dead() || enemy.reachedBase()) {
             continue;
         }
-
         C3D_Mtx enemyView{};
         camera.writeView(enemyView);
         Mtx_Translate(&enemyView, enemy.x(), 0.0F, enemy.z(), true);
@@ -363,57 +399,51 @@ void Renderer::drawScene(const Camera& camera, const Wave& wave, const BuildSyst
     }
 }
 
-void Renderer::drawBottomPanel(const Camera&, const Wave& wave, const BuildSystem& buildSystem) {
+void Renderer::drawBottomPanel(
+    const Camera&,
+    const Wave& wave,
+    const BuildSystem& buildSystem,
+    const TutorialFlow& tutorialFlow) {
     C2D_TargetClear(bottomTarget_, kHudBackground);
     C2D_SceneBegin(bottomTarget_);
 
-    C2D_DrawRectSolid(8.0F, 8.0F, 0.1F, 304.0F, 34.0F, kHudPanel);
-    C2D_DrawRectSolid(8.0F, 50.0F, 0.1F, 304.0F, 100.0F, kHudPanel);
-    C2D_DrawRectSolid(8.0F, 158.0F, 0.1F, 304.0F, 40.0F, kHudPanel);
-    C2D_DrawRectSolid(8.0F, 206.0F, 0.1F, 304.0F, 28.0F, kHudPanel);
+    C2D_DrawRectSolid(8.0F, 8.0F, 0.1F, 304.0F, 30.0F, kHudPanel);
+    C2D_DrawRectSolid(8.0F, 44.0F, 0.1F, 304.0F, 58.0F, kHudAccent);
+    C2D_DrawRectSolid(8.0F, 108.0F, 0.1F, 304.0F, 54.0F, kHudPanel);
+    C2D_DrawRectSolid(8.0F, 168.0F, 0.1F, 304.0F, 28.0F, kHudPanel);
+    C2D_DrawRectSolid(8.0F, 202.0F, 0.1F, 304.0F, 32.0F, kHudPanel);
 
-    C2D_DrawText(&titleText_, C2D_WithColor | C2D_AlignCenter, 160.0F, 14.0F, 0.5F, 0.62F, 0.62F, kHudText);
-    C2D_DrawText(&controlsText_, C2D_WithColor | C2D_AlignCenter, 160.0F, 208.0F, 0.5F, 0.38F, 0.38F, kHudMuted);
+    C2D_DrawText(&titleText_, C2D_WithColor | C2D_AlignCenter, 160.0F, 12.0F, 0.5F, 0.54F, 0.54F, kHudText);
+    C2D_DrawText(&controlsText_, C2D_WithColor | C2D_AlignCenter, 160.0F, 205.0F, 0.5F, 0.32F, 0.32F, kHudMuted);
 
     C2D_TextBufClear(dynamicTextBuffer_);
-    char text[96];
+    char text[128];
 
-    std::snprintf(text, sizeof(text), "BAZA: %d", wave.baseHealth());
-    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 59.0F, 0.55F, wave.baseHealth() <= 2 ? kHudDanger : kHudText);
+    drawDynamicText(dynamicTextBuffer_, "CO TERAZ:", 18.0F, 49.0F, 0.38F, kHudMuted);
+    drawDynamicText(dynamicTextBuffer_, instructionFor(tutorialFlow), 18.0F, 64.0F, 0.52F,
+        tutorialFlow.phase() == TutorialPhase::Defeat ? kHudDanger : kHudText);
 
-    std::snprintf(text, sizeof(text), "ZLOTO: %d", buildSystem.gold());
-    drawDynamicText(dynamicTextBuffer_, text, 168.0F, 59.0F, 0.55F, kHudText);
+    std::snprintf(text, sizeof(text), "BAZA %d", wave.baseHealth());
+    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 116.0F, 0.48F, wave.baseHealth() <= 2 ? kHudDanger : kHudText);
+    std::snprintf(text, sizeof(text), "ZLOTO %d", buildSystem.gold());
+    drawDynamicText(dynamicTextBuffer_, text, 112.0F, 116.0F, 0.48F, kHudText);
+    std::snprintf(text, sizeof(text), "KOSZT %d", buildSystem.towerCost());
+    drawDynamicText(dynamicTextBuffer_, text, 218.0F, 116.0F, 0.42F, kHudMuted);
 
-    std::snprintf(text, sizeof(text), "WIEZE: %zu", buildSystem.towerCount());
-    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 88.0F, 0.50F, kHudText);
+    std::snprintf(text, sizeof(text), "WIEZE %zu", buildSystem.towerCount());
+    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 140.0F, 0.42F, kHudText);
+    std::snprintf(text, sizeof(text), "FALA %zu/%zu", wave.spawnedCount(), wave.enemyCount());
+    drawDynamicText(dynamicTextBuffer_, text, 112.0F, 140.0F, 0.42F, kHudText);
+    std::snprintf(text, sizeof(text), "POLE %zu,%zu", buildSystem.cursorX(), buildSystem.cursorZ());
+    drawDynamicText(dynamicTextBuffer_, text, 218.0F, 140.0F, 0.36F, kHudMuted);
 
-    std::snprintf(text, sizeof(text), "FALA: %zu/%zu", wave.spawnedCount(), wave.enemyCount());
-    drawDynamicText(dynamicTextBuffer_, text, 168.0F, 88.0F, 0.50F, kHudText);
-
-    std::snprintf(text, sizeof(text), "POCISKI: %zu", buildSystem.projectiles().activeCount());
-    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 118.0F, 0.42F, kHudMuted);
-
-    std::snprintf(text, sizeof(text), "KOSZT: %d", buildSystem.towerCost());
-    drawDynamicText(dynamicTextBuffer_, text, 168.0F, 118.0F, 0.42F, kHudMuted);
-
-    const char* status = "A: ZBUDUJ WIEZE";
-    u32 statusColor = kHudGood;
-    if (wave.completed()) {
-        status = "ZWYCIESTWO!";
-    } else if (wave.lost()) {
-        status = "PORAZKA!";
-        statusColor = kHudDanger;
-    } else if (buildSystem.cursorOccupied()) {
-        status = "POLE JEST ZAJETE";
-        statusColor = kHudWarning;
-    } else if (!buildSystem.hasEnoughGold()) {
-        status = "ZA MALO ZLOTA";
-        statusColor = kHudWarning;
-    }
-    drawDynamicText(dynamicTextBuffer_, status, 18.0F, 168.0F, 0.56F, statusColor);
-
-    std::snprintf(text, sizeof(text), "WYBRANE POLE: %zu,%zu", buildSystem.cursorX(), buildSystem.cursorZ());
-    drawDynamicText(dynamicTextBuffer_, text, 18.0F, 187.0F, 0.36F, kHudMuted);
+    drawDynamicText(
+        dynamicTextBuffer_,
+        buildFeedbackText(buildSystem.lastBuildResult()),
+        18.0F,
+        175.0F,
+        0.40F,
+        buildFeedbackColor(buildSystem.lastBuildResult()));
 }
 
 void Renderer::shutdown() {
