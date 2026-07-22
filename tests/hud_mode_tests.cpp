@@ -15,16 +15,20 @@ void expect(bool condition, const char* message) {
 }  // namespace
 
 int main() {
-    const HudMode gameplay = hudModeForSelectHeld(false);
-    const HudMode diagnostics = hudModeForSelectHeld(true);
+    HudModeController controller;
+    expect(controller.mode() == HudMode::Gameplay, "HUD must start in gameplay mode");
+    expect(controller.update(false) == HudMode::Gameplay, "released SELECT must preserve gameplay HUD");
+    expect(controller.update(true) == HudMode::AudioDiagnostics, "first SELECT press must enable diagnostics");
+    expect(controller.update(true) == HudMode::AudioDiagnostics, "holding SELECT must not toggle repeatedly");
+    expect(controller.update(false) == HudMode::AudioDiagnostics, "releasing SELECT must preserve diagnostics");
+    expect(controller.update(true) == HudMode::Gameplay, "second SELECT press must return to gameplay HUD");
 
-    expect(gameplay == HudMode::Gameplay, "released SELECT must use gameplay HUD");
-    expect(diagnostics == HudMode::AudioDiagnostics, "held SELECT must use diagnostic HUD");
-    expect(!showAudioDiagnostics(gameplay), "gameplay HUD must hide raw audio diagnostics");
-    expect(showAudioDiagnostics(diagnostics), "diagnostic HUD must expose raw audio diagnostics");
-    expect(!allowDiagnosticTone(gameplay, true), "B must not play the test tone in normal gameplay");
-    expect(!allowDiagnosticTone(diagnostics, false), "diagnostic tone requires B press");
-    expect(allowDiagnosticTone(diagnostics, true), "SELECT+B must play the diagnostic tone");
+    controller.reset();
+    expect(controller.mode() == HudMode::Gameplay, "reset must restore gameplay HUD");
+    expect(!showAudioDiagnostics(HudMode::Gameplay), "gameplay HUD must hide raw diagnostics");
+    expect(showAudioDiagnostics(HudMode::AudioDiagnostics), "diagnostic HUD must expose raw diagnostics");
+    expect(!allowDiagnosticTone(HudMode::Gameplay, true), "B must not play the test tone in gameplay mode");
+    expect(allowDiagnosticTone(HudMode::AudioDiagnostics, true), "diagnostic mode plus B must play the tone");
 
     std::cout << "HUD mode tests passed\n";
     return 0;
