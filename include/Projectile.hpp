@@ -28,6 +28,7 @@ public:
         float startZ,
         std::size_t targetIndex,
         const ProjectilePayload& payload);
+    void launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage);
     void update(float deltaSeconds, Wave& wave);
     void reset();
 
@@ -59,6 +60,7 @@ public:
         float startZ,
         std::size_t targetIndex,
         const ProjectilePayload& payload);
+    [[nodiscard]] bool launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage);
     void update(float deltaSeconds, Wave& wave);
     void reset();
 
