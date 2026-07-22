@@ -61,7 +61,7 @@ void testTowersLaunchDistinctPayloads() {
     const TowerType types[] = {TowerType::Ballista, TowerType::Mortar, TowerType::Frost};
     const ProjectileEffect effects[] = {ProjectileEffect::Direct, ProjectileEffect::Splash, ProjectileEffect::Frost};
     for (std::size_t index = 0; index < 3; ++index) {
-        Tower tower(level, 2 + index, 1, types[index]);
+        Tower tower(level, 2, 1, types[index]);
         ProjectilePool projectiles;
         tower.update(1.0F, wave, projectiles);
         expect(projectiles.activeCount() == 1, "each tower should launch one pooled projectile");
