@@ -39,6 +39,7 @@ COMMON_FLAGS=(
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/hud_text_tests.cpp" "$ROOT/source/HudText.cpp" -o "$BUILD_DIR/hud-text-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/performance_budget_tests.cpp" -o "$BUILD_DIR/performance-budget-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/performance_stress_level_tests.cpp" "$ROOT/source/Level.cpp" -o "$BUILD_DIR/performance-stress-level-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/orbit_camera_tests.cpp" "$ROOT/source/OrbitCamera.cpp" -o "$BUILD_DIR/orbit-camera-tests"
 
 "$BUILD_DIR/gameplay-tests"
 "$BUILD_DIR/tower-archetype-tests"
@@ -59,6 +60,7 @@ COMMON_FLAGS=(
 "$BUILD_DIR/hud-text-tests"
 "$BUILD_DIR/performance-budget-tests"
 "$BUILD_DIR/performance-stress-level-tests" "$ROOT"
+"$BUILD_DIR/orbit-camera-tests"
 
 # One screen, one owner. PrintConsole is allowed only on the top startup-error path.
 if grep -R "consoleInit(GFX_BOTTOM" "$ROOT/source" "$ROOT/include"; then
@@ -92,6 +94,7 @@ test "$(grep -c "C3D_FrameEnd" "$ROOT/source/UiRenderer.cpp")" -eq 1
 grep -q "uiRenderer.renderTopOverlay(topLeftTarget_" "$ROOT/source/Renderer.cpp"
 grep -q "uiRenderer.renderTopOverlay(topRightTarget_" "$ROOT/source/Renderer.cpp"
 grep -q "uiRenderer.renderBottom(uiState)" "$ROOT/source/Renderer.cpp"
+test "$(grep -c "C2D_Flush();" "$ROOT/source/UiRenderer.cpp")" -eq 2
 
 # Typed UI state replaces rows encoded as ANSI terminal output.
 grep -q "struct UiState" "$ROOT/include/UiState.hpp"
@@ -117,8 +120,10 @@ grep -q "Stereo3D::nextDepthLimit" "$ROOT/source/main.cpp"
 
 # Physical-device regression and runtime diagnostics contracts.
 grep -q "int speedMultiplier = 1;" "$ROOT/source/main.cpp"
-grep -q "const float localX = static_cast<float>(input.circle.dx)" "$ROOT/source/Camera.cpp"
-grep -q "const float localZ = -static_cast<float>(input.circle.dy)" "$ROOT/source/Camera.cpp"
+grep -q "OrbitCamera orbit_" "$ROOT/include/Camera.hpp"
+grep -q "kCircleDeadzone" "$ROOT/include/OrbitCamera.hpp"
+grep -q "orbit_.update" "$ROOT/source/Camera.cpp"
+grep -q "Mtx_RotateY(&destination, orbit_.yaw()" "$ROOT/source/Camera.cpp"
 grep -q "spawnedCount_ = 0U;" "$ROOT/source/Wave.cpp"
 grep -q "C3D_RenderTargetDelete(topLeftTarget_)" "$ROOT/source/Renderer.cpp"
 grep -q "C3D_RenderTargetDelete(topRightTarget_)" "$ROOT/source/Renderer.cpp"
