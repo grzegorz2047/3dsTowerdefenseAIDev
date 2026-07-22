@@ -10,6 +10,7 @@ public:
 
     void update(const InputSnapshot& input, float deltaSeconds);
     void writeProjection(C3D_Mtx& destination) const;
+    void writeStereoProjection(C3D_Mtx& destination, float interocularDistance) const;
     void writeView(C3D_Mtx& destination) const;
 
     [[nodiscard]] int rotationIndex() const;
