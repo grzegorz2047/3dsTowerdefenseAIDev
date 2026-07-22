@@ -59,3 +59,15 @@ private:
     std::size_t projectileVertexOffset_ = 0;
     std::size_t projectileVertexCount_ = 0;
 };
+
+// Renderer.cpp includes this header before its implementation. Replacing only
+// subsequent calls keeps the workaround local to that translation unit in the
+// current codebase: Citro2D batches are submitted before Citro3D closes the
+// frame. The wrapper body is parsed before the macro exists, so its call reaches
+// the original Citro3D function.
+inline void rendererFrameEndWithHudFlush(int flags) {
+    C2D_Flush();
+    C3D_FrameEnd(flags);
+}
+
+#define C3D_FrameEnd rendererFrameEndWithHudFlush
