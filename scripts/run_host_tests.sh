@@ -95,6 +95,7 @@ grep -q "uiRenderer.renderTopOverlay(topLeftTarget_" "$ROOT/source/Renderer.cpp"
 grep -q "uiRenderer.renderTopOverlay(topRightTarget_" "$ROOT/source/Renderer.cpp"
 grep -q "uiRenderer.renderBottom(uiState)" "$ROOT/source/Renderer.cpp"
 test "$(grep -c "C2D_Flush();" "$ROOT/source/UiRenderer.cpp")" -eq 2
+test "$(grep -c "C2D_Prepare();" "$ROOT/source/UiRenderer.cpp")" -eq 2
 
 # Typed UI state replaces rows encoded as ANSI terminal output.
 grep -q "struct UiState" "$ROOT/include/UiState.hpp"
