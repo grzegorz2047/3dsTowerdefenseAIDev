@@ -75,6 +75,8 @@ void drawOverlay(u8* framebuffer, int gold) {
     char text[8]{};
     std::snprintf(text, sizeof(text), "%d", clampedGold);
 
+    // The entire fixed-size panel is redrawn opaquely every frame. This removes
+    // all segments from the previous value before the new digits are written.
     fillRect(framebuffer, 8, 8, 78, 28, kPanelEdge);
     fillRect(framebuffer, 10, 10, 74, 24, kPanel);
     drawCoin(framebuffer, 23, 22);
@@ -86,6 +88,12 @@ void drawOverlay(u8* framebuffer, int gold) {
     }
 }
 
+void flushFramebuffer(u8* framebuffer, u16 width, u16 height) {
+    if (framebuffer == nullptr) return;
+    const std::size_t byteCount = static_cast<std::size_t>(width) * height * 3U;
+    GSPGPU_FlushDataCache(framebuffer, byteCount);
+}
+
 }  // namespace
 
 void drawTopGoldOverlay(int gold) {
@@ -93,6 +101,13 @@ void drawTopGoldOverlay(int gold) {
     u16 height = 0;
     u8* left = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, &width, &height);
     drawOverlay(left, gold);
-    u8* right = gfxGetFramebuffer(GFX_TOP, GFX_RIGHT, &width, &height);
-    if (right != left) drawOverlay(right, gold);
+    flushFramebuffer(left, width, height);
+
+    u16 rightWidth = 0;
+    u16 rightHeight = 0;
+    u8* right = gfxGetFramebuffer(GFX_TOP, GFX_RIGHT, &rightWidth, &rightHeight);
+    if (right != left) {
+        drawOverlay(right, gold);
+        flushFramebuffer(right, rightWidth, rightHeight);
+    }
 }
