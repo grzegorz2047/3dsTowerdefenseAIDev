@@ -25,16 +25,16 @@ void testCleanTap() {
 
 void testSmallJitterRemainsTap() {
     TouchGesture gesture;
-    gesture.update(true, 100, 100);
-    gesture.update(true, 105, 104);
+    (void)gesture.update(true, 100, 100);
+    (void)gesture.update(true, 105, 104);
     const TouchGestureResult result = gesture.update(false, 105, 104);
     expect(result.tapped, "small stylus jitter should remain a tap");
 }
 
 void testDragCancelsTap() {
     TouchGesture gesture;
-    gesture.update(true, 100, 100);
-    gesture.update(true, 109, 100);
+    (void)gesture.update(true, 100, 100);
+    (void)gesture.update(true, 109, 100);
     expect(gesture.cancelledByMovement(), "movement beyond threshold should cancel gesture");
     const TouchGestureResult result = gesture.update(false, 109, 100);
     expect(!result.tapped, "cancelled drag must not activate a button");
@@ -43,8 +43,8 @@ void testDragCancelsTap() {
 
 void testDistanceUsesBothAxes() {
     TouchGesture gesture;
-    gesture.update(true, 10, 10);
-    gesture.update(true, 16, 16);
+    (void)gesture.update(true, 10, 10);
+    (void)gesture.update(true, 16, 16);
     const TouchGestureResult result = gesture.update(false, 16, 16);
     expect(!result.tapped, "diagonal movement beyond circular threshold should cancel tap");
 }
