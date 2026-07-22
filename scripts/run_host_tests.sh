@@ -51,7 +51,10 @@ COMMON_FLAGS=(
 "$BUILD_DIR/audio-events-tests"
 "$BUILD_DIR/hud-text-tests"
 
-# The fallback UI must stay independent from the custom GPU pipeline.
+# The fallback UI must stay independent from the custom GPU pipeline and expose
+# enough diagnostics to distinguish a DSP permission failure from muted output.
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
-grep -q "v0.1.10-alpha  UI-CONSOLE" "$ROOT/source/main.cpp"
-grep -q "#define C2D_DrawText" "$ROOT/include/Renderer.hpp"
+grep -q "v0.1.11-alpha  AUDIO-DSP" "$ROOT/source/main.cpp"
+grep -q "audioStatusMessage(audioAvailable)" "$ROOT/source/main.cpp"
+grep -q "dsp::DSP" "$ROOT/config/application.rsf"
+grep -q "dsp: 0x0004013000001a02" "$ROOT/config/application.rsf"
