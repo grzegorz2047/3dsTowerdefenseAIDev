@@ -25,7 +25,9 @@ public:
         const Camera& camera,
         const Wave& wave,
         const BuildSystem& buildSystem,
-        const TutorialFlow& tutorialFlow);
+        const TutorialFlow& tutorialFlow,
+        bool stereoEnabled,
+        std::uint8_t maximum3DDepthPercent);
     void shutdown();
 
     [[nodiscard]] std::uint8_t lastEyeCount() const;
