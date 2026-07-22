@@ -60,11 +60,13 @@ private:
     std::size_t projectileVertexCount_ = 0;
 };
 
-// Renderer.cpp includes this header before its implementation. Replacing only
-// subsequent calls keeps the workaround local to that translation unit in the
-// current codebase: Citro2D batches are submitted before Citro3D closes the
-// frame. The wrapper body is parsed before the macro exists, so its call reaches
-// the original Citro3D function.
+// Citro2D queues rectangles and text until C2D_Flush. Renderer.cpp currently
+// draws the bottom panel before restoring the custom Citro3D state for the top
+// scene. Submit each text batch while the Citro2D state is still active; the
+// first text flush also submits all panel rectangles queued before it.
+#define C2D_DrawText(...) (C2D_DrawText(__VA_ARGS__), C2D_Flush())
+
+// Keep a final safety flush before the frame is transferred to the displays.
 inline void rendererFrameEndWithHudFlush(int flags) {
     C2D_Flush();
     C3D_FrameEnd(flags);
