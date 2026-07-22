@@ -30,6 +30,7 @@ COMMON_FLAGS=(
 "$HOST_CXX" \
   "${COMMON_FLAGS[@]}" \
   "$ROOT/tests/tutorial_flow_tests.cpp" \
+  "$ROOT/source/BuildFeedback.cpp" \
   "$ROOT/source/TutorialFlow.cpp" \
   -o "$BUILD_DIR/tutorial-flow-tests"
 
