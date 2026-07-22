@@ -47,6 +47,11 @@ COMMON_FLAGS=(
 
 "$HOST_CXX" \
   "${COMMON_FLAGS[@]}" \
+  "$ROOT/tests/audio_probe_tests.cpp" \
+  -o "$BUILD_DIR/audio-probe-tests"
+
+"$HOST_CXX" \
+  "${COMMON_FLAGS[@]}" \
   "$ROOT/tests/hud_text_tests.cpp" \
   "$ROOT/source/HudText.cpp" \
   -o "$BUILD_DIR/hud-text-tests"
@@ -55,12 +60,17 @@ COMMON_FLAGS=(
 "$BUILD_DIR/tutorial-flow-tests"
 "$BUILD_DIR/audio-events-tests"
 "$BUILD_DIR/audio-backend-tests"
+"$BUILD_DIR/audio-probe-tests"
 "$BUILD_DIR/hud-text-tests"
 
 # The fallback UI must expose the active backend and raw service results.
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
-grep -q "v0.1.12-alpha  AUDIO-FALLBACK" "$ROOT/source/main.cpp"
-grep -q "audioBackendName(audioSystem.backend())" "$ROOT/source/main.cpp"
+grep -q "v0.1.13-alpha  AUDIO-PROBE" "$ROOT/source/main.cpp"
+grep -q "KEY_B" "$ROOT/source/main.cpp"
+grep -q "playDiagnosticTone" "$ROOT/source/main.cpp"
+grep -q "channelEverActive" "$ROOT/source/main.cpp"
+grep -q "csndGetState" "$ROOT/source/AudioSystem.cpp"
+grep -q "kDurationSeconds = 2.0F" "$ROOT/source/AudioSystem.cpp"
 grep -q "ndspSetOutputMode(NDSP_OUTPUT_STEREO)" "$ROOT/source/AudioSystem.cpp"
 grep -q "csndPlaySound" "$ROOT/source/AudioSystem.cpp"
 
