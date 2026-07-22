@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cstdio>
 
+#include "AudioEvents.hpp"
+#include "AudioSystem.hpp"
 #include "BuildSystem.hpp"
 #include "Camera.hpp"
 #include "Input.hpp"
@@ -104,6 +106,11 @@ int main() {
     Wave wave(levelResult.level);
     BuildSystem buildSystem(levelResult.level);
     TutorialFlow tutorialFlow;
+    AudioSystem audioSystem;
+    audioSystem.initialize();
+    AudioEventRouter audioRouter;
+    audioRouter.reset({tutorialFlow.phase(), buildSystem.projectiles().activeCount()});
+
     float simulationAccumulator = 0.0F;
     u64 previousMilliseconds = osGetTime();
 
@@ -117,9 +124,11 @@ int main() {
             tutorialFlow.requestWaveStart(buildSystem.towerCount());
         }
         if (input.pressed(KEY_Y) && tutorialFlow.finished()) {
+            audioSystem.stopAll();
             wave.reset();
             buildSystem.reset();
             tutorialFlow.reset();
+            audioRouter.reset({tutorialFlow.phase(), 0U});
             simulationAccumulator = 0.0F;
         }
 
@@ -130,6 +139,9 @@ int main() {
         camera.update(input, frameSeconds);
         if (!tutorialFlow.finished()) {
             buildSystem.handleInput(input);
+            if (input.pressed(KEY_A)) {
+                audioSystem.play(cueForBuildResult(buildSystem.lastBuildResult()));
+            }
         }
         tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost());
 
@@ -146,9 +158,15 @@ int main() {
             simulationAccumulator -= kFixedStepSeconds;
         }
 
+        const AudioFrameState audioState{
+            tutorialFlow.phase(),
+            buildSystem.projectiles().activeCount()};
+        audioSystem.playMask(audioRouter.update(audioState));
+
         renderer.render(camera, wave, buildSystem, tutorialFlow);
     }
 
+    audioSystem.shutdown();
     renderer.shutdown();
     C3D_Fini();
     romfsExit();
