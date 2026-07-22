@@ -77,15 +77,18 @@ COMMON_FLAGS=(
 
 # The fallback UI must expose both NDSP attempts and retain the manual tone.
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
-grep -q "v0.1.16-alpha  NDSP-WBUF" "$ROOT/source/main.cpp"
+grep -q "v0.1.17-alpha  RESULT-FIELDS" "$ROOT/source/main.cpp"
 grep -q "HLE-SHIM" "$ROOT/source/main.cpp"
 grep -q "WBUF:%s POS:%lu/%lu" "$ROOT/source/main.cpp"
 grep -q "KEY_B" "$ROOT/source/main.cpp"
 grep -q "playDiagnosticTone" "$ROOT/source/main.cpp"
 
-# The shim is permitted only for libctru's exact missing-component result and
+# The shim is permitted only for a semantic DSP/NOTFOUND/NOT_FOUND result and
 # must contain no external firmware data.
-grep -q "0xD8B0A7FAU" "$ROOT/include/AudioNdspShim.hpp"
+grep -q "0xD880A7FAU" "$ROOT/include/AudioNdspShim.hpp"
+grep -q "resultSummary(result) == kResultSummaryNotFound" "$ROOT/include/AudioNdspShim.hpp"
+grep -q "resultModule(result) == kResultModuleDsp" "$ROOT/include/AudioNdspShim.hpp"
+grep -q "resultDescription(result) == kResultDescriptionNotFound" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "kSyntheticHleComponent" "$ROOT/source/AudioSystem.cpp"
 grep -q "ndspUseComponent" "$ROOT/source/AudioSystem.cpp"
 grep -q "std::array<std::uint8_t, 0x400>" "$ROOT/source/AudioSystem.cpp"
