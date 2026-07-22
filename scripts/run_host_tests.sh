@@ -31,6 +31,7 @@ COMMON_FLAGS=(
   "${COMMON_FLAGS[@]}" \
   "$ROOT/tests/tower_archetype_tests.cpp" \
   "$ROOT/source/Enemy.cpp" \
+  "$ROOT/source/Level.cpp" \
   "$ROOT/source/Projectile.cpp" \
   "$ROOT/source/Tower.cpp" \
   "$ROOT/source/Wave.cpp" \
