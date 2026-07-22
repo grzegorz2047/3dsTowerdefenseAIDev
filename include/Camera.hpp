@@ -3,6 +3,7 @@
 #include <citro3d.h>
 
 #include "Input.hpp"
+#include "OrbitCamera.hpp"
 
 class Camera {
 public:
@@ -16,9 +17,9 @@ public:
     [[nodiscard]] int rotationIndex() const;
     [[nodiscard]] float focusX() const;
     [[nodiscard]] float focusZ() const;
+    [[nodiscard]] float yaw() const;
+    [[nodiscard]] float distance() const;
 
 private:
-    float focusX_ = 0.0F;
-    float focusZ_ = 0.0F;
-    int rotationIndex_ = 0;
+    OrbitCamera orbit_{};
 };
