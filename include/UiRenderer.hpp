@@ -30,6 +30,8 @@ private:
     void drawWrappedText(const char* text, float x, float y, float scale, u32 color,
         std::size_t charactersPerLine, std::size_t maximumLines);
     void drawButton(float x, float y, float width, float height, const char* label, bool selected);
+    void drawSegmentDigit(unsigned int digit, float x, float y, float scale, u32 color);
+    void drawSegmentNumber(int value, float x, float y, float scale, u32 color);
 
     C3D_RenderTarget* topTarget_ = nullptr;
     C3D_RenderTarget* bottomTarget_ = nullptr;
