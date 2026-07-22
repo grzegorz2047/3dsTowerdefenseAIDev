@@ -39,7 +39,7 @@ void renderFallbackHud(
     consoleSelect(&console);
     std::printf("\x1b[2J\x1b[H");
     std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
-    std::printf("v0.1.16-alpha  NDSP-WBUF\n");
+    std::printf("v0.1.17-alpha  RESULT-FIELDS\n");
     std::printf("==============================\n");
     std::printf(
         "AUDIO:%s HLE-SHIM:%s\n",
