@@ -9,6 +9,7 @@
 #include "Input.hpp"
 #include "Level.hpp"
 #include "Renderer.hpp"
+#include "TutorialFlow.hpp"
 #include "Wave.hpp"
 
 namespace {
@@ -16,7 +17,6 @@ namespace {
 constexpr float kFixedStepSeconds = 1.0F / 60.0F;
 constexpr float kMaximumFrameSeconds = 1.0F / 15.0F;
 constexpr float kMaximumAccumulatorSeconds = kFixedStepSeconds * 5.0F;
-constexpr float kRestartDelaySeconds = 1.5F;
 
 float calculateFrameSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
     if (previousMilliseconds == 0U || nowMilliseconds <= previousMilliseconds) {
@@ -103,7 +103,7 @@ int main() {
     Camera camera;
     Wave wave(levelResult.level);
     BuildSystem buildSystem(levelResult.level);
-    float restartTimer = 0.0F;
+    TutorialFlow tutorialFlow;
     float simulationAccumulator = 0.0F;
     u64 previousMilliseconds = osGetTime();
 
@@ -113,33 +113,40 @@ int main() {
             break;
         }
 
+        if (input.pressed(KEY_X)) {
+            tutorialFlow.requestWaveStart(buildSystem.towerCount());
+        }
+        if (input.pressed(KEY_Y) && tutorialFlow.finished()) {
+            wave.reset();
+            buildSystem.reset();
+            tutorialFlow.reset();
+            simulationAccumulator = 0.0F;
+        }
+
         const u64 nowMilliseconds = osGetTime();
         const float frameSeconds = calculateFrameSeconds(nowMilliseconds, previousMilliseconds);
         previousMilliseconds = nowMilliseconds;
 
         camera.update(input, frameSeconds);
-        buildSystem.handleInput(input);
+        if (!tutorialFlow.finished()) {
+            buildSystem.handleInput(input);
+        }
+        tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost());
 
         simulationAccumulator = std::min(
             simulationAccumulator + frameSeconds,
             kMaximumAccumulatorSeconds);
 
         while (simulationAccumulator >= kFixedStepSeconds) {
-            if (wave.completed() || wave.lost()) {
-                restartTimer += kFixedStepSeconds;
-                if (restartTimer >= kRestartDelaySeconds) {
-                    wave.reset();
-                    buildSystem.reset();
-                    restartTimer = 0.0F;
-                }
-            } else {
+            if (tutorialFlow.waveRunning()) {
                 buildSystem.update(kFixedStepSeconds, wave);
                 wave.update(kFixedStepSeconds);
+                tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost());
             }
             simulationAccumulator -= kFixedStepSeconds;
         }
 
-        renderer.render(camera, wave, buildSystem);
+        renderer.render(camera, wave, buildSystem, tutorialFlow);
     }
 
     renderer.shutdown();

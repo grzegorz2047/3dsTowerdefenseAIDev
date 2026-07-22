@@ -16,9 +16,11 @@ BuildSystem::BuildSystem(const LevelData& level) : level_(&level) {
 void BuildSystem::handleInput(const InputSnapshot& input) {
     if (input.pressed(KEY_DLEFT) || input.pressed(KEY_DUP)) {
         moveCursor(-1);
+        lastBuildResult_ = BuildAttemptResult::None;
     }
     if (input.pressed(KEY_DRIGHT) || input.pressed(KEY_DDOWN)) {
         moveCursor(1);
+        lastBuildResult_ = BuildAttemptResult::None;
     }
     if (input.pressed(KEY_A)) {
         tryBuild();
@@ -45,6 +47,7 @@ void BuildSystem::reset() {
     cursorIndex_ = 0;
     projectiles_.reset();
     economy_.reset();
+    lastBuildResult_ = BuildAttemptResult::None;
 }
 
 std::size_t BuildSystem::towerCount() const { return towerCount_; }
@@ -52,6 +55,7 @@ const Tower& BuildSystem::towerAt(std::size_t index) const { return towers_.at(i
 const ProjectilePool& BuildSystem::projectiles() const { return projectiles_; }
 int BuildSystem::gold() const { return economy_.gold(); }
 int BuildSystem::towerCost() const { return Economy::kTowerCost; }
+BuildAttemptResult BuildSystem::lastBuildResult() const { return lastBuildResult_; }
 
 std::size_t BuildSystem::cursorX() const {
     if (buildSpotCount_ == 0) {
@@ -76,7 +80,7 @@ bool BuildSystem::hasEnoughGold() const {
 }
 
 bool BuildSystem::cursorCanBuild() const {
-    return level_ != nullptr && buildSpotCount_ > 0 && hasEnoughGold() && !cursorOccupied();
+    return level_ != nullptr && buildSpotCount_ > 0 && hasEnoughGold() && !cursorOccupied() && towerCount_ < kMaximumTowers;
 }
 
 bool BuildSystem::occupied(std::size_t x, std::size_t z) const {
@@ -98,17 +102,32 @@ void BuildSystem::moveCursor(int delta) {
 }
 
 void BuildSystem::tryBuild() {
-    if (!cursorCanBuild() || towerCount_ >= kMaximumTowers || level_ == nullptr) {
+    const bool hasBuildSpot = level_ != nullptr && buildSpotCount_ > 0;
+    const bool spotOccupied = hasBuildSpot && cursorOccupied();
+    const bool enoughGold = hasEnoughGold();
+    const bool hasCapacity = towerCount_ < kMaximumTowers;
+
+    BuildAttemptResult result = evaluateBuildAttempt(
+        hasBuildSpot,
+        spotOccupied,
+        enoughGold,
+        hasCapacity,
+        true);
+    if (result != BuildAttemptResult::Built) {
+        lastBuildResult_ = result;
         return;
     }
 
     Tower tower(*level_, cursorX(), cursorZ());
     if (!tower.valid()) {
+        lastBuildResult_ = BuildAttemptResult::InvalidTower;
         return;
     }
     if (!economy_.trySpend(Economy::kTowerCost)) {
+        lastBuildResult_ = BuildAttemptResult::InsufficientGold;
         return;
     }
 
     towers_[towerCount_++] = tower;
+    lastBuildResult_ = BuildAttemptResult::Built;
 }

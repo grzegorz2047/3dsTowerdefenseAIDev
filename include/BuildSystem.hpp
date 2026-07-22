@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 
+#include "BuildFeedback.hpp"
 #include "Economy.hpp"
 #include "Input.hpp"
 #include "Level.hpp"
@@ -28,6 +29,7 @@ public:
     [[nodiscard]] bool cursorOccupied() const;
     [[nodiscard]] bool hasEnoughGold() const;
     [[nodiscard]] bool cursorCanBuild() const;
+    [[nodiscard]] BuildAttemptResult lastBuildResult() const;
 
 private:
     static constexpr std::size_t kMaximumTowers = 16;
@@ -44,4 +46,5 @@ private:
     std::size_t cursorIndex_ = 0;
     ProjectilePool projectiles_{};
     Economy economy_{};
+    BuildAttemptResult lastBuildResult_ = BuildAttemptResult::None;
 };
