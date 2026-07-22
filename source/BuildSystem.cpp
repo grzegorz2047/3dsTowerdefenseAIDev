@@ -16,22 +16,20 @@ BuildSystem::BuildSystem(const LevelData& level) : level_(&level) {
 void BuildSystem::handleInput(const InputSnapshot& input) {
     if (input.pressed(KEY_DLEFT) || input.pressed(KEY_DUP)) {
         moveCursor(-1);
-        lastBuildResult_ = BuildAttemptResult::None;
-        lastTowerAction_ = TowerActionResult::None;
+        cancelAction();
     }
     if (input.pressed(KEY_DRIGHT) || input.pressed(KEY_DDOWN)) {
         moveCursor(1);
-        lastBuildResult_ = BuildAttemptResult::None;
-        lastTowerAction_ = TowerActionResult::None;
+        cancelAction();
     }
     if (input.pressed(KEY_L)) {
-        selectTower(previousTowerType(selectedTowerType_));
+        selectTowerType(previousTowerType(selectedTowerType_));
     }
     if (input.pressed(KEY_R)) {
-        selectTower(nextTowerType(selectedTowerType_));
+        selectTowerType(nextTowerType(selectedTowerType_));
     }
     if (input.pressed(KEY_A)) {
-        tryBuild();
+        buildOrSelectCursor();
     }
     if (input.pressed(KEY_B) && !input.isHeld(KEY_SELECT)) {
         lastTowerAction_ = upgradeCursorTower();
@@ -62,6 +60,19 @@ void BuildSystem::reset() {
     selectedTowerType_ = TowerType::Ballista;
     projectiles_.reset();
     economy_.reset();
+    cancelAction();
+}
+
+void BuildSystem::selectTowerType(TowerType type) {
+    selectedTowerType_ = type;
+    cancelAction();
+}
+
+void BuildSystem::buildOrSelectCursor() {
+    tryBuild();
+}
+
+void BuildSystem::cancelAction() {
     lastBuildResult_ = BuildAttemptResult::None;
     lastTowerAction_ = TowerActionResult::None;
 }
@@ -164,12 +175,6 @@ void BuildSystem::moveCursor(int delta) {
     const int count = static_cast<int>(buildSpotCount_);
     const int current = static_cast<int>(cursorIndex_);
     cursorIndex_ = static_cast<std::size_t>((current + delta + count) % count);
-}
-
-void BuildSystem::selectTower(TowerType type) {
-    selectedTowerType_ = type;
-    lastBuildResult_ = BuildAttemptResult::None;
-    lastTowerAction_ = TowerActionResult::None;
 }
 
 void BuildSystem::tryBuild() {
