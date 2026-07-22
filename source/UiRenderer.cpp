@@ -7,15 +7,15 @@
 
 namespace {
 
-constexpr u32 kBackground = C2D_Color32(12, 18, 28, 255);
-constexpr u32 kPanel = C2D_Color32(20, 29, 40, 255);
-constexpr u32 kPanelStrong = C2D_Color32(24, 43, 62, 255);
-constexpr u32 kText = C2D_Color32(236, 240, 244, 255);
-constexpr u32 kMuted = C2D_Color32(164, 178, 191, 255);
-constexpr u32 kAccent = C2D_Color32(112, 225, 255, 255);
-constexpr u32 kGold = C2D_Color32(255, 222, 112, 255);
-constexpr u32 kDanger = C2D_Color32(255, 132, 132, 255);
-constexpr u32 kSelected = C2D_Color32(48, 91, 119, 255);
+const u32 kBackground = C2D_Color32(12, 18, 28, 255);
+const u32 kPanel = C2D_Color32(20, 29, 40, 255);
+const u32 kPanelStrong = C2D_Color32(24, 43, 62, 255);
+const u32 kText = C2D_Color32(236, 240, 244, 255);
+const u32 kMuted = C2D_Color32(164, 178, 191, 255);
+const u32 kAccent = C2D_Color32(112, 225, 255, 255);
+const u32 kGold = C2D_Color32(255, 222, 112, 255);
+const u32 kDanger = C2D_Color32(255, 132, 132, 255);
+const u32 kSelected = C2D_Color32(48, 91, 119, 255);
 
 const char* towerLabel(TowerType type) {
     switch (type) {
@@ -47,6 +47,12 @@ void UiRenderer::shutdown() {
         textBuffer_ = nullptr;
     }
     bottomTarget_ = nullptr;
+    composedFrameActive_ = false;
+}
+
+void UiRenderer::beginFrame() {
+    if (textBuffer_ != nullptr) C2D_TextBufClear(textBuffer_);
+    composedFrameActive_ = true;
 }
 
 void UiRenderer::drawText(const char* text, float x, float y, float scale, u32 color) {
@@ -59,12 +65,12 @@ void UiRenderer::drawText(const char* text, float x, float y, float scale, u32 c
 
 void UiRenderer::drawButton(float x, float y, float width, float height, const char* label, bool selected) {
     C2D_DrawRectSolid(x, y, 0.1F, width, height, selected ? kSelected : kPanelStrong);
-    drawText(label, x + 7.0F, y + height * 0.36F, 0.47F, selected ? kGold : kText);
+    drawText(label, x + 7.0F, y + height * 0.36F, 0.44F, selected ? kGold : kText);
 }
 
 void UiRenderer::renderStandalone(const UiState& state) {
     if (bottomTarget_ == nullptr || textBuffer_ == nullptr) return;
-    C2D_TextBufClear(textBuffer_);
+    beginFrame();
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
     renderBottom(state);
     C3D_FrameEnd(0);
@@ -83,6 +89,7 @@ void UiRenderer::renderBottom(const UiState& state) {
     } else {
         drawMission(state);
     }
+    composedFrameActive_ = false;
 }
 
 void UiRenderer::drawCampaign(const UiState& state) {
@@ -122,31 +129,27 @@ void UiRenderer::drawCampaign(const UiState& state) {
 }
 
 void UiRenderer::drawMission(const UiState& state) {
-    C2D_DrawRectSolid(0.0F, 0.0F, 0.1F, 320.0F, 30.0F, kPanelStrong);
-    drawText(state.title, 10.0F, 7.0F, 0.50F, kAccent);
-    char resources[64]{};
-    std::snprintf(resources, sizeof(resources), "ZLOTO %d   BAZA %d   WROG %zu/%zu",
-        state.gold, state.baseHealth, state.spawnedEnemies, state.totalEnemies);
-    drawText(resources, 128.0F, 8.0F, 0.38F, kGold);
-
     const TouchRect ballista = TouchUiLayout::rectFor(TouchUiAction::SelectBallista);
     const TouchRect mortar = TouchUiLayout::rectFor(TouchUiAction::SelectMortar);
     const TouchRect frost = TouchUiLayout::rectFor(TouchUiAction::SelectFrost);
-    drawButton(ballista.x, ballista.y + 30.0F, ballista.width, ballista.height - 8.0F, "KUSZA",
+    drawButton(ballista.x, ballista.y, ballista.width, ballista.height, "KUSZA",
         state.selectedTower == TowerType::Ballista);
-    drawButton(mortar.x, mortar.y + 30.0F, mortar.width, mortar.height - 8.0F, "MOZDZIERZ",
+    drawButton(mortar.x, mortar.y, mortar.width, mortar.height, "MOZDZIERZ",
         state.selectedTower == TowerType::Mortar);
-    drawButton(frost.x, frost.y + 30.0F, frost.width, frost.height - 8.0F, "MROZ",
+    drawButton(frost.x, frost.y, frost.width, frost.height, "MROZ",
         state.selectedTower == TowerType::Frost);
 
-    C2D_DrawRectSolid(8.0F, 82.0F, 0.1F, 304.0F, 70.0F, kPanel);
+    C2D_DrawRectSolid(8.0F, 58.0F, 0.1F, 304.0F, 62.0F, kPanel);
+    char resources[64]{};
+    std::snprintf(resources, sizeof(resources), "ZLOTO %d   BAZA %d   WROG %zu/%zu",
+        state.gold, state.baseHealth, state.spawnedEnemies, state.totalEnemies);
+    drawText(resources, 14.0F, 65.0F, 0.42F, kGold);
     char selection[64]{};
-    std::snprintf(selection, sizeof(selection), "%s  koszt %d  pole %zu,%zu  %s",
+    std::snprintf(selection, sizeof(selection), "%s koszt %d  pole %zu,%zu  %s",
         towerLabel(state.selectedTower), state.towerCost, state.cursorX, state.cursorZ,
         state.cursorOccupied ? "WIEZA" : "BUDOWA");
-    drawText(selection, 14.0F, 90.0F, 0.42F, kText);
-    drawText(state.instruction, 14.0F, 114.0F, 0.39F, kMuted);
-    drawText(state.statusMessage, 14.0F, 136.0F, 0.37F, kGold);
+    drawText(selection, 14.0F, 85.0F, 0.38F, kText);
+    drawText(state.instruction, 14.0F, 104.0F, 0.34F, kMuted);
 
     if (state.diagnosticsVisible) {
         drawDiagnostics(state);
@@ -156,11 +159,12 @@ void UiRenderer::drawMission(const UiState& state) {
     const TouchRect pause = TouchUiLayout::rectFor(TouchUiAction::TogglePause);
     const TouchRect speed = TouchUiLayout::rectFor(TouchUiAction::ToggleSpeed);
     const TouchRect cancel = TouchUiLayout::rectFor(TouchUiAction::Cancel);
-    drawButton(pause.x, pause.y + 32.0F, pause.width, pause.height, state.paused ? "WZNOW" : "PAUZA", state.paused);
+    drawButton(pause.x, pause.y, pause.width, pause.height, state.paused ? "WZNOW" : "PAUZA", state.paused);
     char speedLabel[16]{};
     std::snprintf(speedLabel, sizeof(speedLabel), "TEMPO %dx", state.speedMultiplier);
-    drawButton(speed.x, speed.y + 32.0F, speed.width, speed.height, speedLabel, state.speedMultiplier == 2);
-    drawButton(cancel.x, cancel.y + 32.0F, cancel.width, cancel.height, "ANULUJ", false);
+    drawButton(speed.x, speed.y, speed.width, speed.height, speedLabel, state.speedMultiplier == 2);
+    drawButton(cancel.x, cancel.y, cancel.width, cancel.height, "ANULUJ", false);
+    drawText(state.statusMessage, 168.0F, 141.0F, 0.34F, kGold);
 
     const TouchRect build = TouchUiLayout::rectFor(TouchUiAction::BuildOrSelect);
     const TouchRect upgrade = TouchUiLayout::rectFor(TouchUiAction::Upgrade);
@@ -174,29 +178,31 @@ void UiRenderer::drawMission(const UiState& state) {
 }
 
 void UiRenderer::drawDiagnostics(const UiState& state) {
-    C2D_DrawRectSolid(8.0F, 158.0F, 0.2F, 304.0F, 76.0F, kPanelStrong);
+    C2D_DrawRectSolid(8.0F, 128.0F, 0.2F, 304.0F, 106.0F, kPanelStrong);
     const float fps = state.performance.averageFrameMilliseconds > 0.0F
         ? 1000.0F / state.performance.averageFrameMilliseconds : 0.0F;
     char line[96]{};
-    std::snprintf(line, sizeof(line), "FPS %.1f  AVG %.1fms  MAX %.1fms  RENDER %.1fms", fps,
-        state.performance.averageFrameMilliseconds, state.performance.worstFrameMilliseconds,
-        state.performance.lastRenderMilliseconds);
-    drawText(line, 13.0F, 166.0F, 0.34F, state.performance.frameBudgetExceeded() ? kDanger : kText);
-    std::snprintf(line, sizeof(line), "MEM %luKB  3D %s %u%%  oczy %u  sep %.4f",
-        static_cast<unsigned long>(state.performance.freeLinearMemoryBytes / 1024U),
-        state.stereoEnabled ? "ON" : "OFF", static_cast<unsigned int>(state.maximum3DDepthPercent),
-        static_cast<unsigned int>(state.stereoEyeCount), state.stereoSeparation);
-    drawText(line, 13.0F, 188.0F, 0.34F, state.performance.memoryReserveLow() ? kDanger : kText);
-    std::snprintf(line, sizeof(line), "AUDIO %s  HLE %s  CH %d  BUF %s %lu/%lu",
-        state.audioBackend, state.ndspShimActive ? "ON" : (state.ndspShimAttempted ? "BLAD" : "NIE"),
-        state.audioChannel, state.audioWaveStatus,
-        static_cast<unsigned long>(state.audioSamplePosition),
-        static_cast<unsigned long>(state.audioSampleCount));
-    drawText(line, 13.0F, 210.0F, 0.32F, kMuted);
+    std::snprintf(line, sizeof(line), "FPS %.1f AVG %.1fms MAX %.1fms", fps,
+        state.performance.averageFrameMilliseconds, state.performance.worstFrameMilliseconds);
+    drawText(line, 13.0F, 137.0F, 0.36F, state.performance.frameBudgetExceeded() ? kDanger : kText);
+    std::snprintf(line, sizeof(line), "RENDER %.1fms  MEM %luKB", state.performance.lastRenderMilliseconds,
+        static_cast<unsigned long>(state.performance.freeLinearMemoryBytes / 1024U));
+    drawText(line, 13.0F, 158.0F, 0.36F, state.performance.memoryReserveLow() ? kDanger : kText);
+    std::snprintf(line, sizeof(line), "3D %s %u%% oczy %u sep %.4f", state.stereoEnabled ? "ON" : "OFF",
+        static_cast<unsigned int>(state.maximum3DDepthPercent), static_cast<unsigned int>(state.stereoEyeCount),
+        state.stereoSeparation);
+    drawText(line, 13.0F, 179.0F, 0.34F, kText);
+    std::snprintf(line, sizeof(line), "AUDIO %s HLE %s CH %d", state.audioBackend,
+        state.ndspShimActive ? "ON" : (state.ndspShimAttempted ? "BLAD" : "NIE"), state.audioChannel);
+    drawText(line, 13.0F, 200.0F, 0.34F, kMuted);
+    std::snprintf(line, sizeof(line), "BUF %s %lu/%lu", state.audioWaveStatus,
+        static_cast<unsigned long>(state.audioSamplePosition), static_cast<unsigned long>(state.audioSampleCount));
+    drawText(line, 13.0F, 219.0F, 0.32F, kMuted);
 }
 
 void UiRenderer::renderTopOverlay(C3D_RenderTarget* target, const UiState& state) {
     if (target == nullptr || textBuffer_ == nullptr || state.screen != UiScreen::Mission) return;
+    if (!composedFrameActive_) beginFrame();
     C2D_SceneBegin(target);
     C2D_DrawRectSolid(8.0F, 8.0F, 0.8F, 130.0F, 28.0F, C2D_Color32(24, 28, 38, 225));
     C2D_DrawCircleSolid(23.0F, 22.0F, 0.9F, 9.0F, C2D_Color32(244, 190, 48, 255));
