@@ -60,16 +60,10 @@ private:
     std::size_t projectileVertexCount_ = 0;
 };
 
-// Citro2D queues rectangles and text until C2D_Flush. Renderer.cpp currently
-// draws the bottom panel before restoring the custom Citro3D state for the top
-// scene. Submit each text batch while the Citro2D state is still active; the
-// first text flush also submits all panel rectangles queued before it.
-#define C2D_DrawText(...) (C2D_DrawText(__VA_ARGS__), C2D_Flush())
-
-// Keep a final safety flush before the frame is transferred to the displays.
-inline void rendererFrameEndWithHudFlush(int flags) {
-    C2D_Flush();
-    C3D_FrameEnd(flags);
-}
-
-#define C3D_FrameEnd rendererFrameEndWithHudFlush
+// Renderer.cpp includes this header before its implementation. Disable only its
+// legacy bottom-screen Citro2D draw calls so they cannot overwrite the system
+// PrintConsole fallback. The 3D top-screen pass remains unchanged.
+#define C2D_TargetClear(...) ((void)0)
+#define C2D_SceneBegin(...) ((void)0)
+#define C2D_DrawRectSolid(...) ((void)0)
+#define C2D_DrawText(...) ((void)0)

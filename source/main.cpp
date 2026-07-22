@@ -8,6 +8,7 @@
 #include "AudioSystem.hpp"
 #include "BuildSystem.hpp"
 #include "Camera.hpp"
+#include "HudText.hpp"
 #include "Input.hpp"
 #include "Level.hpp"
 #include "Renderer.hpp"
@@ -27,6 +28,39 @@ float calculateFrameSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
 
     const float elapsed = static_cast<float>(nowMilliseconds - previousMilliseconds) / 1000.0F;
     return std::min(elapsed, kMaximumFrameSeconds);
+}
+
+void renderFallbackHud(
+    PrintConsole& console,
+    const Wave& wave,
+    const BuildSystem& buildSystem,
+    const TutorialFlow& tutorialFlow) {
+    consoleSelect(&console);
+    std::printf("\x1b[2J\x1b[H");
+    std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
+    std::printf("v0.1.10-alpha  UI-CONSOLE\n");
+    std::printf("==============================\n\n");
+
+    std::printf("\x1b[33mCO TERAZ:\x1b[0m\n%s\n\n", tutorialInstruction(tutorialFlow.phase()));
+    std::printf(
+        "BAZA: %-2d  ZLOTO: %-3d  KOSZT: %d\n",
+        wave.baseHealth(),
+        buildSystem.gold(),
+        buildSystem.towerCost());
+    std::printf(
+        "WIEZE: %-2zu FALA: %zu/%zu  POLE: %zu,%zu\n\n",
+        buildSystem.towerCount(),
+        wave.spawnedCount(),
+        wave.enemyCount(),
+        buildSystem.cursorX(),
+        buildSystem.cursorZ());
+
+    std::printf("STATUS: %s\n\n", buildAttemptMessage(buildSystem.lastBuildResult()));
+    std::printf("D-PAD  wybierz niebieskie pole\n");
+    std::printf("A      zbuduj wieze\n");
+    std::printf("X      uruchom fale\n");
+    std::printf("Y      restart po wyniku\n");
+    std::printf("START  wyjscie\n");
 }
 
 int showStartupError(const char* stage, const char* detail, bool citro3dInitialized, bool romfsInitialized) {
@@ -101,6 +135,11 @@ int main() {
             true);
     }
 
+    PrintConsole bottomConsole{};
+    consoleInit(GFX_BOTTOM, &bottomConsole);
+    consoleSelect(&bottomConsole);
+    consoleClear();
+
     InputSystem inputSystem;
     Camera camera;
     Wave wave(levelResult.level);
@@ -163,6 +202,7 @@ int main() {
             buildSystem.projectiles().activeCount()};
         audioSystem.playMask(audioRouter.update(audioState));
 
+        renderFallbackHud(bottomConsole, wave, buildSystem, tutorialFlow);
         renderer.render(camera, wave, buildSystem, tutorialFlow);
     }
 
