@@ -39,12 +39,18 @@ void renderFallbackHud(
     consoleSelect(&console);
     std::printf("\x1b[2J\x1b[H");
     std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
-    std::printf("v0.1.13-alpha  AUDIO-PROBE\n");
+    std::printf("v0.1.14-alpha  NDSP-HLE\n");
     std::printf("==============================\n");
-    std::printf("AUDIO: %s\n", audioBackendName(audioSystem.backend()));
     std::printf(
-        "NDSP:%08lX CSND:%08lX PLAY:%08lX\n",
-        static_cast<unsigned long>(audioSystem.ndspResult()),
+        "AUDIO:%s HLE-SHIM:%s\n",
+        audioBackendName(audioSystem.backend()),
+        audioSystem.ndspShimActive() ? "AKTYWNY" : (audioSystem.ndspShimAttempted() ? "ODRZUCONY" : "NIE"));
+    std::printf(
+        "NDSP1:%08lX NDSP2:%08lX\n",
+        static_cast<unsigned long>(audioSystem.ndspInitialResult()),
+        static_cast<unsigned long>(audioSystem.ndspShimResult()));
+    std::printf(
+        "CSND:%08lX PLAY:%08lX\n",
         static_cast<unsigned long>(audioSystem.csndResult()),
         static_cast<unsigned long>(audioSystem.lastPlayResult()));
     std::printf(
@@ -123,20 +129,12 @@ int main() {
     }
 
     if (!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)) {
-        return showStartupError(
-            "CITRO3D",
-            "C3D_Init nie przydzielil bufora polecen GPU.",
-            false,
-            true);
+        return showStartupError("CITRO3D", "C3D_Init nie przydzielil bufora polecen GPU.", false, true);
     }
 
     const LevelLoadResult levelResult = LevelLoader::loadFromRomFs("romfs:/levels/tutorial.lvl");
     if (!levelResult.success) {
-        return showStartupError(
-            "LADOWANIE POZIOMU",
-            levelResult.error.c_str(),
-            true,
-            true);
+        return showStartupError("LADOWANIE POZIOMU", levelResult.error.c_str(), true, true);
     }
 
     Renderer renderer;
@@ -201,10 +199,7 @@ int main() {
         }
         tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost());
 
-        simulationAccumulator = std::min(
-            simulationAccumulator + frameSeconds,
-            kMaximumAccumulatorSeconds);
-
+        simulationAccumulator = std::min(simulationAccumulator + frameSeconds, kMaximumAccumulatorSeconds);
         while (simulationAccumulator >= kFixedStepSeconds) {
             if (tutorialFlow.waveRunning()) {
                 buildSystem.update(kFixedStepSeconds, wave);
