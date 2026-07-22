@@ -6,6 +6,7 @@
 #include "Economy.hpp"
 #include "Input.hpp"
 #include "Level.hpp"
+#include "Projectile.hpp"
 #include "Tower.hpp"
 #include "Wave.hpp"
 
@@ -19,6 +20,7 @@ public:
 
     [[nodiscard]] std::size_t towerCount() const;
     [[nodiscard]] const Tower& towerAt(std::size_t index) const;
+    [[nodiscard]] const ProjectilePool& projectiles() const;
     [[nodiscard]] int gold() const;
     [[nodiscard]] int towerCost() const;
     [[nodiscard]] std::size_t cursorX() const;
@@ -40,5 +42,6 @@ private:
     std::size_t buildSpotCount_ = 0;
     std::size_t towerCount_ = 0;
     std::size_t cursorIndex_ = 0;
+    ProjectilePool projectiles_{};
     Economy economy_{};
 };
