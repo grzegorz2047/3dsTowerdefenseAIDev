@@ -24,6 +24,8 @@ public:
     void play(AudioCue cue);
     void playMask(std::uint32_t cueMask);
     void playDiagnosticTone();
+    void startMissionMusic();
+    void stopMusic();
     void updateProbe();
     void stopAll();
     void shutdown();
@@ -50,6 +52,7 @@ private:
     static constexpr int kDiagnosticChannel = 0;
     static constexpr std::size_t kSfxChannelCount = 6;
     static constexpr int kFirstSfxChannel = 1;
+    static constexpr int kMusicChannel = kFirstSfxChannel + static_cast<int>(kSfxChannelCount);
 
     struct Sample {
         std::int16_t* data = nullptr;
@@ -59,6 +62,7 @@ private:
     [[nodiscard]] bool generateSamples();
     [[nodiscard]] bool generateSample(AudioCue cue);
     [[nodiscard]] bool generateDiagnosticTone();
+    [[nodiscard]] bool generateMissionMusic();
     void playSample(const Sample& sample);
     void initializeNdspChannels();
     void freeSamples();
@@ -77,7 +81,9 @@ private:
     std::size_t nextChannel_ = 0;
     std::array<Sample, static_cast<std::size_t>(AudioCue::Count)> samples_{};
     Sample diagnosticTone_{};
+    Sample missionMusic_{};
     ndspWaveBuf diagnosticWaveBuffer_{};
+    ndspWaveBuf musicWaveBuffer_{};
     std::uint32_t diagnosticSamplePosition_ = 0;
     std::array<ndspWaveBuf, kSfxChannelCount> waveBuffers_{};
 };

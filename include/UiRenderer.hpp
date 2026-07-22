@@ -22,12 +22,16 @@ public:
     void renderTopOverlay(C3D_RenderTarget* target, const UiState& state);
 
 private:
+    void drawStandaloneTop(const UiState& state);
     void drawCampaign(const UiState& state);
     void drawMission(const UiState& state);
     void drawDiagnostics(const UiState& state);
     void drawText(const char* text, float x, float y, float scale, u32 color);
+    void drawWrappedText(const char* text, float x, float y, float scale, u32 color,
+        std::size_t charactersPerLine, std::size_t maximumLines);
     void drawButton(float x, float y, float width, float height, const char* label, bool selected);
 
+    C3D_RenderTarget* topTarget_ = nullptr;
     C3D_RenderTarget* bottomTarget_ = nullptr;
     C2D_TextBuf textBuffer_ = nullptr;
     bool composedFrameActive_ = false;

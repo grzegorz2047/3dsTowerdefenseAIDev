@@ -69,7 +69,9 @@ if grep -R "consoleInit(GFX_BOTTOM" "$ROOT/source" "$ROOT/include"; then
 fi
 grep -q "consoleInit(GFX_TOP" "$ROOT/source/main.cpp"
 grep -q "C2D_Init(C2D_DEFAULT_MAX_OBJECTS)" "$ROOT/source/main.cpp"
+grep -q "C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT)" "$ROOT/source/UiRenderer.cpp"
 grep -q "C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT)" "$ROOT/source/UiRenderer.cpp"
+grep -q "gfxSet3D(false)" "$ROOT/source/UiRenderer.cpp"
 grep -q "C2D_Fini();" "$ROOT/source/main.cpp"
 
 # No terminal interception, renderer macros, or CPU writes into GPU-owned framebuffers.
@@ -85,24 +87,31 @@ if grep -R "#define render\|#define printf\|#define C3D_Init\|#define gfxSwapBuf
   exit 1
 fi
 
-# Each active path owns exactly one begin/end pair. Mission rendering composes top 3D,
-# top Citro2D overlays, and bottom Citro2D before the single FrameEnd.
+# Each active path owns exactly one begin/end pair. Standalone rendering composes both screens.
 test "$(grep -c "C3D_FrameBegin" "$ROOT/source/Renderer.cpp")" -eq 1
 test "$(grep -c "C3D_FrameEnd" "$ROOT/source/Renderer.cpp")" -eq 1
 test "$(grep -c "C3D_FrameBegin" "$ROOT/source/UiRenderer.cpp")" -eq 1
 test "$(grep -c "C3D_FrameEnd" "$ROOT/source/UiRenderer.cpp")" -eq 1
+grep -q "drawStandaloneTop(state)" "$ROOT/source/UiRenderer.cpp"
 grep -q "uiRenderer.renderTopOverlay(topLeftTarget_" "$ROOT/source/Renderer.cpp"
 grep -q "uiRenderer.renderTopOverlay(topRightTarget_" "$ROOT/source/Renderer.cpp"
 grep -q "uiRenderer.renderBottom(uiState)" "$ROOT/source/Renderer.cpp"
-test "$(grep -c "C2D_Flush();" "$ROOT/source/UiRenderer.cpp")" -eq 2
-test "$(grep -c "C2D_Prepare();" "$ROOT/source/UiRenderer.cpp")" -eq 2
+test "$(grep -c "C2D_Flush();" "$ROOT/source/UiRenderer.cpp")" -eq 3
+test "$(grep -c "C2D_Prepare();" "$ROOT/source/UiRenderer.cpp")" -eq 3
 
-# Typed UI state replaces rows encoded as ANSI terminal output.
+# Typed UI state and physical-device layout contracts.
 grep -q "struct UiState" "$ROOT/include/UiState.hpp"
 grep -q "UiScreen screen" "$ROOT/include/UiState.hpp"
 grep -q "UiRenderer& uiRenderer" "$ROOT/include/Renderer.hpp"
 grep -q "missionUiState" "$ROOT/source/main.cpp"
 grep -q "campaignUiState" "$ROOT/source/main.cpp"
+grep -q "drawWrappedText" "$ROOT/source/UiRenderer.cpp"
+grep -q '"X KAMPANIA"' "$ROOT/source/UiRenderer.cpp"
+grep -q '"Y POWTORZ"' "$ROOT/source/UiRenderer.cpp"
+if grep -q '"L 3D ON"\|"L 3D OFF"' "$ROOT/source/UiRenderer.cpp"; then
+  echo "Physical 3D slider must not be duplicated as a campaign button" >&2
+  exit 1
+fi
 
 # Visible mission controls must be sourced from the same rectangles as touch input.
 grep -q "TouchUiLayout::rectFor(TouchUiAction::SelectBallista)" "$ROOT/source/UiRenderer.cpp"
@@ -122,7 +131,9 @@ grep -q "Stereo3D::nextDepthLimit" "$ROOT/source/main.cpp"
 # Physical-device regression and runtime diagnostics contracts.
 grep -q "int speedMultiplier = 1;" "$ROOT/source/main.cpp"
 grep -q "OrbitCamera orbit_" "$ROOT/include/Camera.hpp"
-grep -q "kCircleDeadzone" "$ROOT/include/OrbitCamera.hpp"
+grep -q "kDefaultPitch = 0.50F" "$ROOT/include/OrbitCamera.hpp"
+grep -q "kDefaultDistance = 13.25F" "$ROOT/include/OrbitCamera.hpp"
+grep -q "kCameraHeight = -3.8F" "$ROOT/source/Camera.cpp"
 grep -q "orbit_.update" "$ROOT/source/Camera.cpp"
 grep -q "Mtx_RotateY(&destination, orbit_.yaw()" "$ROOT/source/Camera.cpp"
 grep -q "spawnedCount_ = 0U;" "$ROOT/source/Wave.cpp"
@@ -149,7 +160,7 @@ grep -q "appendEnemy(vertices)" "$ROOT/source/Renderer.cpp"
 grep -q "appendTower(vertices)" "$ROOT/source/Renderer.cpp"
 grep -q "appendProjectile(vertices)" "$ROOT/source/Renderer.cpp"
 
-# Audio platform contracts.
+# Audio platform and music contracts.
 grep -q "0xD880A7FAU" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultSummary(result) == kResultSummaryNotFound" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultModule(result) == kResultModuleDsp" "$ROOT/include/AudioNdspShim.hpp"
@@ -163,6 +174,10 @@ if find "$ROOT" -type f \( -iname 'dspfirm.cdc' -o -iname '*.cdc' \) | grep -q .
 fi
 
 grep -q "kDiagnosticChannel = 0" "$ROOT/include/AudioSystem.hpp"
+grep -q "kMusicChannel" "$ROOT/include/AudioSystem.hpp"
+grep -q "generateMissionMusic" "$ROOT/source/AudioSystem.cpp"
+grep -q "musicWaveBuffer_.looping = true" "$ROOT/source/AudioSystem.cpp"
+grep -q "ndspChnSetMix(kMusicChannel" "$ROOT/source/AudioSystem.cpp"
 grep -q "NDSP_FORMAT_STEREO_PCM16" "$ROOT/source/AudioSystem.cpp"
 grep -q "frame \* 2U + 1U" "$ROOT/source/AudioSystem.cpp"
 grep -q "ndspChnGetSamplePos" "$ROOT/source/AudioSystem.cpp"
