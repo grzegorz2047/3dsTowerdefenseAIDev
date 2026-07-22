@@ -37,6 +37,7 @@ COMMON_FLAGS=(
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/audio_wave_status_tests.cpp" -o "$BUILD_DIR/audio-wave-status-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/hud_mode_tests.cpp" -o "$BUILD_DIR/hud-mode-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/hud_text_tests.cpp" "$ROOT/source/HudText.cpp" -o "$BUILD_DIR/hud-text-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/performance_budget_tests.cpp" -o "$BUILD_DIR/performance-budget-tests"
 
 "$BUILD_DIR/gameplay-tests"
 "$BUILD_DIR/tower-archetype-tests"
@@ -55,6 +56,7 @@ COMMON_FLAGS=(
 "$BUILD_DIR/audio-wave-status-tests"
 "$BUILD_DIR/hud-mode-tests"
 "$BUILD_DIR/hud-text-tests"
+"$BUILD_DIR/performance-budget-tests"
 
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
 grep -q "TouchGesture touchGesture" "$ROOT/source/main.cpp"
@@ -87,8 +89,16 @@ grep -q "spawnedCount_ = 0U;" "$ROOT/source/Wave.cpp"
 grep -q "C3D_RenderTargetDelete(topLeftTarget_)" "$ROOT/source/Renderer.cpp"
 grep -q "C3D_RenderTargetDelete(topRightTarget_)" "$ROOT/source/Renderer.cpp"
 grep -q "void printConsoleLine" "$ROOT/source/main.cpp"
-grep -q '\\x1b\[%d;1H%-39.39s' "$ROOT/source/main.cpp"
+grep -q '\x1b\[%d;1H%-39.39s' "$ROOT/source/main.cpp"
 grep -q "printInstruction(8" "$ROOT/source/main.cpp"
+
+# Original Nintendo 3DS XL performance budgets.
+grep -q "kTargetFrameMilliseconds = 33.333F" "$ROOT/include/PerformanceBudget.hpp"
+grep -q "kMinimumLinearMemoryReserveBytes = 512U \* 1024U" "$ROOT/include/PerformanceBudget.hpp"
+grep -q "kMaximumEnemies = 64U" "$ROOT/include/PerformanceBudget.hpp"
+grep -q "kMaximumTowers = 16U" "$ROOT/include/PerformanceBudget.hpp"
+grep -q "kMaximumProjectiles = 32U" "$ROOT/include/PerformanceBudget.hpp"
+grep -q "kMaximumLevelVertices = 4096U" "$ROOT/include/PerformanceBudget.hpp"
 
 # Model-composition contract.
 grep -q "void appendEnemy" "$ROOT/source/Renderer.cpp"
