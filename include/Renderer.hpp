@@ -31,10 +31,6 @@ private:
     [[nodiscard]] bool buildLevelMesh(const LevelData& level);
     [[nodiscard]] bool initializeHud();
     void drawScene(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
-    void drawTopOverlay(
-        const Wave& wave,
-        const BuildSystem& buildSystem,
-        const TutorialFlow& tutorialFlow);
     void drawBottomPanel(
         const Camera& camera,
         const Wave& wave,
@@ -63,3 +59,11 @@ private:
     std::size_t projectileVertexOffset_ = 0;
     std::size_t projectileVertexCount_ = 0;
 };
+
+// Renderer.cpp includes this header before its implementation. Disable only its
+// legacy bottom-screen Citro2D draw calls so they cannot overwrite the system
+// PrintConsole fallback. The 3D top-screen pass remains unchanged.
+#define C2D_TargetClear(...) ((void)0)
+#define C2D_SceneBegin(...) ((void)0)
+#define C2D_DrawRectSolid(...) ((void)0)
+#define C2D_DrawText(...) ((void)0)
