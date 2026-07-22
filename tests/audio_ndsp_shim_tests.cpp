@@ -16,14 +16,30 @@ void expect(bool condition, const char* message) {
 
 int main() {
     expect(
-        shouldAttemptNdspHleShim(kNdspComponentNotFoundResult),
-        "missing DSP component must enable the HLE shim retry");
+        shouldAttemptNdspHleShim(kObservedNdspComponentNotFoundResult),
+        "observed D880A7FA must enable the HLE shim retry");
+    expect(
+        resultSummary(kObservedNdspComponentNotFoundResult) == kResultSummaryNotFound,
+        "observed result must decode to NOTFOUND summary");
+    expect(
+        resultModule(kObservedNdspComponentNotFoundResult) == kResultModuleDsp,
+        "observed result must decode to DSP module");
+    expect(
+        resultDescription(kObservedNdspComponentNotFoundResult) == kResultDescriptionNotFound,
+        "observed result must decode to NOT_FOUND description");
+
     expect(
         !shouldAttemptNdspHleShim(kAudioResultSuccess),
         "successful NDSP initialization must never attempt the shim");
     expect(
-        !shouldAttemptNdspHleShim(0xD8E007F7U),
-        "unrelated DSP failures must not be hidden by the shim");
+        !shouldAttemptNdspHleShim(0xD8B0A7FAU),
+        "INVALIDSTATE summary must not be mistaken for a missing component");
+    expect(
+        !shouldAttemptNdspHleShim(0xD880A3FAU),
+        "a non-DSP module must not enable the shim");
+    expect(
+        !shouldAttemptNdspHleShim(0xD880A7F9U),
+        "a different description must not enable the shim");
     expect(
         !shouldAttemptNdspHleShim(1U),
         "generic failures must remain real failures");
@@ -32,8 +48,8 @@ int main() {
         ndspBackendReady(kAudioResultSuccess, false, kAudioResultNotAttempted),
         "normal successful NDSP initialization must select NDSP");
     expect(
-        ndspBackendReady(kNdspComponentNotFoundResult, true, kAudioResultSuccess),
-        "D8B0A7FA followed by a successful shim must select NDSP");
+        ndspBackendReady(kObservedNdspComponentNotFoundResult, true, kAudioResultSuccess),
+        "D880A7FA followed by a successful shim must select NDSP");
     expect(
         ndspShimIsActive(true, kAudioResultSuccess),
         "successful attempted shim must be reported as active");
@@ -41,10 +57,10 @@ int main() {
         !ndspShimIsActive(false, kAudioResultSuccess),
         "an unattempted shim must never appear active even with a zero placeholder");
     expect(
-        !ndspBackendReady(kNdspComponentNotFoundResult, false, kAudioResultNotAttempted),
+        !ndspBackendReady(kObservedNdspComponentNotFoundResult, false, kAudioResultNotAttempted),
         "missing component without a retry must not select NDSP");
     expect(
-        !ndspBackendReady(kNdspComponentNotFoundResult, true, 0xD8E007F7U),
+        !ndspBackendReady(kObservedNdspComponentNotFoundResult, true, 0xD8E007F7U),
         "failed shim retry must not select NDSP");
 
     std::cout << "NDSP HLE shim policy tests passed\n";
