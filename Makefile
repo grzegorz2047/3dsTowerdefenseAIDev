@@ -75,6 +75,7 @@ all: 3dsx
 
 test:
 	@bash scripts/run_host_tests.sh
+	@$(PYTHON) scripts/validate_assets.py
 
 3dsx: tools assets $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile 3dsx
