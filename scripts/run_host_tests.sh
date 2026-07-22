@@ -62,6 +62,11 @@ COMMON_FLAGS=(
 
 "$HOST_CXX" \
   "${COMMON_FLAGS[@]}" \
+  "$ROOT/tests/hud_mode_tests.cpp" \
+  -o "$BUILD_DIR/hud-mode-tests"
+
+"$HOST_CXX" \
+  "${COMMON_FLAGS[@]}" \
   "$ROOT/tests/hud_text_tests.cpp" \
   "$ROOT/source/HudText.cpp" \
   -o "$BUILD_DIR/hud-text-tests"
@@ -73,14 +78,19 @@ COMMON_FLAGS=(
 "$BUILD_DIR/audio-probe-tests"
 "$BUILD_DIR/audio-ndsp-shim-tests"
 "$BUILD_DIR/audio-wave-status-tests"
+"$BUILD_DIR/hud-mode-tests"
 "$BUILD_DIR/hud-text-tests"
 
-# The fallback UI must expose both NDSP attempts and retain the manual tone.
+# Normal gameplay HUD is compact. Raw audio diagnostics and the manual tone
+# are available only while SELECT is held.
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
-grep -q "v0.1.17-alpha  RESULT-FIELDS" "$ROOT/source/main.cpp"
-grep -q "HLE-SHIM" "$ROOT/source/main.cpp"
+grep -q "v0.1.18-alpha  COMPACT-HUD" "$ROOT/source/main.cpp"
+grep -q "DZWIEK: %s" "$ROOT/source/main.cpp"
+grep -q "KEY_SELECT" "$ROOT/source/main.cpp"
+grep -q "hudModeForSelectHeld" "$ROOT/source/main.cpp"
+grep -q "allowDiagnosticTone" "$ROOT/source/main.cpp"
+grep -q "renderAudioDiagnostics" "$ROOT/source/main.cpp"
 grep -q "WBUF:%s POS:%lu/%lu" "$ROOT/source/main.cpp"
-grep -q "KEY_B" "$ROOT/source/main.cpp"
 grep -q "playDiagnosticTone" "$ROOT/source/main.cpp"
 
 # The shim is permitted only for a semantic DSP/NOTFOUND/NOT_FOUND result and
