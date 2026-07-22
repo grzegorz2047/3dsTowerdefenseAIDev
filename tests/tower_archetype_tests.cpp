@@ -69,6 +69,23 @@ void testTowersLaunchDistinctPayloads() {
     }
 }
 
+void testTowerAimsAtSelectedTarget() {
+    const LevelData level = makeLevel();
+    Wave wave(level);
+    Tower tower(level, 2, 1, TowerType::Ballista);
+    ProjectilePool projectiles;
+
+    tower.update(1.0F / 60.0F, wave, projectiles);
+    expect(tower.hasTarget(), "tower should expose an in-range target");
+    Enemy& target = wave.enemyAt(0);
+    const float expected = std::atan2(target.x() - tower.x(), target.z() - tower.z());
+    expect(std::fabs(tower.aimAngleRadians() - expected) < 0.0001F, "tower aim should point at the selected enemy");
+
+    target.takeDamage(99);
+    tower.update(1.0F / 60.0F, wave, projectiles);
+    expect(!tower.hasTarget(), "tower should clear target state when no valid enemy remains");
+}
+
 void testSplashDamagesNearbyEnemies() {
     const LevelData level = makeLevel();
     Wave wave(level);
@@ -104,6 +121,7 @@ void testFrostSlowsAndExpires() {
 int main() {
     testTowerCatalog();
     testTowersLaunchDistinctPayloads();
+    testTowerAimsAtSelectedTarget();
     testSplashDamagesNearbyEnemies();
     testFrostSlowsAndExpires();
     std::cout << "Tower archetype tests passed\n";

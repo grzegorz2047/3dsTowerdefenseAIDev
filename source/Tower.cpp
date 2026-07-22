@@ -1,6 +1,7 @@
 #include "Tower.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 
 namespace {
@@ -84,15 +85,13 @@ Tower::Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ, Tower
 
 void Tower::update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles) {
     if (!valid_ || wave.completed() || wave.lost()) {
+        hasTarget_ = false;
         return;
     }
 
     const TowerStats stats = statsFor(type_, level_);
     const float rangeSquared = stats.range * stats.range;
     cooldown_ = std::max(cooldown_ - std::max(deltaSeconds, 0.0F), 0.0F);
-    if (cooldown_ > 0.0F) {
-        return;
-    }
 
     std::size_t targetIndex = wave.spawnedCount();
     float bestProgress = -1.0F;
@@ -115,16 +114,28 @@ void Tower::update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles) 
         }
     }
 
-    if (targetIndex < wave.spawnedCount() &&
-        projectiles.launch(x_, kMuzzleHeight, z_, targetIndex, stats.payload)) {
+    hasTarget_ = targetIndex < wave.spawnedCount();
+    if (!hasTarget_) {
+        return;
+    }
+
+    const Enemy& target = wave.enemyAt(targetIndex);
+    aimAngleRadians_ = std::atan2(target.x() - x_, target.z() - z_);
+    if (cooldown_ > 0.0F) {
+        return;
+    }
+
+    if (projectiles.launch(x_, kMuzzleHeight, z_, targetIndex, stats.payload)) {
         cooldown_ = stats.attackIntervalSeconds;
         ++shotsFired_;
     }
 }
 
 void Tower::resetCombat() {
+    aimAngleRadians_ = 0.0F;
     cooldown_ = 0.0F;
     shotsFired_ = 0;
+    hasTarget_ = false;
 }
 
 bool Tower::upgrade() {
@@ -139,6 +150,8 @@ bool Tower::upgrade() {
 
 float Tower::x() const { return x_; }
 float Tower::z() const { return z_; }
+float Tower::aimAngleRadians() const { return aimAngleRadians_; }
+bool Tower::hasTarget() const { return hasTarget_; }
 std::size_t Tower::gridX() const { return gridX_; }
 std::size_t Tower::gridZ() const { return gridZ_; }
 TowerType Tower::type() const { return type_; }
