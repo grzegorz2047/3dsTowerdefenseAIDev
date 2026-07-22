@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "id": "tutorial_watchtower",
+  "kind": "tower",
+  "display_name": "Wieża strażnicza",
+  "author": "grzegorz2047",
+  "license": "Project",
+  "source": "source/Renderer.cpp",
+  "generated": "runtime:shared-vbo",
+  "forward_axis": "+Z",
+  "up_axis": "+Y",
+  "pivot": "base_center",
+  "triangle_count": 110,
+  "material_count": 1,
+  "bounds": {
+    "min": [-0.42, 0.06, -0.42],
+    "max": [0.42, 1.19, 0.42]
+  }
+}

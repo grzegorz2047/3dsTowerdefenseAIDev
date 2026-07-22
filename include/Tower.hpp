@@ -3,6 +3,7 @@
 #include <cstddef>
 
 #include "Level.hpp"
+#include "Projectile.hpp"
 #include "Wave.hpp"
 
 class Tower {
@@ -10,7 +11,7 @@ public:
     Tower() = default;
     Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ);
 
-    void update(float deltaSeconds, Wave& wave);
+    void update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles);
     void resetCombat();
 
     [[nodiscard]] float x() const;

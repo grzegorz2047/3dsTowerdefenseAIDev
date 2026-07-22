@@ -18,6 +18,7 @@ mkdir -p "$(dirname "$OUTPUT")"
   "$ROOT/source/Economy.cpp" \
   "$ROOT/source/Enemy.cpp" \
   "$ROOT/source/Level.cpp" \
+  "$ROOT/source/Projectile.cpp" \
   "$ROOT/source/Tower.cpp" \
   "$ROOT/source/Wave.cpp" \
   -o "$OUTPUT"

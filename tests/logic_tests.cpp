@@ -5,6 +5,7 @@
 #include "Economy.hpp"
 #include "Enemy.hpp"
 #include "Level.hpp"
+#include "Projectile.hpp"
 #include "Tower.hpp"
 #include "Wave.hpp"
 
@@ -102,10 +103,12 @@ void testTowerCanWinWave() {
     const LevelData level = makeLevel();
     Wave wave(level);
     Tower tower(level, 3, 1);
+    ProjectilePool projectiles;
     require(tower.valid(), "test tower should be placed on BuildSpot");
 
     for (int step = 0; step < 60 * 30 && !wave.completed() && !wave.lost(); ++step) {
-        tower.update(1.0F / 60.0F, wave);
+        tower.update(1.0F / 60.0F, wave, projectiles);
+        projectiles.update(1.0F / 60.0F, wave);
         wave.update(1.0F / 60.0F);
     }
 
@@ -113,6 +116,37 @@ void testTowerCanWinWave() {
     require(!wave.lost(), "winning wave must preserve base health");
     require(wave.baseHealth() > 0, "winning wave should leave the base alive");
     require(tower.shotsFired() > 0, "tower should fire during the test");
+}
+
+void testProjectileDamagesOnlyOnImpact() {
+    const LevelData level = makeLevel();
+    Wave wave(level);
+    ProjectilePool projectiles;
+    Enemy& target = wave.enemyAt(0);
+    const int initialHealth = target.health();
+
+    require(projectiles.launch(target.x() - 2.0F, 0.48F, target.z(), 0, 1), "projectile launch should reserve a slot");
+    require(target.health() == initialHealth, "launch must not apply immediate damage");
+    projectiles.update(1.0F / 60.0F, wave);
+    require(target.health() == initialHealth, "projectile must not damage before reaching target");
+
+    for (int step = 0; step < 120 && projectiles.activeCount() > 0; ++step) {
+        projectiles.update(1.0F / 60.0F, wave);
+    }
+    require(projectiles.activeCount() == 0, "projectile should resolve after impact");
+    require(target.health() == initialHealth - 1, "projectile should apply damage exactly on impact");
+}
+
+void testProjectileDropsLostTarget() {
+    const LevelData level = makeLevel();
+    Wave wave(level);
+    ProjectilePool projectiles;
+    Enemy& target = wave.enemyAt(0);
+
+    require(projectiles.launch(target.x() - 2.0F, 0.48F, target.z(), 0, 1), "projectile launch should succeed");
+    target.takeDamage(99);
+    projectiles.update(1.0F / 60.0F, wave);
+    require(projectiles.activeCount() == 0, "projectile should deactivate when target is already dead");
 }
 
 void testTowerPlacementRules() {
@@ -155,6 +189,8 @@ int main() {
     testEnemyTimePartitioning();
     testWaveLossWithoutTowers();
     testTowerCanWinWave();
+    testProjectileDamagesOnlyOnImpact();
+    testProjectileDropsLostTarget();
     testTowerPlacementRules();
     testEconomySpendsExactlyOnce();
     testEconomyRewardsEachEnemyOnce();

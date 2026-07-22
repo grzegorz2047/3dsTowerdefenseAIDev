@@ -27,8 +27,9 @@ void BuildSystem::handleInput(const InputSnapshot& input) {
 
 void BuildSystem::update(float deltaSeconds, Wave& wave) {
     for (std::size_t index = 0; index < towerCount_; ++index) {
-        towers_[index].update(deltaSeconds, wave);
+        towers_[index].update(deltaSeconds, wave, projectiles_);
     }
+    projectiles_.update(deltaSeconds, wave);
 
     for (std::size_t index = 0; index < wave.spawnedCount(); ++index) {
         const Enemy& enemy = wave.enemyAt(index);
@@ -42,24 +43,15 @@ void BuildSystem::reset() {
     towers_.fill(Tower{});
     towerCount_ = 0;
     cursorIndex_ = 0;
+    projectiles_.reset();
     economy_.reset();
 }
 
-std::size_t BuildSystem::towerCount() const {
-    return towerCount_;
-}
-
-const Tower& BuildSystem::towerAt(std::size_t index) const {
-    return towers_.at(index);
-}
-
-int BuildSystem::gold() const {
-    return economy_.gold();
-}
-
-int BuildSystem::towerCost() const {
-    return Economy::kTowerCost;
-}
+std::size_t BuildSystem::towerCount() const { return towerCount_; }
+const Tower& BuildSystem::towerAt(std::size_t index) const { return towers_.at(index); }
+const ProjectilePool& BuildSystem::projectiles() const { return projectiles_; }
+int BuildSystem::gold() const { return economy_.gold(); }
+int BuildSystem::towerCost() const { return Economy::kTowerCost; }
 
 std::size_t BuildSystem::cursorX() const {
     if (buildSpotCount_ == 0) {
