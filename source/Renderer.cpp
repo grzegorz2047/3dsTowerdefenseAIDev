@@ -157,28 +157,42 @@ Renderer::~Renderer() {
 }
 
 bool Renderer::initialize(const LevelData& level) {
+    shutdown();
     level_ = &level;
     gfxSet3D(true);
 
     topLeftTarget_ = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
+    if (topLeftTarget_ == nullptr) {
+        shutdown();
+        return false;
+    }
     topRightTarget_ = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
-    if (topLeftTarget_ == nullptr || topRightTarget_ == nullptr) return false;
+    if (topRightTarget_ == nullptr) {
+        shutdown();
+        return false;
+    }
 
     C3D_RenderTargetSetOutput(topLeftTarget_, GFX_TOP, GFX_LEFT, kDisplayTransferFlags);
     C3D_RenderTargetSetOutput(topRightTarget_, GFX_TOP, GFX_RIGHT, kDisplayTransferFlags);
 
     auto* shaderData = reinterpret_cast<u32*>(const_cast<u8*>(vshader_shbin));
     shaderBinary_ = DVLB_ParseFile(shaderData, vshader_shbin_size);
-    if (shaderBinary_ == nullptr) return false;
+    if (shaderBinary_ == nullptr) {
+        shutdown();
+        return false;
+    }
 
     shaderProgramInit(&shaderProgram_);
     shaderProgramInitialized_ = true;
     shaderProgramSetVsh(&shaderProgram_, &shaderBinary_->DVLE[0]);
     projectionUniform_ = shaderInstanceGetUniformLocation(shaderProgram_.vertexShader, "projection");
     modelViewUniform_ = shaderInstanceGetUniformLocation(shaderProgram_.vertexShader, "modelView");
-    if (projectionUniform_ < 0 || modelViewUniform_ < 0) return false;
+    if (projectionUniform_ < 0 || modelViewUniform_ < 0 || !buildLevelMesh(level)) {
+        shutdown();
+        return false;
+    }
 
-    return buildLevelMesh(level);
+    return true;
 }
 
 bool Renderer::buildLevelMesh(const LevelData& level) {
@@ -313,7 +327,24 @@ void Renderer::shutdown() {
         DVLB_Free(shaderBinary_);
         shaderBinary_ = nullptr;
     }
+    if (topRightTarget_ != nullptr) {
+        C3D_RenderTargetDelete(topRightTarget_);
+        topRightTarget_ = nullptr;
+    }
+    if (topLeftTarget_ != nullptr) {
+        C3D_RenderTargetDelete(topLeftTarget_);
+        topLeftTarget_ = nullptr;
+    }
+
     level_ = nullptr;
-    topLeftTarget_ = nullptr;
-    topRightTarget_ = nullptr;
+    projectionUniform_ = -1;
+    modelViewUniform_ = -1;
+    levelVertexCount_ = 0;
+    enemyVertexOffset_ = 0;
+    enemyVertexCount_ = 0;
+    towerVertexOffset_ = 0;
+    towerVertexCount_ = 0;
+    projectileVertexOffset_ = 0;
+    projectileVertexCount_ = 0;
+    lastStereoPlan_ = {};
 }

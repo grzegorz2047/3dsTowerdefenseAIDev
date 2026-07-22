@@ -2,6 +2,12 @@
 
 #include <algorithm>
 
+namespace {
+
+constexpr float kSpawnTimeEpsilon = 0.00001F;
+
+}  // namespace
+
 Wave::Wave(const LevelData& level) : level_(&level) {
     enemies_.reserve(level.totalEnemyCount);
     std::size_t enemyIndex = 0;
@@ -25,8 +31,8 @@ void Wave::update(float deltaSeconds) {
     if (spawnedCount_ < enemies_.size()) {
         spawnTimer_ += step;
         while (spawnedCount_ < enemies_.size() &&
-               spawnTimer_ >= spawnIntervals_[spawnedCount_]) {
-            spawnTimer_ -= spawnIntervals_[spawnedCount_];
+               spawnTimer_ + kSpawnTimeEpsilon >= spawnIntervals_[spawnedCount_]) {
+            spawnTimer_ = std::max(spawnTimer_ - spawnIntervals_[spawnedCount_], 0.0F);
             ++spawnedCount_;
         }
     }
@@ -55,7 +61,7 @@ void Wave::reset() {
         enemy.reset();
     }
     resolved_.fill(false);
-    spawnedCount_ = enemies_.empty() ? 0U : 1U;
+    spawnedCount_ = 0U;
     spawnTimer_ = 0.0F;
     baseHealth_ = kInitialBaseHealth;
 }

@@ -54,25 +54,25 @@ bool persistSave(const CampaignProgress& progress, SaveData& saveData, std::stri
 }
 
 void renderAudioDiagnostics(const AudioSystem& audioSystem) {
-    std::printf("AUDIO:%s HLE-SHIM:%s\n", audioBackendName(audioSystem.backend()),
-        audioSystem.ndspShimActive() ? "AKTYWNY" : (audioSystem.ndspShimAttempted() ? "ODRZUCONY" : "NIE"));
-    std::printf("NDSP1:%08lX NDSP2:%08lX\n", static_cast<unsigned long>(audioSystem.ndspInitialResult()),
+    std::printf("AUDIO:%s HLE:%s\n", audioBackendName(audioSystem.backend()),
+        audioSystem.ndspShimActive() ? "ON" : (audioSystem.ndspShimAttempted() ? "BLAD" : "NIE"));
+    std::printf("NDSP:%08lX/%08lX\n", static_cast<unsigned long>(audioSystem.ndspInitialResult()),
         static_cast<unsigned long>(audioSystem.ndspShimResult()));
     std::printf("CSND:%08lX PLAY:%08lX\n", static_cast<unsigned long>(audioSystem.csndResult()),
         static_cast<unsigned long>(audioSystem.lastPlayResult()));
-    std::printf("CH:%d WBUF:%s POS:%lu/%lu\n", audioSystem.lastChannel(),
+    std::printf("CH:%d BUF:%s %lu/%lu\n", audioSystem.lastChannel(),
         audioWaveStatusName(audioSystem.diagnosticWaveStatus()),
         static_cast<unsigned long>(audioSystem.diagnosticSamplePosition()),
         static_cast<unsigned long>(audioSystem.diagnosticSampleCount()));
-    std::printf("PROBE:%08lX ACTIVE:%s EVER:%s\n", static_cast<unsigned long>(audioSystem.probeResult()),
-        audioSystem.channelActive() ? "TAK" : "NIE", audioSystem.channelEverActive() ? "TAK" : "NIE");
+    std::printf("PROBE:%08lX A:%s E:%s\n", static_cast<unsigned long>(audioSystem.probeResult()),
+        audioSystem.channelActive() ? "T" : "N", audioSystem.channelEverActive() ? "T" : "N");
 }
 
 void renderStereoDiagnostics(const Renderer& renderer, const GameSettings& settings) {
     std::printf("3D:%s LIMIT:%u%% OCZY:%u\n", settings.stereoEnabled ? "ON" : "OFF",
         static_cast<unsigned int>(settings.maximum3DDepthPercent),
         static_cast<unsigned int>(renderer.lastEyeCount()));
-    std::printf("SUWAK:%3.0f%% SEPARACJA:%.4f\n", renderer.lastStereoSlider() * 100.0F,
+    std::printf("SUWAK:%3.0f%% SEP:%.4f\n", renderer.lastStereoSlider() * 100.0F,
         renderer.lastStereoSeparation());
 }
 
@@ -80,33 +80,33 @@ void renderCampaignMenu(PrintConsole& console, const CampaignProgress& progress,
     std::size_t selected, bool saveProblem, const std::string& saveMessage) {
     consoleSelect(&console);
     std::printf("\x1b[2J\x1b[H");
-    std::printf("\x1b[36mCITADEL DEFENSE 3D - KAMPANIA\x1b[0m\n\n");
+    std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
+    std::printf("KAMPANIA\n\n");
 
     const auto& missions = CampaignCatalog::missions();
     for (std::size_t index = 0; index < missions.size(); ++index) {
         const bool unlocked = progress.unlocked(index);
-        std::printf("%c %zu. %-19s %s %u/3\n", index == selected ? '>' : ' ', index + 1U,
-            unlocked ? missions[index].title : "ZABLOKOWANE", unlocked ? "*" : "-",
+        std::printf("%c%zu %-18.18s %u/3\n", index == selected ? '>' : ' ', index + 1U,
+            unlocked ? missions[index].title : "ZABLOKOWANE",
             static_cast<unsigned int>(progress.bestStars(index)));
     }
 
     const CampaignMission& mission = missions[selected];
-    std::printf("\nCEL: %s\n", mission.objective);
-    std::printf("WIEZE: %s\n", mission.availableTowers);
-    std::printf("ZAGROZENIA: %s\n", mission.threats);
-    std::printf("NAGRODA: %s\n", mission.reward);
-    std::printf("\nGWIAZDKI: 1 zwyciestwo, +1 zdrowie bazy >= %u,\n+1 maksymalnie %u wiez.\n",
+    std::printf("\nMISJA: %.32s\n", mission.title);
+    std::printf("CEL: %.34s\n", mission.objective);
+    std::printf("WIEZE: %.32s\n", mission.availableTowers);
+    std::printf("WROGOWIE: %.29s\n", mission.threats);
+    std::printf("GWIAZDKI: HP>=%u WIEZE<=%u\n",
         static_cast<unsigned int>(mission.fullHealthThreshold),
         static_cast<unsigned int>(mission.efficientTowerLimit));
-    std::printf("\nDZWIEK:%s [X]  START:%ux [Y]\n",
+    std::printf("\nDZWIEK:%s [X]  3D:%s [L]\n",
         saveData.settings.soundEnabled ? "ON" : "OFF",
-        static_cast<unsigned int>(saveData.settings.preferredSpeed));
-    std::printf("3D:%s [L]  LIMIT:%u%% [R]\n",
-        saveData.settings.stereoEnabled ? "ON" : "OFF",
+        saveData.settings.stereoEnabled ? "ON" : "OFF");
+    std::printf("GLEBIA:%u%% [R]  START:1x\n",
         static_cast<unsigned int>(saveData.settings.maximum3DDepthPercent));
-    if (!saveMessage.empty()) std::printf("%s\n", saveMessage.c_str());
-    if (saveProblem) std::printf("USZKODZONY ZAPIS: SELECT+Y RESET\n");
-    std::printf("D-PAD: WYBOR   A: GRAJ   START: WYJSCIE\n");
+    if (!saveMessage.empty()) std::printf("%.39s\n", saveMessage.c_str());
+    if (saveProblem) std::printf("RESET ZAPISU: SELECT+Y\n");
+    std::printf("D-PAD WYBOR  A GRAJ  START WYJSCIE\n");
 }
 
 std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progress, SaveData& saveData,
@@ -126,9 +126,6 @@ std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progr
             selected = 0;
         } else if (input.pressed(KEY_X)) {
             saveData.settings.soundEnabled = !saveData.settings.soundEnabled;
-            saveProblem = !persistSave(progress, saveData, saveMessage);
-        } else if (input.pressed(KEY_Y)) {
-            saveData.settings.preferredSpeed = saveData.settings.preferredSpeed == 1 ? 2 : 1;
             saveProblem = !persistSave(progress, saveData, saveMessage);
         } else if (input.pressed(KEY_L)) {
             saveData.settings.stereoEnabled = !saveData.settings.stereoEnabled;
@@ -160,42 +157,41 @@ void renderTouchHud(PrintConsole& console, const CampaignMission& mission, const
     int speedMultiplier, const MissionResult& missionResult) {
     consoleSelect(&console);
     std::printf("\x1b[2J\x1b[H");
-    std::printf("\x1b[36m%s\x1b[0m\n", mission.title);
-    std::printf("[KUSZA]   [MOZDZIERZ]   [MROZ]\n");
-    std::printf("Wybrano: %-10s Koszt:%-3d Zloto:%-3d\n", buildSystem.selectedTowerName(),
+    std::printf("\x1b[36m%.38s\x1b[0m\n", mission.title);
+    std::printf("[KUSZA] [MOZDZIERZ] [MROZ]\n");
+    std::printf("Wybrano:%-9.9s K:%d Z:%d\n", buildSystem.selectedTowerName(),
         buildSystem.towerCost(), buildSystem.gold());
-    std::printf("Baza:%-2d Wieze:%-2zu Fala:%zu/%zu\n", wave.baseHealth(), buildSystem.towerCount(),
+    std::printf("Baza:%d Wieze:%zu Wrog:%zu/%zu\n", wave.baseHealth(), buildSystem.towerCount(),
         wave.spawnedCount(), wave.enemyCount());
-    std::printf("Pole:%zu,%zu  %s\n", buildSystem.cursorX(), buildSystem.cursorZ(),
-        buildSystem.cursorOccupied() ? "WIEZA ZAZNACZONA" : "MIEJSCE BUDOWY");
+    std::printf("Pole:%zu,%zu %s\n", buildSystem.cursorX(), buildSystem.cursorZ(),
+        buildSystem.cursorOccupied() ? "WIEZA" : "BUDOWA");
 
     const Tower* tower = buildSystem.cursorTower();
     if (tower != nullptr) {
-        std::printf("%s  POZIOM:%u  ULEPSZ:%d  SPRZEDAJ:%d\n", towerName(tower->type()),
+        std::printf("%.9s L:%u U:%d S:%d\n", towerName(tower->type()),
             static_cast<unsigned int>(tower->level()), tower->upgradeCost(), tower->sellValue());
     } else {
-        std::printf("Status: %s\n", buildAttemptMessage(buildSystem.lastBuildResult()));
+        std::printf("Status: %.31s\n", buildAttemptMessage(buildSystem.lastBuildResult()));
     }
 
-    std::printf("\nCO TERAZ: %s\n", tutorialInstruction(tutorialFlow.phase()));
+    std::printf("Cel: %.35s\n", tutorialInstruction(tutorialFlow.phase()));
     if (tutorialFlow.finished()) {
         std::printf("WYNIK: %u/3 GWIAZDKI\n", static_cast<unsigned int>(missionResult.stars));
-        std::printf("\n[X: MAPA KAMPANII]       [Y: POWTORZ]\n");
+        std::printf("X kampania  Y powtorz\n");
     } else {
-        std::printf("Tryb: %s  Predkosc:%dx\n", paused ? "PAUZA" : "GRA", speedMultiplier);
-        std::printf("\n[PAUZA/X] [1x-2x/L+R]       [ANULUJ]\n");
-        std::printf("\n[BUDUJ/A] [ULEPSZ/B] [SPRZEDAJ/Y] [START/X]\n");
+        std::printf("Tryb:%s Tempo:%dx\n", paused ? "PAUZA" : "GRA", speedMultiplier);
+        std::printf("X pauza/start  L+R tempo\n");
+        std::printf("A buduj  B ulepsz  Y sprzedaj\n");
     }
 
     if (showAudioDiagnostics(hudMode)) {
-        std::printf("\n");
         renderStereoDiagnostics(renderer, settings);
         renderAudioDiagnostics(audioSystem);
     } else {
-        std::printf("\n3D:%s %u%%  DZWIEK:%s\nSELECT: diagnostyka\n",
-            settings.stereoEnabled ? "ON" : "OFF",
+        std::printf("3D:%s %u%% DZW:%s\n", settings.stereoEnabled ? "ON" : "OFF",
             static_cast<unsigned int>(settings.maximum3DDepthPercent),
-            audioSystem.available() ? "WLACZONY" : "WYLACZONY");
+            audioSystem.available() ? "ON" : "OFF");
+        std::printf("SELECT: diagnostyka\n");
     }
 }
 
@@ -227,13 +223,22 @@ void applyTouchAction(TouchUiAction action, BuildSystem& buildSystem, TutorialFl
 MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t missionIndex, CampaignProgress& progress,
     SaveData& saveData, bool& saveProblem, std::string& saveMessage) {
     const CampaignMission& mission = CampaignCatalog::mission(missionIndex);
+    consoleSelect(&bottomConsole);
+    std::printf("\x1b[2J\x1b[H\n\nLadowanie poziomu...\n%.34s\n", mission.title);
+    gfxFlushBuffers();
+    gfxSwapBuffers();
+    gspWaitForVBlank();
+
     const LevelLoadResult levelResult = LevelLoader::loadFromRomFs(mission.levelPath);
-    if (!levelResult.success) return MissionSessionAction::ExitApplication;
+    if (!levelResult.success) {
+        saveMessage = "BLAD POZIOMU: " + levelResult.error;
+        return MissionSessionAction::ReturnToCampaign;
+    }
 
     Renderer renderer;
     if (!renderer.initialize(levelResult.level)) {
-        renderer.shutdown();
-        return MissionSessionAction::ExitApplication;
+        saveMessage = "BLAD GRAFIKI: brak pamieci.";
+        return MissionSessionAction::ReturnToCampaign;
     }
 
     InputSystem inputSystem;
@@ -250,7 +255,7 @@ MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t mission
     float simulationAccumulator = 0.0F;
     u64 previousMilliseconds = osGetTime();
     bool paused = false;
-    int speedMultiplier = saveData.settings.preferredSpeed;
+    int speedMultiplier = 1;
     bool resultRecorded = false;
     MissionResult missionResult{};
     MissionSessionAction action = MissionSessionAction::ExitApplication;
@@ -314,10 +319,10 @@ MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t mission
         const AudioFrameState audioState{tutorialFlow.phase(), buildSystem.projectiles().activeCount()};
         if (saveData.settings.soundEnabled) audioSystem.playMask(audioRouter.update(audioState));
         audioSystem.updateProbe();
-        renderer.render(camera, wave, buildSystem, tutorialFlow,
-            saveData.settings.stereoEnabled, saveData.settings.maximum3DDepthPercent);
         renderTouchHud(bottomConsole, mission, wave, buildSystem, tutorialFlow, audioSystem,
             renderer, saveData.settings, hudMode, paused, speedMultiplier, missionResult);
+        renderer.render(camera, wave, buildSystem, tutorialFlow,
+            saveData.settings.stereoEnabled, saveData.settings.maximum3DDepthPercent);
     }
 
     audioSystem.shutdown();
