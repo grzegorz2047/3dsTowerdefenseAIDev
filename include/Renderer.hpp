@@ -11,6 +11,17 @@
 #include "TutorialFlow.hpp"
 #include "Wave.hpp"
 
+// Citro2D batches rectangles and text. The renderer switches back to a custom
+// Citro3D pipeline after drawing the bottom screen, so the batch must be
+// submitted explicitly before the frame ends. Without this, Azahar can show
+// only the cleared bottom-screen background while dropping all HUD geometry.
+inline void finishRendererFrame(int flags) {
+    C2D_Flush();
+    C3D_FrameEnd(flags);
+}
+
+#define C3D_FrameEnd(flags) finishRendererFrame(flags)
+
 class Renderer {
 public:
     Renderer() = default;
