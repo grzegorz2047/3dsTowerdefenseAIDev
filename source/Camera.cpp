@@ -24,8 +24,8 @@ Camera::Camera() = default;
 
 void Camera::update(const InputSnapshot& input, float deltaSeconds) {
     const float frameScale = std::clamp(deltaSeconds * 60.0F, 0.0F, 2.0F);
-    const float localX = static_cast<float>(input.circle.dx) * kPanSpeed * frameScale;
-    const float localZ = static_cast<float>(input.circle.dy) * kPanSpeed * frameScale;
+    const float localX = -static_cast<float>(input.circle.dx) * kPanSpeed * frameScale;
+    const float localZ = -static_cast<float>(input.circle.dy) * kPanSpeed * frameScale;
     const float yaw = static_cast<float>(rotationIndex_) * kQuarterTurn;
 
     const float worldX = localX * std::cos(yaw) + localZ * std::sin(yaw);
