@@ -4,12 +4,15 @@
 #include <string>
 
 #include "Campaign.hpp"
+#include "Stereo3D.hpp"
 
-constexpr std::uint32_t kCurrentSaveVersion = 2;
+constexpr std::uint32_t kCurrentSaveVersion = 3;
 
 struct GameSettings {
     bool soundEnabled = true;
     std::uint8_t preferredSpeed = 1;
+    bool stereoEnabled = true;
+    std::uint8_t maximum3DDepthPercent = Stereo3D::kDefaultDepthPercent;
 };
 
 struct SaveData {
