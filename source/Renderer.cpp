@@ -71,9 +71,9 @@ void appendTile(std::vector<Vertex>& vertices, float centerX, float centerZ, con
     appendQuad(
         vertices,
         {centerX - half, y, centerZ - half, visual.r, visual.g, visual.b, 1.0F},
-        {centerX + half, y, centerZ - half, visual.r, visual.g, visual.b, 1.0F},
+        {centerX - half, y, centerZ + half, visual.r, visual.g, visual.b, 1.0F},
         {centerX + half, y, centerZ + half, visual.r, visual.g, visual.b, 1.0F},
-        {centerX - half, y, centerZ + half, visual.r, visual.g, visual.b, 1.0F});
+        {centerX + half, y, centerZ - half, visual.r, visual.g, visual.b, 1.0F});
 }
 
 void appendBox(std::vector<Vertex>& vertices, float half, float y0, float y1, float r, float g, float b) {
