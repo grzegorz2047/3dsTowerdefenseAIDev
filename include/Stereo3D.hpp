@@ -20,4 +20,5 @@ public:
         float sliderState,
         bool enabled,
         std::uint8_t maximumDepthPercent);
+    [[nodiscard]] static std::uint8_t nextDepthLimit(std::uint8_t currentDepthPercent);
 };
