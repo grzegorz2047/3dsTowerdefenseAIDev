@@ -26,6 +26,10 @@ void Projectile::launch(
     active_ = payload.damage > 0 || payload.slowDurationSeconds > 0.0F;
 }
 
+void Projectile::launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage) {
+    launch(startX, startY, startZ, targetIndex, {ProjectileEffect::Direct, damage, 0.0F, 0.0F, 1.0F});
+}
+
 void Projectile::update(float deltaSeconds, Wave& wave) {
     if (!active_ || deltaSeconds <= 0.0F || targetIndex_ >= wave.spawnedCount()) {
         if (targetIndex_ >= wave.spawnedCount()) {
@@ -107,6 +111,10 @@ bool ProjectilePool::launch(
         }
     }
     return false;
+}
+
+bool ProjectilePool::launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage) {
+    return launch(startX, startY, startZ, targetIndex, {ProjectileEffect::Direct, damage, 0.0F, 0.0F, 1.0F});
 }
 
 void ProjectilePool::update(float deltaSeconds, Wave& wave) {
