@@ -83,9 +83,6 @@ test:
 cia: tools assets $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile cia
 
-# The two formats share the same object directory. Keep the top-level stages
-# sequential even when the caller uses -j, otherwise parallel recursive links
-# can observe partially written ARM object files.
 release:
 	@$(MAKE) --no-print-directory 3dsx
 	@$(MAKE) --no-print-directory cia
@@ -122,8 +119,6 @@ else
 all: 3dsx
 3dsx: $(OUTPUT).3dsx
 cia: $(OUTPUT).cia
-
-main.o: CXXFLAGS += -include $(TOPDIR)/include/MainOverrides.hpp
 
 $(OUTPUT).3dsx: $(OUTPUT).elf $(_3DSXDEPS)
 $(OFILES_SOURCES): $(HFILES)
