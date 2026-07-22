@@ -74,6 +74,21 @@ grep -q "Mtx_PerspStereoTilt" "$ROOT/source/Camera.cpp"
 grep -q "lastStereoPlan_.stereo" "$ROOT/source/Renderer.cpp"
 grep -q "drawScene(topRightTarget_" "$ROOT/source/Renderer.cpp"
 
+# Model-composition contract: gameplay entities must remain recognizable
+# multi-part geometry, not regress to one generic placeholder box.
+grep -q "void appendEnemy" "$ROOT/source/Renderer.cpp"
+grep -q "void appendTower" "$ROOT/source/Renderer.cpp"
+grep -q "void appendProjectile" "$ROOT/source/Renderer.cpp"
+grep -q "appendEnemy(vertices)" "$ROOT/source/Renderer.cpp"
+grep -q "appendTower(vertices)" "$ROOT/source/Renderer.cpp"
+grep -q "appendProjectile(vertices)" "$ROOT/source/Renderer.cpp"
+enemy_parts=$(sed -n '/void appendEnemy/,/^}/p' "$ROOT/source/Renderer.cpp" | grep -c "appendBoxAt")
+tower_parts=$(sed -n '/void appendTower/,/^}/p' "$ROOT/source/Renderer.cpp" | grep -c "appendBoxAt")
+projectile_parts=$(sed -n '/void appendProjectile/,/^}/p' "$ROOT/source/Renderer.cpp" | grep -c "appendBoxAt")
+test "$enemy_parts" -ge 8
+test "$tower_parts" -ge 11
+test "$projectile_parts" -ge 2
+
 grep -q "0xD880A7FAU" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultSummary(result) == kResultSummaryNotFound" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultModule(result) == kResultModuleDsp" "$ROOT/include/AudioNdspShim.hpp"
