@@ -5,3 +5,4 @@
 
 [[nodiscard]] const char* tutorialInstruction(TutorialPhase phase);
 [[nodiscard]] const char* buildAttemptMessage(BuildAttemptResult result);
+[[nodiscard]] const char* audioStatusMessage(bool available);
