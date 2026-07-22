@@ -165,6 +165,7 @@ SaveLoadResult SaveDataStore::load(const char* path) {
 
 bool SaveDataStore::saveAtomically(const char* path, const SaveData& data, std::string& error) {
     const std::string temporaryPath = std::string(path) + ".tmp";
+    const std::string backupPath = std::string(path) + ".bak";
     {
         std::ofstream output(temporaryPath, std::ios::binary | std::ios::trunc);
         if (!output.is_open()) {
@@ -182,17 +183,27 @@ bool SaveDataStore::saveAtomically(const char* path, const SaveData& data, std::
         }
     }
 
-    std::remove(path);
-    if (std::rename(temporaryPath.c_str(), path) != 0) {
-        error = "Nie mozna podmienic pliku zapisu";
+    std::remove(backupPath.c_str());
+    const bool hadPrevious = std::rename(path, backupPath.c_str()) == 0;
+    if (!hadPrevious && errno != ENOENT) {
+        error = "Nie mozna zabezpieczyc poprzedniego zapisu";
         std::remove(temporaryPath.c_str());
         return false;
     }
+    if (std::rename(temporaryPath.c_str(), path) != 0) {
+        error = "Nie mozna podmienic pliku zapisu";
+        if (hadPrevious) (void)std::rename(backupPath.c_str(), path);
+        std::remove(temporaryPath.c_str());
+        return false;
+    }
+    if (hadPrevious) std::remove(backupPath.c_str());
     return true;
 }
 
 bool SaveDataStore::reset(const char* path) {
     const std::string temporaryPath = std::string(path) + ".tmp";
+    const std::string backupPath = std::string(path) + ".bak";
     std::remove(temporaryPath.c_str());
+    std::remove(backupPath.c_str());
     return std::remove(path) == 0 || errno == ENOENT;
 }
