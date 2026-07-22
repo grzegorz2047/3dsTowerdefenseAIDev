@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "id": "tutorial_citadel",
+  "kind": "base",
+  "display_name": "Cytadela graniczna",
+  "author": "grzegorz2047",
+  "license": "Project",
+  "source": "source/Renderer.cpp",
+  "generated": "runtime:static-level-vbo",
+  "forward_axis": "+Z",
+  "up_axis": "+Y",
+  "pivot": "base_center",
+  "triangle_count": 100,
+  "material_count": 1,
+  "bounds": {
+    "min": [-0.46, 0.0, -0.46],
+    "max": [0.46, 1.13, 0.46]
+  }
+}
