@@ -92,13 +92,19 @@ grep -q "void printConsoleLine" "$ROOT/source/main.cpp"
 grep -q '\x1b\[%d;1H%-39.39s' "$ROOT/source/main.cpp"
 grep -q "printInstruction(8" "$ROOT/source/main.cpp"
 
-# Original Nintendo 3DS XL performance budgets.
+# Original Nintendo 3DS XL performance budgets and runtime metrics.
 grep -q "kTargetFrameMilliseconds = 33.333F" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMinimumLinearMemoryReserveBytes = 512U \* 1024U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumEnemies = 64U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumTowers = 16U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumProjectiles = 32U" "$ROOT/include/PerformanceBudget.hpp"
 grep -q "kMaximumLevelVertices = 4096U" "$ROOT/include/PerformanceBudget.hpp"
+grep -q "PerformanceSampler performanceSampler" "$ROOT/source/main.cpp"
+grep -q "linearSpaceFree()" "$ROOT/source/main.cpp"
+grep -q "renderPerformanceDiagnostics" "$ROOT/source/main.cpp"
+grep -q "averageFrameMilliseconds" "$ROOT/source/main.cpp"
+grep -q "worstFrameMilliseconds" "$ROOT/source/main.cpp"
+grep -q "lastRenderMilliseconds" "$ROOT/source/main.cpp"
 
 # Model-composition contract.
 grep -q "void appendEnemy" "$ROOT/source/Renderer.cpp"
