@@ -10,6 +10,7 @@
 #include "AudioEvents.hpp"
 #include "AudioNdspShim.hpp"
 #include "AudioProbe.hpp"
+#include "AudioWaveStatus.hpp"
 
 class AudioSystem {
 public:
@@ -40,9 +41,13 @@ public:
     [[nodiscard]] int lastChannel() const;
     [[nodiscard]] bool channelActive() const;
     [[nodiscard]] bool channelEverActive() const;
+    [[nodiscard]] AudioWaveStatus diagnosticWaveStatus() const;
+    [[nodiscard]] std::uint32_t diagnosticSamplePosition() const;
+    [[nodiscard]] std::uint32_t diagnosticSampleCount() const;
 
 private:
     static constexpr int kSampleRate = 22050;
+    static constexpr int kDiagnosticChannel = 0;
     static constexpr std::size_t kSfxChannelCount = 6;
     static constexpr int kFirstSfxChannel = 1;
 
@@ -72,5 +77,7 @@ private:
     std::size_t nextChannel_ = 0;
     std::array<Sample, static_cast<std::size_t>(AudioCue::Count)> samples_{};
     Sample diagnosticTone_{};
+    ndspWaveBuf diagnosticWaveBuffer_{};
+    std::uint32_t diagnosticSamplePosition_ = 0;
     std::array<ndspWaveBuf, kSfxChannelCount> waveBuffers_{};
 };
