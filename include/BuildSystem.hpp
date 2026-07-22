@@ -24,6 +24,8 @@ public:
     [[nodiscard]] const ProjectilePool& projectiles() const;
     [[nodiscard]] int gold() const;
     [[nodiscard]] int towerCost() const;
+    [[nodiscard]] TowerType selectedTowerType() const;
+    [[nodiscard]] const char* selectedTowerName() const;
     [[nodiscard]] std::size_t cursorX() const;
     [[nodiscard]] std::size_t cursorZ() const;
     [[nodiscard]] bool cursorOccupied() const;
@@ -36,6 +38,7 @@ private:
 
     [[nodiscard]] bool occupied(std::size_t x, std::size_t z) const;
     void moveCursor(int delta);
+    void selectTower(TowerType type);
     void tryBuild();
 
     const LevelData* level_ = nullptr;
@@ -44,6 +47,7 @@ private:
     std::size_t buildSpotCount_ = 0;
     std::size_t towerCount_ = 0;
     std::size_t cursorIndex_ = 0;
+    TowerType selectedTowerType_ = TowerType::Ballista;
     ProjectilePool projectiles_{};
     Economy economy_{};
     BuildAttemptResult lastBuildResult_ = BuildAttemptResult::None;
