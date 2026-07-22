@@ -5,12 +5,12 @@ public:
     static constexpr int kCircleDeadzone = 24;
     static constexpr int kCircleMaximum = 156;
     static constexpr float kDefaultYaw = 0.0F;
-    static constexpr float kDefaultPitch = 0.72F;
-    static constexpr float kDefaultDistance = 16.0F;
-    static constexpr float kMinimumDistance = 10.0F;
-    static constexpr float kMaximumDistance = 24.0F;
+    static constexpr float kDefaultPitch = 0.50F;
+    static constexpr float kDefaultDistance = 13.25F;
+    static constexpr float kMinimumDistance = 9.0F;
+    static constexpr float kMaximumDistance = 21.0F;
     static constexpr float kYawRadiansPerSecond = 1.8F;
-    static constexpr float kZoomUnitsPerSecond = 8.0F;
+    static constexpr float kZoomUnitsPerSecond = 7.0F;
 
     void update(int circleX, int circleY, float deltaSeconds);
     void rotateQuarterTurn(int direction);
