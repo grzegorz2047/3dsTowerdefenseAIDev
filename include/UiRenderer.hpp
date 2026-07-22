@@ -15,6 +15,7 @@ public:
 
     [[nodiscard]] bool initialize();
     void shutdown();
+    void beginFrame();
 
     void renderStandalone(const UiState& state);
     void renderBottom(const UiState& state);
