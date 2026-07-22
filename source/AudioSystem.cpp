@@ -218,6 +218,9 @@ void AudioSystem::playSample(const Sample& sample) {
 }
 
 void AudioSystem::playMask(std::uint32_t cueMask) {
+    if (backend_ == AudioBackend::Ndsp && musicWaveBuffer_.data_vaddr == nullptr) {
+        startMissionMusic();
+    }
     for (std::uint8_t value = 0; value < static_cast<std::uint8_t>(AudioCue::Count); ++value) {
         const AudioCue cue = static_cast<AudioCue>(value);
         if ((cueMask & audioCueMask(cue)) != 0U) {
