@@ -21,7 +21,7 @@ COMMON_FLAGS=(
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/tower_economy_tests.cpp" "$ROOT/source/Economy.cpp" "$ROOT/source/Enemy.cpp" "$ROOT/source/Level.cpp" "$ROOT/source/Projectile.cpp" "$ROOT/source/Tower.cpp" "$ROOT/source/Wave.cpp" -o "$BUILD_DIR/tower-economy-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/touch_gesture_tests.cpp" "$ROOT/source/TouchGesture.cpp" -o "$BUILD_DIR/touch-gesture-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/touch_ui_layout_tests.cpp" "$ROOT/source/TouchUiLayout.cpp" -o "$BUILD_DIR/touch-ui-layout-tests"
-"$HOST_CXX""${COMMON_FLAGS[@]}" "$ROOT/tests/tutorial_flow_tests.cpp" "$ROOT/source/BuildFeedback.cpp" "$ROOT/source/TutorialFlow.cpp" -o "$BUILD_DIR/tutorial-flow-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/tutorial_flow_tests.cpp" "$ROOT/source/BuildFeedback.cpp" "$ROOT/source/TutorialFlow.cpp" -o "$BUILD_DIR/tutorial-flow-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/campaign_tests.cpp" "$ROOT/source/Campaign.cpp" -o "$BUILD_DIR/campaign-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/campaign_level_files_tests.cpp" "$ROOT/source/Campaign.cpp" "$ROOT/source/Level.cpp" -o "$BUILD_DIR/campaign-level-files-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/save_data_tests.cpp" "$ROOT/source/Campaign.cpp" "$ROOT/source/SaveData.cpp" -o "$BUILD_DIR/save-data-tests"
