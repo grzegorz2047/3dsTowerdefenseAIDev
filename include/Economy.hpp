@@ -12,6 +12,7 @@ public:
 
     void reset();
     [[nodiscard]] bool trySpend(int amount);
+    [[nodiscard]] bool credit(int amount);
     [[nodiscard]] bool rewardEnemy(std::size_t enemyIndex);
 
     [[nodiscard]] int gold() const;
