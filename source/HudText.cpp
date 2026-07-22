@@ -28,3 +28,7 @@ const char* buildAttemptMessage(BuildAttemptResult result) {
         default: return "Niebieskie: budowa | Brazowe: droga";
     }
 }
+
+const char* audioStatusMessage(bool available) {
+    return available ? "AUDIO: OK" : "AUDIO: BLAD DSP";
+}

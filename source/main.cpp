@@ -34,12 +34,14 @@ void renderFallbackHud(
     PrintConsole& console,
     const Wave& wave,
     const BuildSystem& buildSystem,
-    const TutorialFlow& tutorialFlow) {
+    const TutorialFlow& tutorialFlow,
+    bool audioAvailable) {
     consoleSelect(&console);
     std::printf("\x1b[2J\x1b[H");
     std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
-    std::printf("v0.1.10-alpha  UI-CONSOLE\n");
-    std::printf("==============================\n\n");
+    std::printf("v0.1.11-alpha  AUDIO-DSP\n");
+    std::printf("==============================\n");
+    std::printf("%s\n\n", audioStatusMessage(audioAvailable));
 
     std::printf("\x1b[33mCO TERAZ:\x1b[0m\n%s\n\n", tutorialInstruction(tutorialFlow.phase()));
     std::printf(
@@ -57,7 +59,7 @@ void renderFallbackHud(
 
     std::printf("STATUS: %s\n\n", buildAttemptMessage(buildSystem.lastBuildResult()));
     std::printf("D-PAD  wybierz niebieskie pole\n");
-    std::printf("A      zbuduj wieze\n");
+    std::printf("A      zbuduj wieze / test dzwieku\n");
     std::printf("X      uruchom fale\n");
     std::printf("Y      restart po wyniku\n");
     std::printf("START  wyjscie\n");
@@ -146,7 +148,7 @@ int main() {
     BuildSystem buildSystem(levelResult.level);
     TutorialFlow tutorialFlow;
     AudioSystem audioSystem;
-    audioSystem.initialize();
+    const bool audioAvailable = audioSystem.initialize();
     AudioEventRouter audioRouter;
     audioRouter.reset({tutorialFlow.phase(), buildSystem.projectiles().activeCount()});
 
@@ -202,7 +204,7 @@ int main() {
             buildSystem.projectiles().activeCount()};
         audioSystem.playMask(audioRouter.update(audioState));
 
-        renderFallbackHud(bottomConsole, wave, buildSystem, tutorialFlow);
+        renderFallbackHud(bottomConsole, wave, buildSystem, tutorialFlow, audioAvailable);
         renderer.render(camera, wave, buildSystem, tutorialFlow);
     }
 

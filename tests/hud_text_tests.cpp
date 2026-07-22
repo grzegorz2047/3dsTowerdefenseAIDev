@@ -26,6 +26,9 @@ int main() {
     expectContains(buildAttemptMessage(BuildAttemptResult::InsufficientGold), "zlota", "gold feedback must explain the reason");
     expectContains(buildAttemptMessage(BuildAttemptResult::TowerLimitReached), "Limit", "limit feedback must explain the reason");
 
+    expectContains(audioStatusMessage(true), "OK", "available audio must be reported as ready");
+    expectContains(audioStatusMessage(false), "BLAD", "failed audio initialization must be visible");
+
     std::cout << "HUD text unit tests passed\n";
     return 0;
 }
