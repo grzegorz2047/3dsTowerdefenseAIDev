@@ -6,6 +6,7 @@
 
 #include <3ds.h>
 
+#include "AudioBackend.hpp"
 #include "AudioEvents.hpp"
 
 class AudioSystem {
@@ -23,6 +24,10 @@ public:
     void shutdown();
 
     [[nodiscard]] bool available() const;
+    [[nodiscard]] AudioBackend backend() const;
+    [[nodiscard]] Result ndspResult() const;
+    [[nodiscard]] Result csndResult() const;
+    [[nodiscard]] Result lastPlayResult() const;
 
 private:
     static constexpr int kSampleRate = 22050;
@@ -36,9 +41,13 @@ private:
 
     [[nodiscard]] bool generateSamples();
     [[nodiscard]] bool generateSample(AudioCue cue);
+    void initializeNdspChannels();
     void freeSamples();
 
-    bool initialized_ = false;
+    AudioBackend backend_ = AudioBackend::None;
+    Result ndspResult_ = 0;
+    Result csndResult_ = 0;
+    Result lastPlayResult_ = 0;
     std::size_t nextChannel_ = 0;
     std::array<Sample, static_cast<std::size_t>(AudioCue::Count)> samples_{};
     std::array<ndspWaveBuf, kSfxChannelCount> waveBuffers_{};
