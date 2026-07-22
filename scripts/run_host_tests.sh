@@ -43,3 +43,9 @@ COMMON_FLAGS=(
 "$BUILD_DIR/gameplay-tests"
 "$BUILD_DIR/tutorial-flow-tests"
 "$BUILD_DIR/audio-events-tests"
+
+# Citro2D queues HUD rectangles and text. This source-level regression guard
+# prevents the renderer from ending a frame without submitting that queue,
+# which previously left Azahar's bottom screen as a uniform clear color.
+grep -q "rendererFrameEndWithHudFlush" "$ROOT/include/Renderer.hpp"
+grep -q "C2D_Flush();" "$ROOT/include/Renderer.hpp"
