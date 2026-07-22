@@ -1,6 +1,7 @@
 #include "Campaign.hpp"
 
 #include <algorithm>
+#include <limits>
 
 namespace {
 
@@ -31,6 +32,8 @@ const CampaignMission& CampaignCatalog::mission(std::size_t index) {
 
 void CampaignProgress::reset() {
     bestStars_.fill(0);
+    bestBaseHealth_.fill(0);
+    fewestTowers_.fill(0);
     unlockedCount_ = 1;
 }
 
@@ -42,8 +45,39 @@ std::uint8_t CampaignProgress::bestStars(std::size_t index) const {
     return index < kCampaignMissionCount ? bestStars_[index] : 0;
 }
 
+std::uint8_t CampaignProgress::bestBaseHealth(std::size_t index) const {
+    return index < kCampaignMissionCount ? bestBaseHealth_[index] : 0;
+}
+
+std::uint8_t CampaignProgress::fewestTowers(std::size_t index) const {
+    return index < kCampaignMissionCount ? fewestTowers_[index] : 0;
+}
+
 std::size_t CampaignProgress::unlockedCount() const {
     return unlockedCount_;
+}
+
+CampaignProgressSnapshot CampaignProgress::snapshot() const {
+    return {unlockedCount_, bestStars_, bestBaseHealth_, fewestTowers_};
+}
+
+bool CampaignProgress::restore(const CampaignProgressSnapshot& snapshotValue) {
+    if (snapshotValue.unlockedCount == 0 || snapshotValue.unlockedCount > kCampaignMissionCount) {
+        return false;
+    }
+    for (std::size_t index = 0; index < kCampaignMissionCount; ++index) {
+        if (snapshotValue.bestStars[index] > 3 || snapshotValue.bestBaseHealth[index] > 5) {
+            return false;
+        }
+        if (index >= snapshotValue.unlockedCount && snapshotValue.bestStars[index] != 0) {
+            return false;
+        }
+    }
+    unlockedCount_ = snapshotValue.unlockedCount;
+    bestStars_ = snapshotValue.bestStars;
+    bestBaseHealth_ = snapshotValue.bestBaseHealth;
+    fewestTowers_ = snapshotValue.fewestTowers;
+    return true;
 }
 
 MissionResult CampaignProgress::complete(std::size_t index, int baseHealth, std::size_t towersBuilt) {
@@ -61,6 +95,12 @@ MissionResult CampaignProgress::complete(std::size_t index, int baseHealth, std:
     }
 
     bestStars_[index] = std::max(bestStars_[index], stars);
+    bestBaseHealth_[index] = std::max(bestBaseHealth_[index], static_cast<std::uint8_t>(std::min(baseHealth, 5)));
+    const std::uint8_t towerRecord = static_cast<std::uint8_t>(std::min<std::size_t>(towersBuilt, std::numeric_limits<std::uint8_t>::max()));
+    if (fewestTowers_[index] == 0 || towerRecord < fewestTowers_[index]) {
+        fewestTowers_[index] = towerRecord;
+    }
+
     const std::size_t previousUnlockedCount = unlockedCount_;
     if (index + 1U < kCampaignMissionCount) {
         unlockedCount_ = std::max(unlockedCount_, index + 2U);
