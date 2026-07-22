@@ -47,4 +47,6 @@ private:
     std::size_t enemyVertexCount_ = 0;
     std::size_t towerVertexOffset_ = 0;
     std::size_t towerVertexCount_ = 0;
+    std::size_t projectileVertexOffset_ = 0;
+    std::size_t projectileVertexCount_ = 0;
 };
