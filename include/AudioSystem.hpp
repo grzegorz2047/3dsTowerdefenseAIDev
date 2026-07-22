@@ -8,6 +8,7 @@
 
 #include "AudioBackend.hpp"
 #include "AudioEvents.hpp"
+#include "AudioNdspShim.hpp"
 #include "AudioProbe.hpp"
 
 class AudioSystem {
@@ -58,14 +59,14 @@ private:
     void freeSamples();
 
     AudioBackend backend_ = AudioBackend::None;
-    Result ndspResult_ = 0;
-    Result ndspInitialResult_ = 0;
-    Result ndspShimResult_ = 0;
+    Result ndspResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    Result ndspInitialResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    Result ndspShimResult_ = static_cast<Result>(kAudioResultNotAttempted);
     bool ndspShimAttempted_ = false;
     bool ndspShimActive_ = false;
-    Result csndResult_ = 0;
-    Result lastPlayResult_ = 0;
-    Result probeResult_ = 0;
+    Result csndResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    Result lastPlayResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    Result probeResult_ = static_cast<Result>(kAudioResultNotAttempted);
     int lastChannel_ = -1;
     AudioProbeState probeState_{};
     std::size_t nextChannel_ = 0;

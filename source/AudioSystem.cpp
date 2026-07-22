@@ -51,9 +51,9 @@ bool AudioSystem::initialize() {
 
     ndspInitialResult_ = ndspInit();
     ndspResult_ = ndspInitialResult_;
+    const std::uint32_t initialRaw = static_cast<std::uint32_t>(ndspInitialResult_);
 
-    if (R_FAILED(ndspInitialResult_) &&
-        shouldAttemptNdspHleShim(static_cast<std::uint32_t>(ndspInitialResult_))) {
+    if (shouldAttemptNdspHleShim(initialRaw)) {
         ndspShimAttempted_ = true;
         ndspUseComponent(
             kSyntheticHleComponent.data(),
@@ -62,17 +62,22 @@ bool AudioSystem::initialize() {
             0x00FFU);
         ndspShimResult_ = ndspInit();
         ndspResult_ = ndspShimResult_;
-        ndspShimActive_ = R_SUCCEEDED(ndspShimResult_);
+        ndspShimActive_ = ndspShimIsActive(
+            ndspShimAttempted_,
+            static_cast<std::uint32_t>(ndspShimResult_));
     }
 
-    if (R_SUCCEEDED(ndspResult_)) {
+    if (ndspBackendReady(
+            initialRaw,
+            ndspShimAttempted_,
+            static_cast<std::uint32_t>(ndspShimResult_))) {
         backend_ = AudioBackend::Ndsp;
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
         ndspSetMasterVol(1.0F);
         initializeNdspChannels();
     } else {
         csndResult_ = csndInit();
-        if (R_SUCCEEDED(csndResult_)) {
+        if (audioResultSucceeded(static_cast<std::uint32_t>(csndResult_))) {
             backend_ = AudioBackend::Csnd;
         }
     }
@@ -205,62 +210,30 @@ void AudioSystem::shutdown() {
     backend_ = AudioBackend::None;
     nextChannel_ = 0;
     lastChannel_ = -1;
-    probeResult_ = 0;
-    probeState_ = {};
+    ndspResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    ndspInitialResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    ndspShimResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    ndspShimAttempted_ = false;
     ndspShimActive_ = false;
+    csndResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    lastPlayResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    probeResult_ = static_cast<Result>(kAudioResultNotAttempted);
+    probeState_ = {};
 }
 
-bool AudioSystem::available() const {
-    return backend_ != AudioBackend::None;
-}
-
-AudioBackend AudioSystem::backend() const {
-    return backend_;
-}
-
-Result AudioSystem::ndspResult() const {
-    return ndspResult_;
-}
-
-Result AudioSystem::ndspInitialResult() const {
-    return ndspInitialResult_;
-}
-
-Result AudioSystem::ndspShimResult() const {
-    return ndspShimResult_;
-}
-
-bool AudioSystem::ndspShimAttempted() const {
-    return ndspShimAttempted_;
-}
-
-bool AudioSystem::ndspShimActive() const {
-    return ndspShimActive_;
-}
-
-Result AudioSystem::csndResult() const {
-    return csndResult_;
-}
-
-Result AudioSystem::lastPlayResult() const {
-    return lastPlayResult_;
-}
-
-Result AudioSystem::probeResult() const {
-    return probeResult_;
-}
-
-int AudioSystem::lastChannel() const {
-    return lastChannel_;
-}
-
-bool AudioSystem::channelActive() const {
-    return probeState_.active;
-}
-
-bool AudioSystem::channelEverActive() const {
-    return probeState_.everActive;
-}
+bool AudioSystem::available() const { return backend_ != AudioBackend::None; }
+AudioBackend AudioSystem::backend() const { return backend_; }
+Result AudioSystem::ndspResult() const { return ndspResult_; }
+Result AudioSystem::ndspInitialResult() const { return ndspInitialResult_; }
+Result AudioSystem::ndspShimResult() const { return ndspShimResult_; }
+bool AudioSystem::ndspShimAttempted() const { return ndspShimAttempted_; }
+bool AudioSystem::ndspShimActive() const { return ndspShimActive_; }
+Result AudioSystem::csndResult() const { return csndResult_; }
+Result AudioSystem::lastPlayResult() const { return lastPlayResult_; }
+Result AudioSystem::probeResult() const { return probeResult_; }
+int AudioSystem::lastChannel() const { return lastChannel_; }
+bool AudioSystem::channelActive() const { return probeState_.active; }
+bool AudioSystem::channelEverActive() const { return probeState_.everActive; }
 
 bool AudioSystem::generateSamples() {
     for (std::uint8_t value = 0; value < static_cast<std::uint8_t>(AudioCue::Count); ++value) {
