@@ -78,6 +78,7 @@ void UiRenderer::renderStandalone(const UiState& state) {
 
 void UiRenderer::renderBottom(const UiState& state) {
     if (bottomTarget_ == nullptr || textBuffer_ == nullptr) return;
+    C2D_Prepare();
     C2D_TargetClear(bottomTarget_, kBackground);
     C2D_SceneBegin(bottomTarget_);
     if (state.screen == UiScreen::Campaign) drawCampaign(state);
@@ -204,6 +205,7 @@ void UiRenderer::drawDiagnostics(const UiState& state) {
 void UiRenderer::renderTopOverlay(C3D_RenderTarget* target, const UiState& state) {
     if (target == nullptr || textBuffer_ == nullptr || state.screen != UiScreen::Mission) return;
     if (!composedFrameActive_) beginFrame();
+    C2D_Prepare();
     C2D_SceneBegin(target);
     C2D_DrawRectSolid(8.0F, 8.0F, 0.8F, 130.0F, 28.0F, C2D_Color32(24, 28, 38, 225));
     C2D_DrawCircleSolid(23.0F, 22.0F, 0.9F, 9.0F, C2D_Color32(244, 190, 48, 255));
