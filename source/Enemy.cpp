@@ -38,7 +38,13 @@ void Enemy::update(float deltaSeconds) {
         return;
     }
 
-    float remainingDistance = std::max(deltaSeconds, 0.0F) * movementSpeed();
+    const float stepSeconds = std::max(deltaSeconds, 0.0F);
+    float remainingDistance = stepSeconds * effectiveMovementSpeed();
+    slowRemainingSeconds_ = std::max(slowRemainingSeconds_ - stepSeconds, 0.0F);
+    if (slowRemainingSeconds_ <= 0.0F) {
+        slowMovementMultiplier_ = 1.0F;
+    }
+
     while (remainingDistance > 0.0F && !reachedBase_) {
         const float available = 1.0F - segmentProgress_;
         const float step = std::min(remainingDistance, available);
@@ -69,6 +75,8 @@ void Enemy::update(float deltaSeconds) {
 void Enemy::reset() {
     segmentIndex_ = 0;
     segmentProgress_ = 0.0F;
+    slowRemainingSeconds_ = 0.0F;
+    slowMovementMultiplier_ = 1.0F;
     health_ = maxHealth();
     reachedBase_ = level_ == nullptr || level_->pathLength < 2;
     if (!reachedBase_) {
@@ -85,6 +93,14 @@ void Enemy::takeDamage(int amount) {
     health_ = std::max(health_ - amount, 0);
 }
 
+void Enemy::applySlow(float durationSeconds, float movementMultiplier) {
+    if (durationSeconds <= 0.0F || movementMultiplier <= 0.0F || movementMultiplier >= 1.0F || dead() || reachedBase_) {
+        return;
+    }
+    slowRemainingSeconds_ = std::max(slowRemainingSeconds_, durationSeconds);
+    slowMovementMultiplier_ = std::min(slowMovementMultiplier_, movementMultiplier);
+}
+
 float Enemy::x() const { return x_; }
 float Enemy::z() const { return z_; }
 bool Enemy::reachedBase() const { return reachedBase_; }
@@ -93,6 +109,8 @@ int Enemy::health() const { return health_; }
 int Enemy::maxHealth() const { return statsFor(type_).health; }
 int Enemy::baseDamage() const { return statsFor(type_).baseDamage; }
 float Enemy::movementSpeed() const { return statsFor(type_).movementSpeed; }
+float Enemy::effectiveMovementSpeed() const { return movementSpeed() * slowMovementMultiplier_; }
+bool Enemy::slowed() const { return slowRemainingSeconds_ > 0.0F; }
 EnemyType Enemy::type() const { return type_; }
 
 float Enemy::pathProgress() const {
