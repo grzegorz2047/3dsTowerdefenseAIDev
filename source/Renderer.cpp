@@ -41,8 +41,8 @@ TileVisual visualFor(TileType tile) {
         case TileType::Road: return {0.48F, 0.34F, 0.20F, 0.03F, 0.03F};
         case TileType::BuildSpot: return {0.20F, 0.42F, 0.68F, 0.07F, 0.10F};
         case TileType::Blocked: return {0.24F, 0.25F, 0.28F, 0.38F, 0.05F};
-        case TileType::Spawn: return {0.18F, 0.72F, 0.28F, 0.08F, 0.05F};
-        case TileType::Base: return {0.78F, 0.22F, 0.18F, 0.16F, 0.05F};
+        case TileType::Spawn: return {0.16F, 0.24F, 0.20F, 0.08F, 0.05F};
+        case TileType::Base: return {0.34F, 0.29F, 0.25F, 0.16F, 0.05F};
         case TileType::Ground:
         default: return {0.18F, 0.46F, 0.22F, 0.0F, 0.04F};
     }
@@ -84,6 +84,57 @@ void appendBoxAt(std::vector<Vertex>& vertices, float centerX, float centerZ,
         {x0,y1,z1,r,g,b,1}, {x0,y1,z0,r,g,b,1});
     appendQuad(vertices, {x0,y1,z1,r,g,b,1}, {x1,y1,z1,r,g,b,1},
         {x1,y1,z0,r,g,b,1}, {x0,y1,z0,r,g,b,1});
+}
+
+void appendCitadel(std::vector<Vertex>& vertices, float x, float z) {
+    constexpr float stoneR = 0.47F;
+    constexpr float stoneG = 0.50F;
+    constexpr float stoneB = 0.54F;
+    constexpr float darkR = 0.25F;
+    constexpr float darkG = 0.28F;
+    constexpr float darkB = 0.32F;
+    constexpr float bannerR = 0.64F;
+    constexpr float bannerG = 0.12F;
+    constexpr float bannerB = 0.16F;
+    constexpr float goldR = 0.82F;
+    constexpr float goldG = 0.62F;
+    constexpr float goldB = 0.18F;
+
+    appendBoxAt(vertices, x, z, 0.46F, 0.46F, 0.15F, 0.27F, darkR, darkG, darkB);
+    appendBoxAt(vertices, x, z, 0.28F, 0.28F, 0.25F, 0.82F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, x, z, 0.34F, 0.34F, 0.80F, 0.92F, darkR, darkG, darkB);
+    appendBoxAt(vertices, x - 0.26F, z - 0.26F, 0.08F, 0.08F, 0.90F, 1.10F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, x + 0.26F, z - 0.26F, 0.08F, 0.08F, 0.90F, 1.10F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, x - 0.26F, z + 0.26F, 0.08F, 0.08F, 0.90F, 1.10F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, x + 0.26F, z + 0.26F, 0.08F, 0.08F, 0.90F, 1.10F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, x, z + 0.285F, 0.09F, 0.025F, 0.31F, 0.72F, bannerR, bannerG, bannerB);
+    appendBoxAt(vertices, x, z + 0.315F, 0.025F, 0.025F, 0.68F, 1.13F, goldR, goldG, goldB);
+    appendBoxAt(vertices, x, z + 0.32F, 0.13F, 0.035F, 1.02F, 1.10F, bannerR, bannerG, bannerB);
+}
+
+void appendInvasionGate(std::vector<Vertex>& vertices, float x, float z) {
+    constexpr float stoneR = 0.30F;
+    constexpr float stoneG = 0.32F;
+    constexpr float stoneB = 0.34F;
+    constexpr float edgeR = 0.16F;
+    constexpr float edgeG = 0.18F;
+    constexpr float edgeB = 0.20F;
+    constexpr float portalR = 0.14F;
+    constexpr float portalG = 0.78F;
+    constexpr float portalB = 0.62F;
+    constexpr float coreR = 0.48F;
+    constexpr float coreG = 1.00F;
+    constexpr float coreB = 0.84F;
+
+    appendBoxAt(vertices, x, z - 0.30F, 0.13F, 0.13F, 0.08F, 0.78F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, x, z + 0.30F, 0.13F, 0.13F, 0.08F, 0.78F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, x, z, 0.14F, 0.43F, 0.66F, 0.84F, edgeR, edgeG, edgeB);
+    appendBoxAt(vertices, x + 0.02F, z, 0.035F, 0.18F, 0.16F, 0.66F, portalR, portalG, portalB);
+    appendBoxAt(vertices, x + 0.055F, z, 0.018F, 0.11F, 0.25F, 0.59F, coreR, coreG, coreB);
+    appendBoxAt(vertices, x, z - 0.30F, 0.18F, 0.18F, 0.76F, 0.91F, edgeR, edgeG, edgeB);
+    appendBoxAt(vertices, x, z + 0.30F, 0.18F, 0.18F, 0.76F, 0.91F, edgeR, edgeG, edgeB);
+    appendBoxAt(vertices, x, z - 0.30F, 0.07F, 0.07F, 0.89F, 1.03F, stoneR, stoneG, stoneB);
+    appendBoxAt(vertices, x, z + 0.30F, 0.07F, 0.07F, 0.89F, 1.03F, stoneR, stoneG, stoneB);
 }
 
 void appendEnemy(std::vector<Vertex>& vertices) {
@@ -197,13 +248,17 @@ bool Renderer::initialize(const LevelData& level) {
 
 bool Renderer::buildLevelMesh(const LevelData& level) {
     std::vector<Vertex> vertices;
-    vertices.reserve(static_cast<std::size_t>(level.width) * level.height * 6U + 1200U);
+    vertices.reserve(static_cast<std::size_t>(level.width) * level.height * 6U + 1800U);
     const float offsetX = -static_cast<float>(level.width) * 0.5F + 0.5F;
     const float offsetZ = -static_cast<float>(level.height) * 0.5F + 0.5F;
     for (std::size_t z = 0; z < level.height; ++z) {
         for (std::size_t x = 0; x < level.width; ++x) {
-            appendTile(vertices, offsetX + static_cast<float>(x), offsetZ + static_cast<float>(z),
-                visualFor(level.tileAt(x, z)));
+            const TileType tile = level.tileAt(x, z);
+            const float tileX = offsetX + static_cast<float>(x);
+            const float tileZ = offsetZ + static_cast<float>(z);
+            appendTile(vertices, tileX, tileZ, visualFor(tile));
+            if (tile == TileType::Base) appendCitadel(vertices, tileX, tileZ);
+            else if (tile == TileType::Spawn) appendInvasionGate(vertices, tileX, tileZ);
         }
     }
 

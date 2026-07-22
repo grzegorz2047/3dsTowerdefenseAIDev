@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "id": "tutorial_invasion_gate",
+  "kind": "spawn",
+  "display_name": "Brama najazdu",
+  "author": "grzegorz2047",
+  "license": "Project",
+  "source": "source/Renderer.cpp",
+  "generated": "runtime:static-level-vbo",
+  "forward_axis": "+Z",
+  "up_axis": "+Y",
+  "pivot": "base_center",
+  "triangle_count": 90,
+  "material_count": 1,
+  "bounds": {
+    "min": [-0.18, 0.08, -0.48],
+    "max": [0.18, 1.03, 0.48]
+  }
+}

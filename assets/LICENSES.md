@@ -24,6 +24,8 @@ Każdy asset wizualny, dźwiękowy lub font używany przez grę musi mieć wpis 
 | `tutorial_watchtower` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | podstawa, trzon, blanki i kusza | runtime VBO |
 | `tutorial_raider` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | humanoidalna sylwetka z tarczą | runtime VBO |
 | `tutorial_bolt` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | grot i drewniany trzon | runtime VBO |
+| `tutorial_citadel` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | warownia, blanki, wieżyczki i sztandar | runtime static level VBO |
+| `tutorial_invasion_gate` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | kamienna brama i świecący portal | runtime static level VBO |
 | `release_icon_banner` | image/audio | grzegorz2047 | Project | `scripts/generate_release_assets.py` | generowane deterministycznie | `build/release-assets/*` |
 
 ## Szablon nowego wpisu
