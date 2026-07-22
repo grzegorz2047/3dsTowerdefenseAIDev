@@ -69,9 +69,12 @@ export _3DSXDEPS := $(if $(NO_SMDH),,$(OUTPUT).smdh)
 export _3DSXFLAGS += --smdh=$(CURDIR)/$(TARGET).smdh --romfs=$(CURDIR)/$(ROMFS)
 export MAKEROM BANNERTOOL PYTHON SOURCE_RSF RSF_FILE ASSET_DIR ICON_FILE BANNER_IMAGE BANNER_AUDIO BANNER_FILE CIA_ICON
 
-.PHONY: all 3dsx cia release tools assets clean checksums
+.PHONY: all test 3dsx cia release tools assets clean checksums
 
 all: 3dsx
+
+test:
+	@bash scripts/run_host_tests.sh
 
 3dsx: tools assets $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile 3dsx
