@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "Economy.hpp"
 #include "Enemy.hpp"
 #include "Level.hpp"
 #include "Tower.hpp"
@@ -122,6 +123,31 @@ void testTowerPlacementRules() {
     require(!invalid.valid(), "road tower should be invalid");
 }
 
+void testEconomySpendsExactlyOnce() {
+    Economy economy;
+    economy.reset();
+
+    require(economy.trySpend(Economy::kTowerCost), "first tower cost should be accepted");
+    require(economy.gold() == Economy::kInitialGold - Economy::kTowerCost, "first cost should be deducted exactly once");
+    require(economy.trySpend(Economy::kTowerCost), "second affordable tower cost should be accepted");
+    require(economy.gold() == 0, "two tower costs should consume initial gold exactly");
+    require(!economy.trySpend(Economy::kTowerCost), "unaffordable tower cost must be rejected");
+    require(economy.gold() == 0, "rejected cost must not change gold");
+}
+
+void testEconomyRewardsEachEnemyOnce() {
+    Economy economy;
+    economy.reset();
+
+    require(economy.rewardEnemy(0), "first reward for enemy should be accepted");
+    require(economy.gold() == Economy::kInitialGold + Economy::kKillReward, "first reward should be credited once");
+    require(!economy.rewardEnemy(0), "duplicate reward for enemy must be rejected");
+    require(economy.gold() == Economy::kInitialGold + Economy::kKillReward, "duplicate reward must not change gold");
+    require(economy.rewardEnemy(1), "different enemy should grant a reward");
+    require(economy.gold() == Economy::kInitialGold + 2 * Economy::kKillReward, "two unique enemies should grant two rewards");
+    require(!economy.rewardEnemy(Economy::kMaximumRewardedEnemies), "out-of-range enemy reward must be rejected");
+}
+
 }  // namespace
 
 int main() {
@@ -130,6 +156,8 @@ int main() {
     testWaveLossWithoutTowers();
     testTowerCanWinWave();
     testTowerPlacementRules();
+    testEconomySpendsExactlyOnce();
+    testEconomyRewardsEachEnemyOnce();
     std::cout << "All host gameplay tests passed.\n";
     return 0;
 }
