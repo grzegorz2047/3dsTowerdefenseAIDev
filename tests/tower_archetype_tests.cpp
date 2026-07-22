@@ -77,7 +77,7 @@ void testTowerAimsAtSelectedTarget() {
 
     tower.update(1.0F / 60.0F, wave, projectiles);
     expect(tower.hasTarget(), "tower should expose an in-range target");
-    const Enemy& target = wave.enemyAt(0);
+    Enemy& target = wave.enemyAt(0);
     const float expected = std::atan2(target.x() - tower.x(), target.z() - tower.z());
     expect(std::fabs(tower.aimAngleRadians() - expected) < 0.0001F, "tower aim should point at the selected enemy");
 
