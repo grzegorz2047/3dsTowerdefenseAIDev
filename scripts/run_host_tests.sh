@@ -16,93 +16,19 @@ COMMON_FLAGS=(
   -I"$ROOT/include"
 )
 
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/logic_tests.cpp" \
-  "$ROOT/source/Economy.cpp" \
-  "$ROOT/source/Enemy.cpp" \
-  "$ROOT/source/Level.cpp" \
-  "$ROOT/source/Projectile.cpp" \
-  "$ROOT/source/Tower.cpp" \
-  "$ROOT/source/Wave.cpp" \
-  -o "$BUILD_DIR/gameplay-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/tower_archetype_tests.cpp" \
-  "$ROOT/source/Enemy.cpp" \
-  "$ROOT/source/Level.cpp" \
-  "$ROOT/source/Projectile.cpp" \
-  "$ROOT/source/Tower.cpp" \
-  "$ROOT/source/Wave.cpp" \
-  -o "$BUILD_DIR/tower-archetype-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/tower_economy_tests.cpp" \
-  "$ROOT/source/Economy.cpp" \
-  "$ROOT/source/Enemy.cpp" \
-  "$ROOT/source/Level.cpp" \
-  "$ROOT/source/Projectile.cpp" \
-  "$ROOT/source/Tower.cpp" \
-  "$ROOT/source/Wave.cpp" \
-  -o "$BUILD_DIR/tower-economy-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/touch_gesture_tests.cpp" \
-  "$ROOT/source/TouchGesture.cpp" \
-  -o "$BUILD_DIR/touch-gesture-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/touch_ui_layout_tests.cpp" \
-  "$ROOT/source/TouchUiLayout.cpp" \
-  -o "$BUILD_DIR/touch-ui-layout-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/tutorial_flow_tests.cpp" \
-  "$ROOT/source/BuildFeedback.cpp" \
-  "$ROOT/source/TutorialFlow.cpp" \
-  -o "$BUILD_DIR/tutorial-flow-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/audio_events_tests.cpp" \
-  "$ROOT/source/AudioEvents.cpp" \
-  -o "$BUILD_DIR/audio-events-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/audio_backend_tests.cpp" \
-  -o "$BUILD_DIR/audio-backend-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/audio_probe_tests.cpp" \
-  -o "$BUILD_DIR/audio-probe-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/audio_ndsp_shim_tests.cpp" \
-  -o "$BUILD_DIR/audio-ndsp-shim-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/audio_wave_status_tests.cpp" \
-  -o "$BUILD_DIR/audio-wave-status-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/hud_mode_tests.cpp" \
-  -o "$BUILD_DIR/hud-mode-tests"
-
-"$HOST_CXX" \
-  "${COMMON_FLAGS[@]}" \
-  "$ROOT/tests/hud_text_tests.cpp" \
-  "$ROOT/source/HudText.cpp" \
-  -o "$BUILD_DIR/hud-text-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/logic_tests.cpp" "$ROOT/source/Economy.cpp" "$ROOT/source/Enemy.cpp" "$ROOT/source/Level.cpp" "$ROOT/source/Projectile.cpp" "$ROOT/source/Tower.cpp" "$ROOT/source/Wave.cpp" -o "$BUILD_DIR/gameplay-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/tower_archetype_tests.cpp" "$ROOT/source/Enemy.cpp" "$ROOT/source/Level.cpp" "$ROOT/source/Projectile.cpp" "$ROOT/source/Tower.cpp" "$ROOT/source/Wave.cpp" -o "$BUILD_DIR/tower-archetype-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/tower_economy_tests.cpp" "$ROOT/source/Economy.cpp" "$ROOT/source/Enemy.cpp" "$ROOT/source/Level.cpp" "$ROOT/source/Projectile.cpp" "$ROOT/source/Tower.cpp" "$ROOT/source/Wave.cpp" -o "$BUILD_DIR/tower-economy-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/touch_gesture_tests.cpp" "$ROOT/source/TouchGesture.cpp" -o "$BUILD_DIR/touch-gesture-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/touch_ui_layout_tests.cpp" "$ROOT/source/TouchUiLayout.cpp" -o "$BUILD_DIR/touch-ui-layout-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/tutorial_flow_tests.cpp" "$ROOT/source/BuildFeedback.cpp" "$ROOT/source/TutorialFlow.cpp" -o "$BUILD_DIR/tutorial-flow-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/audio_events_tests.cpp" "$ROOT/source/AudioEvents.cpp" -o "$BUILD_DIR/audio-events-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/audio_backend_tests.cpp" -o "$BUILD_DIR/audio-backend-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/audio_probe_tests.cpp" -o "$BUILD_DIR/audio-probe-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/audio_ndsp_shim_tests.cpp" -o "$BUILD_DIR/audio-ndsp-shim-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/audio_wave_status_tests.cpp" -o "$BUILD_DIR/audio-wave-status-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/hud_mode_tests.cpp" -o "$BUILD_DIR/hud-mode-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/hud_text_tests.cpp" "$ROOT/source/HudText.cpp" -o "$BUILD_DIR/hud-text-tests"
 
 "$BUILD_DIR/gameplay-tests"
 "$BUILD_DIR/tower-archetype-tests"
@@ -118,11 +44,20 @@ COMMON_FLAGS=(
 "$BUILD_DIR/hud-mode-tests"
 "$BUILD_DIR/hud-text-tests"
 
-# Normal gameplay HUD is compact. Raw audio diagnostics and the manual tone
-# are available only while SELECT is held.
+# Bottom-screen interaction contract: touch gestures, fixed hitboxes and button
+# equivalents must all be connected to the live gameplay loop.
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
-grep -q "v0.1.18-alpha  COMPACT-HUD" "$ROOT/source/main.cpp"
-grep -q "DZWIEK: %s" "$ROOT/source/main.cpp"
+grep -q "TouchGesture touchGesture" "$ROOT/source/main.cpp"
+grep -q "TouchUiLayout::actionAt" "$ROOT/source/main.cpp"
+grep -q "SelectBallista" "$ROOT/source/main.cpp"
+grep -q "TogglePause" "$ROOT/source/main.cpp"
+grep -q "ToggleSpeed" "$ROOT/source/main.cpp"
+grep -q "KEY_X" "$ROOT/source/main.cpp"
+grep -q "input.pressed(KEY_L) && input.pressed(KEY_R)" "$ROOT/source/main.cpp"
+grep -q "BUDUJ/A" "$ROOT/source/main.cpp"
+grep -q "ULEPSZ/B" "$ROOT/source/main.cpp"
+grep -q "SPRZEDAJ/Y" "$ROOT/source/main.cpp"
+grep -q "ANULUJ" "$ROOT/source/main.cpp"
 grep -q "KEY_SELECT" "$ROOT/source/main.cpp"
 grep -q "hudModeForSelectHeld" "$ROOT/source/main.cpp"
 grep -q "allowDiagnosticTone" "$ROOT/source/main.cpp"
@@ -144,19 +79,13 @@ if find "$ROOT" -type f \( -iname 'dspfirm.cdc' -o -iname '*.cdc' \) | grep -q .
   exit 1
 fi
 
-# Diagnostic path must match the official devkitPro shape: channel 0, stereo
-# PCM16, interleaved L/R and an observable wave-buffer status.
 grep -q "kDiagnosticChannel = 0" "$ROOT/include/AudioSystem.hpp"
 grep -q "NDSP_FORMAT_STEREO_PCM16" "$ROOT/source/AudioSystem.cpp"
 grep -q "frame \* 2U + 1U" "$ROOT/source/AudioSystem.cpp"
 grep -q "ndspChnGetSamplePos" "$ROOT/source/AudioSystem.cpp"
 grep -q "diagnosticWaveBuffer_.status" "$ROOT/source/AudioSystem.cpp"
-
 grep -q "ndspSetOutputMode(NDSP_OUTPUT_STEREO)" "$ROOT/source/AudioSystem.cpp"
 grep -q "csndPlaySound" "$ROOT/source/AudioSystem.cpp"
-
-# CIA builds must be allowed to use both services. NDSP remains preferred,
-# while CSND remains a hardware fallback when the synthetic component fails.
 grep -q "dsp::DSP" "$ROOT/config/application.rsf"
 grep -q "dsp: 0x0004013000001a02" "$ROOT/config/application.rsf"
 grep -q "csnd:SND" "$ROOT/config/application.rsf"
