@@ -18,16 +18,16 @@ struct CueShape {
 
 CueShape shapeFor(AudioCue cue) {
     switch (cue) {
-        case AudioCue::BuildSuccess: return {0.16F, 520.0F, 880.0F, 0.42F, false};
-        case AudioCue::BuildFailure: return {0.14F, 190.0F, 110.0F, 0.36F, true};
-        case AudioCue::WaveStart: return {0.28F, 330.0F, 660.0F, 0.40F, false};
-        case AudioCue::Shot: return {0.08F, 720.0F, 420.0F, 0.28F, true};
-        case AudioCue::Hit: return {0.07F, 260.0F, 120.0F, 0.30F, true};
-        case AudioCue::Victory: return {0.48F, 440.0F, 1040.0F, 0.44F, false};
-        case AudioCue::Defeat: return {0.52F, 300.0F, 90.0F, 0.40F, false};
+        case AudioCue::BuildSuccess: return {0.16F, 520.0F, 880.0F, 0.55F, false};
+        case AudioCue::BuildFailure: return {0.14F, 190.0F, 110.0F, 0.48F, true};
+        case AudioCue::WaveStart: return {0.28F, 330.0F, 660.0F, 0.52F, false};
+        case AudioCue::Shot: return {0.08F, 720.0F, 420.0F, 0.38F, true};
+        case AudioCue::Hit: return {0.07F, 260.0F, 120.0F, 0.42F, true};
+        case AudioCue::Victory: return {0.48F, 440.0F, 1040.0F, 0.56F, false};
+        case AudioCue::Defeat: return {0.52F, 300.0F, 90.0F, 0.52F, false};
         case AudioCue::Count: break;
     }
-    return {0.1F, 440.0F, 440.0F, 0.2F, false};
+    return {0.1F, 440.0F, 440.0F, 0.3F, false};
 }
 
 }  // namespace
@@ -37,34 +37,52 @@ AudioSystem::~AudioSystem() {
 }
 
 bool AudioSystem::initialize() {
-    if (initialized_) {
+    if (backend_ != AudioBackend::None) {
         return true;
     }
 
-    if (R_FAILED(ndspInit())) {
+    ndspResult_ = ndspInit();
+    if (R_SUCCEEDED(ndspResult_)) {
+        backend_ = AudioBackend::Ndsp;
+        ndspSetOutputMode(NDSP_OUTPUT_STEREO);
+        initializeNdspChannels();
+    } else {
+        csndResult_ = csndInit();
+        if (R_SUCCEEDED(csndResult_)) {
+            backend_ = AudioBackend::Csnd;
+        }
+    }
+
+    if (backend_ == AudioBackend::None) {
         return false;
     }
-    initialized_ = true;
 
     if (!generateSamples()) {
         shutdown();
         return false;
     }
 
+    // An audible startup cue makes backend verification independent from any
+    // gameplay action. It also confirms that initialization and playback both
+    // succeeded rather than merely reporting that a service handle opened.
+    play(AudioCue::BuildSuccess);
+    return true;
+}
+
+void AudioSystem::initializeNdspChannels() {
     for (std::size_t index = 0; index < kSfxChannelCount; ++index) {
         const int channel = kFirstSfxChannel + static_cast<int>(index);
         ndspChnReset(channel);
         ndspChnSetInterp(channel, NDSP_INTERP_LINEAR);
         ndspChnSetRate(channel, static_cast<float>(kSampleRate));
         ndspChnSetFormat(channel, NDSP_FORMAT_MONO_PCM16);
-        float mix[12] = {0.72F, 0.72F};
+        float mix[12] = {1.0F, 1.0F};
         ndspChnSetMix(channel, mix);
     }
-    return true;
 }
 
 void AudioSystem::play(AudioCue cue) {
-    if (!initialized_ || cue == AudioCue::Count) {
+    if (backend_ == AudioBackend::None || cue == AudioCue::Count) {
         return;
     }
 
@@ -76,14 +94,35 @@ void AudioSystem::play(AudioCue cue) {
 
     const std::size_t slot = nextChannel_++ % kSfxChannelCount;
     const int channel = kFirstSfxChannel + static_cast<int>(slot);
-    ndspChnWaveBufClear(channel);
 
-    ndspWaveBuf& waveBuffer = waveBuffers_[slot];
-    std::memset(&waveBuffer, 0, sizeof(waveBuffer));
-    waveBuffer.data_vaddr = sample.data;
-    waveBuffer.nsamples = static_cast<u32>(sample.count);
-    waveBuffer.looping = false;
-    ndspChnWaveBufAdd(channel, &waveBuffer);
+    if (backend_ == AudioBackend::Ndsp) {
+        ndspChnWaveBufClear(channel);
+        ndspWaveBuf& waveBuffer = waveBuffers_[slot];
+        std::memset(&waveBuffer, 0, sizeof(waveBuffer));
+        waveBuffer.data_vaddr = sample.data;
+        waveBuffer.nsamples = static_cast<u32>(sample.count);
+        waveBuffer.looping = false;
+        ndspChnWaveBufAdd(channel, &waveBuffer);
+        lastPlayResult_ = 0;
+        return;
+    }
+
+    const u32 byteCount = static_cast<u32>(sample.count * sizeof(std::int16_t));
+    const Result flushResult = CSND_FlushDataCache(sample.data, byteCount);
+    if (R_FAILED(flushResult)) {
+        lastPlayResult_ = flushResult;
+        return;
+    }
+
+    lastPlayResult_ = csndPlaySound(
+        channel,
+        SOUND_ONE_SHOT | SOUND_FORMAT_16BIT | SOUND_LINEAR_INTERP,
+        static_cast<u32>(kSampleRate),
+        1.0F,
+        0.0F,
+        sample.data,
+        nullptr,
+        byteCount);
 }
 
 void AudioSystem::playMask(std::uint32_t cueMask) {
@@ -96,29 +135,54 @@ void AudioSystem::playMask(std::uint32_t cueMask) {
 }
 
 void AudioSystem::stopAll() {
-    if (!initialized_) {
+    if (backend_ == AudioBackend::Ndsp) {
+        for (std::size_t index = 0; index < kSfxChannelCount; ++index) {
+            ndspChnWaveBufClear(kFirstSfxChannel + static_cast<int>(index));
+            waveBuffers_[index] = {};
+        }
         return;
     }
-    for (std::size_t index = 0; index < kSfxChannelCount; ++index) {
-        ndspChnWaveBufClear(kFirstSfxChannel + static_cast<int>(index));
-        waveBuffers_[index] = {};
+
+    if (backend_ == AudioBackend::Csnd) {
+        for (std::size_t index = 0; index < kSfxChannelCount; ++index) {
+            CSND_SetPlayStateR(kFirstSfxChannel + static_cast<int>(index), 0U);
+        }
+        lastPlayResult_ = csndExecCmds(true);
     }
 }
 
 void AudioSystem::shutdown() {
-    if (!initialized_) {
-        freeSamples();
-        return;
-    }
     stopAll();
     freeSamples();
-    ndspExit();
-    initialized_ = false;
+
+    if (backend_ == AudioBackend::Ndsp) {
+        ndspExit();
+    } else if (backend_ == AudioBackend::Csnd) {
+        csndExit();
+    }
+
+    backend_ = AudioBackend::None;
     nextChannel_ = 0;
 }
 
 bool AudioSystem::available() const {
-    return initialized_;
+    return backend_ != AudioBackend::None;
+}
+
+AudioBackend AudioSystem::backend() const {
+    return backend_;
+}
+
+Result AudioSystem::ndspResult() const {
+    return ndspResult_;
+}
+
+Result AudioSystem::csndResult() const {
+    return csndResult_;
+}
+
+Result AudioSystem::lastPlayResult() const {
+    return lastPlayResult_;
 }
 
 bool AudioSystem::generateSamples() {
