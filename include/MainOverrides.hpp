@@ -12,6 +12,7 @@ int citadelConsolePrintf(const char* format, ...);
 bool citadelGraphicsInit(std::size_t commandBufferSize);
 void citadelGraphicsFini();
 void citadelSwapBuffers();
+void drawBottomUiOverlay();
 void drawTopGoldOverlay(int gold);
 
 #define printf citadelConsolePrintf
@@ -20,4 +21,4 @@ void drawTopGoldOverlay(int gold);
 #define gfxSwapBuffers() citadelSwapBuffers()
 #define render(camera, wave, buildSystem, tutorialFlow, stereoEnabled, maximum3DDepthPercent) \
     render(camera, wave, buildSystem, tutorialFlow, stereoEnabled, maximum3DDepthPercent), \
-    drawTopGoldOverlay(buildSystem.gold())
+    drawTopGoldOverlay(buildSystem.gold()), drawBottomUiOverlay()
