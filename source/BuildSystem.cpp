@@ -17,10 +17,12 @@ void BuildSystem::handleInput(const InputSnapshot& input) {
     if (input.pressed(KEY_DLEFT) || input.pressed(KEY_DUP)) {
         moveCursor(-1);
         lastBuildResult_ = BuildAttemptResult::None;
+        lastTowerAction_ = TowerActionResult::None;
     }
     if (input.pressed(KEY_DRIGHT) || input.pressed(KEY_DDOWN)) {
         moveCursor(1);
         lastBuildResult_ = BuildAttemptResult::None;
+        lastTowerAction_ = TowerActionResult::None;
     }
     if (input.pressed(KEY_L)) {
         selectTower(previousTowerType(selectedTowerType_));
@@ -30,6 +32,12 @@ void BuildSystem::handleInput(const InputSnapshot& input) {
     }
     if (input.pressed(KEY_A)) {
         tryBuild();
+    }
+    if (input.pressed(KEY_B) && !input.isHeld(KEY_SELECT)) {
+        lastTowerAction_ = upgradeCursorTower();
+    }
+    if (input.pressed(KEY_Y)) {
+        lastTowerAction_ = sellCursorTower();
     }
 }
 
@@ -55,6 +63,44 @@ void BuildSystem::reset() {
     projectiles_.reset();
     economy_.reset();
     lastBuildResult_ = BuildAttemptResult::None;
+    lastTowerAction_ = TowerActionResult::None;
+}
+
+TowerActionResult BuildSystem::upgradeCursorTower() {
+    const std::size_t index = towerIndexAt(cursorX(), cursorZ());
+    if (index >= towerCount_) {
+        return TowerActionResult::NoTower;
+    }
+    Tower& tower = towers_[index];
+    if (!tower.canUpgrade()) {
+        return TowerActionResult::MaximumLevel;
+    }
+    const int cost = tower.upgradeCost();
+    if (!economy_.trySpend(cost)) {
+        return TowerActionResult::InsufficientGold;
+    }
+    if (!tower.upgrade()) {
+        economy_.credit(cost);
+        return TowerActionResult::MaximumLevel;
+    }
+    return TowerActionResult::Upgraded;
+}
+
+TowerActionResult BuildSystem::sellCursorTower() {
+    const std::size_t index = towerIndexAt(cursorX(), cursorZ());
+    if (index >= towerCount_) {
+        return TowerActionResult::NoTower;
+    }
+    const int refund = towers_[index].sellValue();
+    if (!economy_.credit(refund)) {
+        return TowerActionResult::None;
+    }
+    for (std::size_t move = index + 1; move < towerCount_; ++move) {
+        towers_[move - 1] = towers_[move];
+    }
+    --towerCount_;
+    towers_[towerCount_] = Tower{};
+    return TowerActionResult::Sold;
 }
 
 std::size_t BuildSystem::towerCount() const { return towerCount_; }
@@ -65,6 +111,7 @@ int BuildSystem::towerCost() const { return ::towerCost(selectedTowerType_); }
 TowerType BuildSystem::selectedTowerType() const { return selectedTowerType_; }
 const char* BuildSystem::selectedTowerName() const { return towerName(selectedTowerType_); }
 BuildAttemptResult BuildSystem::lastBuildResult() const { return lastBuildResult_; }
+TowerActionResult BuildSystem::lastTowerAction() const { return lastTowerAction_; }
 
 std::size_t BuildSystem::cursorX() const {
     if (buildSpotCount_ == 0) {
@@ -84,6 +131,11 @@ bool BuildSystem::cursorOccupied() const {
     return buildSpotCount_ > 0 && occupied(cursorX(), cursorZ());
 }
 
+const Tower* BuildSystem::cursorTower() const {
+    const std::size_t index = towerIndexAt(cursorX(), cursorZ());
+    return index < towerCount_ ? &towers_[index] : nullptr;
+}
+
 bool BuildSystem::hasEnoughGold() const {
     return economy_.canAfford(towerCost());
 }
@@ -92,13 +144,17 @@ bool BuildSystem::cursorCanBuild() const {
     return level_ != nullptr && buildSpotCount_ > 0 && hasEnoughGold() && !cursorOccupied() && towerCount_ < kMaximumTowers;
 }
 
-bool BuildSystem::occupied(std::size_t x, std::size_t z) const {
+std::size_t BuildSystem::towerIndexAt(std::size_t x, std::size_t z) const {
     for (std::size_t index = 0; index < towerCount_; ++index) {
         if (towers_[index].gridX() == x && towers_[index].gridZ() == z) {
-            return true;
+            return index;
         }
     }
-    return false;
+    return towerCount_;
+}
+
+bool BuildSystem::occupied(std::size_t x, std::size_t z) const {
+    return towerIndexAt(x, z) < towerCount_;
 }
 
 void BuildSystem::moveCursor(int delta) {
@@ -113,22 +169,29 @@ void BuildSystem::moveCursor(int delta) {
 void BuildSystem::selectTower(TowerType type) {
     selectedTowerType_ = type;
     lastBuildResult_ = BuildAttemptResult::None;
+    lastTowerAction_ = TowerActionResult::None;
 }
 
 void BuildSystem::tryBuild() {
     const bool hasBuildSpot = level_ != nullptr && buildSpotCount_ > 0;
     const bool spotOccupied = hasBuildSpot && cursorOccupied();
+    if (spotOccupied) {
+        lastBuildResult_ = BuildAttemptResult::None;
+        lastTowerAction_ = TowerActionResult::Selected;
+        return;
+    }
+
     const bool enoughGold = hasEnoughGold();
     const bool hasCapacity = towerCount_ < kMaximumTowers;
-
     BuildAttemptResult result = evaluateBuildAttempt(
         hasBuildSpot,
-        spotOccupied,
+        false,
         enoughGold,
         hasCapacity,
         true);
     if (result != BuildAttemptResult::Built) {
         lastBuildResult_ = result;
+        lastTowerAction_ = TowerActionResult::None;
         return;
     }
 
@@ -144,4 +207,5 @@ void BuildSystem::tryBuild() {
 
     towers_[towerCount_++] = tower;
     lastBuildResult_ = BuildAttemptResult::Built;
+    lastTowerAction_ = TowerActionResult::None;
 }
