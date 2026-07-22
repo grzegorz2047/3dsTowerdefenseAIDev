@@ -1,0 +1,19 @@
+; Citadel Defense 3D level format v2
+id=echo_valley
+name=Dolina Echa
+size=12,12
+grid=begin
+############
+#..BBBB....#
+#SRRRRRRRR.#
+#........R.#
+#.RRRRRRRR.#
+#.R.BBBB...#
+#.R........#
+#.RRRRRRR..#
+#..BBBB.R..#
+#.......E..#
+#..........#
+############
+path=1,2;2,2;3,2;4,2;5,2;6,2;7,2;8,2;9,2;9,3;9,4;8,4;7,4;6,4;5,4;4,4;3,4;2,4;2,5;2,6;2,7;3,7;4,7;5,7;6,7;7,7;8,7;8,8;8,9
+waves=Scout,4,0.45;Raider,4,0.70;Brute,3,1.15;Raider,3,0.60;Brute,2,1.00

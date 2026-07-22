@@ -1,0 +1,19 @@
+; Citadel Defense 3D level format v2
+id=stone_bridge
+name=Kamienny Most
+size=12,12
+grid=begin
+############
+#.S........#
+#.R.BBBB...#
+#.R........#
+#.R.BBBB...#
+#.R........#
+#.R.BBBB...#
+#.R........#
+#.RRRRRRRE.#
+#..BBBB....#
+#..........#
+############
+path=2,1;2,2;2,3;2,4;2,5;2,6;2,7;2,8;3,8;4,8;5,8;6,8;7,8;8,8;9,8
+waves=Scout,5,0.50;Raider,4,0.80;Brute,3,1.25;Scout,4,0.45
