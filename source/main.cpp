@@ -17,6 +17,7 @@
 #include "HudText.hpp"
 #include "Input.hpp"
 #include "Level.hpp"
+#include "PerformanceBudget.hpp"
 #include "Renderer.hpp"
 #include "SaveData.hpp"
 #include "TouchGesture.hpp"
@@ -85,6 +86,11 @@ float calculateFrameSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
     return std::min(elapsed, kMaximumFrameSeconds);
 }
 
+float elapsedMilliseconds(u64 startMilliseconds, u64 endMilliseconds) {
+    if (endMilliseconds <= startMilliseconds) return 0.0F;
+    return static_cast<float>(endMilliseconds - startMilliseconds);
+}
+
 bool persistSave(const CampaignProgress& progress, SaveData& saveData, std::string& saveMessage) {
     saveData.campaign = progress.snapshot();
     std::string error;
@@ -117,6 +123,18 @@ void renderStereoDiagnostics(const Renderer& renderer, const GameSettings& setti
         static_cast<unsigned int>(renderer.lastEyeCount()));
     printConsoleLine(firstRow + 1, "SUWAK:%3.0f%% SEP:%.4f", renderer.lastStereoSlider() * 100.0F,
         renderer.lastStereoSeparation());
+}
+
+void renderPerformanceDiagnostics(const PerformanceSnapshot& performance, int firstRow) {
+    const float fps = performance.averageFrameMilliseconds > 0.0F
+        ? 1000.0F / performance.averageFrameMilliseconds
+        : 0.0F;
+    printConsoleLine(firstRow, "FPS:%4.1f AVG:%5.1fms %s", fps, performance.averageFrameMilliseconds,
+        performance.frameBudgetExceeded ? "WOLNO" : "OK");
+    printConsoleLine(firstRow + 1, "MAX:%5.1fms RENDER:%5.1fms", performance.worstFrameMilliseconds,
+        performance.lastRenderMilliseconds);
+    printConsoleLine(firstRow + 2, "MEM:%luKB %s", static_cast<unsigned long>(performance.linearFreeBytes / 1024U),
+        performance.lowLinearMemory ? "NISKA" : "OK");
 }
 
 void renderCampaignMenu(PrintConsole& console, const CampaignProgress& progress, const SaveData& saveData,
@@ -196,8 +214,8 @@ std::size_t selectCampaignMission(PrintConsole& console, CampaignProgress& progr
 
 void renderTouchHud(PrintConsole& console, const CampaignMission& mission, const Wave& wave,
     const BuildSystem& buildSystem, const TutorialFlow& tutorialFlow, const AudioSystem& audioSystem,
-    const Renderer& renderer, const GameSettings& settings, HudMode hudMode, bool paused,
-    int speedMultiplier, const MissionResult& missionResult) {
+    const Renderer& renderer, const GameSettings& settings, const PerformanceSnapshot& performance,
+    HudMode hudMode, bool paused, int speedMultiplier, const MissionResult& missionResult) {
     clearConsoleFrame(console);
     printConsoleTitle(1, mission.title);
     printConsoleLine(2, "[KUSZA] [MOZDZIERZ] [MROZ]");
@@ -228,7 +246,8 @@ void renderTouchHud(PrintConsole& console, const CampaignMission& mission, const
 
     if (showAudioDiagnostics(hudMode)) {
         renderStereoDiagnostics(renderer, settings, 15);
-        renderAudioDiagnostics(audioSystem, 17);
+        renderPerformanceDiagnostics(performance, 17);
+        renderAudioDiagnostics(audioSystem, 21);
     } else {
         printConsoleLine(16, "3D:%s %u%% DZW:%s", settings.stereoEnabled ? "ON" : "OFF",
             static_cast<unsigned int>(settings.maximum3DDepthPercent),
@@ -294,6 +313,8 @@ MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t mission
     audioSystem.initialize();
     AudioEventRouter audioRouter;
     audioRouter.reset({tutorialFlow.phase(), buildSystem.projectiles().activeCount()});
+    PerformanceSampler performanceSampler;
+    PerformanceSnapshot performanceSnapshot{};
 
     float simulationAccumulator = 0.0F;
     u64 previousMilliseconds = osGetTime();
@@ -304,6 +325,7 @@ MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t mission
     MissionSessionAction action = MissionSessionAction::ExitApplication;
 
     while (aptMainLoop()) {
+        const u64 frameStartMilliseconds = osGetTime();
         const InputSnapshot input = inputSystem.poll();
         if (input.pressed(KEY_START)) { action = MissionSessionAction::ExitApplication; break; }
         if (tutorialFlow.finished()) {
@@ -363,9 +385,16 @@ MissionSessionAction runMission(PrintConsole& bottomConsole, std::size_t mission
         if (saveData.settings.soundEnabled) audioSystem.playMask(audioRouter.update(audioState));
         audioSystem.updateProbe();
         renderTouchHud(bottomConsole, mission, wave, buildSystem, tutorialFlow, audioSystem,
-            renderer, saveData.settings, hudMode, paused, speedMultiplier, missionResult);
+            renderer, saveData.settings, performanceSnapshot, hudMode, paused, speedMultiplier, missionResult);
+        const u64 renderStartMilliseconds = osGetTime();
         renderer.render(camera, wave, buildSystem, tutorialFlow,
             saveData.settings.stereoEnabled, saveData.settings.maximum3DDepthPercent);
+        const u64 frameEndMilliseconds = osGetTime();
+        performanceSampler.record(
+            elapsedMilliseconds(frameStartMilliseconds, frameEndMilliseconds),
+            elapsedMilliseconds(renderStartMilliseconds, frameEndMilliseconds),
+            static_cast<std::size_t>(linearSpaceFree()));
+        performanceSnapshot = performanceSampler.snapshot();
     }
 
     audioSystem.shutdown();
