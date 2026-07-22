@@ -1,13 +1,14 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
-#include <citro2d.h>
 #include <citro3d.h>
 
 #include "BuildSystem.hpp"
 #include "Camera.hpp"
 #include "Level.hpp"
+#include "Stereo3D.hpp"
 #include "TutorialFlow.hpp"
 #include "Wave.hpp"
 
@@ -27,27 +28,21 @@ public:
         const TutorialFlow& tutorialFlow);
     void shutdown();
 
+    [[nodiscard]] std::uint8_t lastEyeCount() const;
+    [[nodiscard]] float lastStereoSlider() const;
+    [[nodiscard]] float lastStereoSeparation() const;
+
 private:
     [[nodiscard]] bool buildLevelMesh(const LevelData& level);
-    [[nodiscard]] bool initializeHud();
-    void drawScene(const Camera& camera, const Wave& wave, const BuildSystem& buildSystem);
-    void drawBottomPanel(
-        const Camera& camera,
-        const Wave& wave,
-        const BuildSystem& buildSystem,
-        const TutorialFlow& tutorialFlow);
+    void drawScene(C3D_RenderTarget* target, const Camera& camera,
+        const Wave& wave, const BuildSystem& buildSystem, float eyeIod);
 
     const LevelData* level_ = nullptr;
-    C3D_RenderTarget* topTarget_ = nullptr;
-    C3D_RenderTarget* bottomTarget_ = nullptr;
+    C3D_RenderTarget* topLeftTarget_ = nullptr;
+    C3D_RenderTarget* topRightTarget_ = nullptr;
     DVLB_s* shaderBinary_ = nullptr;
     shaderProgram_s shaderProgram_{};
     bool shaderProgramInitialized_ = false;
-    bool citro2dInitialized_ = false;
-    C2D_TextBuf staticTextBuffer_ = nullptr;
-    C2D_TextBuf dynamicTextBuffer_ = nullptr;
-    C2D_Text titleText_{};
-    C2D_Text controlsText_{};
     int projectionUniform_ = -1;
     int modelViewUniform_ = -1;
     void* vertexBuffer_ = nullptr;
@@ -58,12 +53,5 @@ private:
     std::size_t towerVertexCount_ = 0;
     std::size_t projectileVertexOffset_ = 0;
     std::size_t projectileVertexCount_ = 0;
+    StereoFramePlan lastStereoPlan_{};
 };
-
-// Renderer.cpp includes this header before its implementation. Disable only its
-// legacy bottom-screen Citro2D draw calls so they cannot overwrite the system
-// PrintConsole fallback. The 3D top-screen pass remains unchanged.
-#define C2D_TargetClear(...) ((void)0)
-#define C2D_SceneBegin(...) ((void)0)
-#define C2D_DrawRectSolid(...) ((void)0)
-#define C2D_DrawText(...) ((void)0)
