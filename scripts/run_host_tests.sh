@@ -81,6 +81,15 @@ grep -q "lastEyeCount" "$ROOT/source/main.cpp"
 grep -q "lastStereoSlider" "$ROOT/source/main.cpp"
 grep -q "lastStereoSeparation" "$ROOT/source/main.cpp"
 
+# Physical-device regression contracts.
+grep -q "int speedMultiplier = 1;" "$ROOT/source/main.cpp"
+grep -q "const float localX = -static_cast<float>(input.circle.dx)" "$ROOT/source/Camera.cpp"
+grep -q "const float localZ = -static_cast<float>(input.circle.dy)" "$ROOT/source/Camera.cpp"
+grep -q "spawnedCount_ = 0U;" "$ROOT/source/Wave.cpp"
+grep -q "C3D_RenderTargetDelete(topLeftTarget_)" "$ROOT/source/Renderer.cpp"
+grep -q "C3D_RenderTargetDelete(topRightTarget_)" "$ROOT/source/Renderer.cpp"
+grep -q "renderTouchHud(bottomConsole" "$ROOT/source/main.cpp"
+
 # Model-composition contract: gameplay entities must remain recognizable
 # multi-part geometry, not regress to one generic placeholder box.
 grep -q "void appendEnemy" "$ROOT/source/Renderer.cpp"
