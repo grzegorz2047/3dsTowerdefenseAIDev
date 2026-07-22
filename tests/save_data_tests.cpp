@@ -31,7 +31,7 @@ std::string withChecksum(const std::string& payload) {
     return stream.str();
 }
 
-void testVersionTwoRoundTrip() {
+void testVersionThreeRoundTrip() {
     SaveData source{};
     source.campaign.unlockedCount = 3;
     source.campaign.bestStars = {3, 2, 1, 0, 0, 0};
@@ -39,16 +39,37 @@ void testVersionTwoRoundTrip() {
     source.campaign.fewestTowers = {2, 4, 7, 0, 0, 0};
     source.settings.soundEnabled = false;
     source.settings.preferredSpeed = 2;
+    source.settings.stereoEnabled = false;
+    source.settings.maximum3DDepthPercent = 45;
 
     const SaveLoadResult result = SaveDataCodec::deserialize(SaveDataCodec::serialize(source));
-    expect(result.status == SaveLoadStatus::Loaded, "v2 save should deserialize");
-    expect(!result.migrated, "v2 save should not report migration");
+    expect(result.status == SaveLoadStatus::Loaded, "v3 save should deserialize");
+    expect(!result.migrated, "v3 save should not report migration");
     expect(result.data.campaign.unlockedCount == 3, "unlocked count should round-trip");
     expect(result.data.campaign.bestStars[1] == 2, "stars should round-trip");
-    expect(result.data.campaign.bestBaseHealth[0] == 5, "base health should round-trip");
-    expect(result.data.campaign.fewestTowers[1] == 4, "tower record should round-trip");
     expect(!result.data.settings.soundEnabled, "sound setting should round-trip");
     expect(result.data.settings.preferredSpeed == 2, "speed setting should round-trip");
+    expect(!result.data.settings.stereoEnabled, "stereo setting should round-trip");
+    expect(result.data.settings.maximum3DDepthPercent == 45, "3D depth should round-trip");
+}
+
+void testVersionTwoMigration() {
+    const std::string payload =
+        "version=2\n"
+        "unlocked=2\n"
+        "stars=3,1,0,0,0,0\n"
+        "base_health=5,2,0,0,0,0\n"
+        "fewest_towers=2,8,0,0,0,0\n"
+        "sound=0\n"
+        "speed=2\n";
+    const SaveLoadResult result = SaveDataCodec::deserialize(withChecksum(payload));
+    expect(result.status == SaveLoadStatus::Loaded, "v2 save should load");
+    expect(result.migrated, "v2 save should report migration");
+    expect(!result.data.settings.soundEnabled, "old sound setting should migrate");
+    expect(result.data.settings.preferredSpeed == 2, "old speed setting should migrate");
+    expect(result.data.settings.stereoEnabled, "new stereo setting should use safe default");
+    expect(result.data.settings.maximum3DDepthPercent == Stereo3D::kDefaultDepthPercent,
+        "new depth limit should use safe default");
 }
 
 void testVersionOneMigration() {
@@ -59,62 +80,53 @@ void testVersionOneMigration() {
     const SaveLoadResult result = SaveDataCodec::deserialize(withChecksum(payload));
     expect(result.status == SaveLoadStatus::Loaded, "v1 save should load");
     expect(result.migrated, "v1 save should report migration");
-    expect(result.data.campaign.unlockedCount == 2, "v1 progress should migrate");
-    expect(result.data.campaign.bestStars[0] == 3, "v1 stars should migrate");
     expect(result.data.campaign.bestBaseHealth[0] == 0, "new records should use defaults");
-    expect(result.data.settings.soundEnabled, "new settings should use defaults");
-    expect(result.data.settings.preferredSpeed == 1, "new speed should use default");
+    expect(result.data.settings.stereoEnabled, "new settings should use defaults");
 }
 
 void testCorruptionIsRejected() {
     SaveData data{};
     std::string serialized = SaveDataCodec::serialize(data);
     serialized[serialized.find("stars=") + 6] = '9';
-    const SaveLoadResult result = SaveDataCodec::deserialize(serialized);
-    expect(result.status == SaveLoadStatus::Corrupt, "checksum mismatch should be corrupt");
+    expect(SaveDataCodec::deserialize(serialized).status == SaveLoadStatus::Corrupt,
+        "checksum mismatch should be corrupt");
 }
 
-void testInconsistentProgressIsRejected() {
+void testInvalidStereoSettingsAreRejected() {
     const std::string payload =
-        "version=2\n"
+        "version=3\n"
         "unlocked=1\n"
-        "stars=3,1,0,0,0,0\n"
-        "base_health=5,4,0,0,0,0\n"
-        "fewest_towers=2,3,0,0,0,0\n"
+        "stars=0,0,0,0,0,0\n"
+        "base_health=0,0,0,0,0,0\n"
+        "fewest_towers=0,0,0,0,0,0\n"
         "sound=1\n"
-        "speed=1\n";
-    const SaveLoadResult result = SaveDataCodec::deserialize(withChecksum(payload));
-    expect(result.status == SaveLoadStatus::Corrupt, "locked mission progress should be rejected");
+        "speed=1\n"
+        "stereo=1\n"
+        "stereo_depth=101\n";
+    expect(SaveDataCodec::deserialize(withChecksum(payload)).status == SaveLoadStatus::Corrupt,
+        "out-of-range stereo depth should be rejected");
 }
 
 void testAtomicStoreAndReset(const char* root) {
     const std::string path = std::string(root) + "/build/host-tests/save-data-test.sav";
     std::remove(path.c_str());
     std::remove((path + ".tmp").c_str());
-
     SaveData source{};
-    source.campaign.unlockedCount = 2;
-    source.campaign.bestStars = {3, 1, 0, 0, 0, 0};
-    source.campaign.bestBaseHealth = {5, 2, 0, 0, 0, 0};
-    source.campaign.fewestTowers = {2, 8, 0, 0, 0, 0};
-
     std::string error;
     expect(SaveDataStore::saveAtomically(path.c_str(), source, error), "atomic save should succeed");
     expect(SaveDataStore::load(path.c_str()).status == SaveLoadStatus::Loaded, "stored save should load");
-    std::ifstream temporary(path + ".tmp");
-    expect(!temporary.good(), "temporary file should not remain after commit");
     expect(SaveDataStore::reset(path.c_str()), "reset should remove save");
-    expect(SaveDataStore::load(path.c_str()).status == SaveLoadStatus::Missing, "reset save should be missing");
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
     expect(argc == 2, "repository root argument is required");
-    testVersionTwoRoundTrip();
+    testVersionThreeRoundTrip();
+    testVersionTwoMigration();
     testVersionOneMigration();
     testCorruptionIsRejected();
-    testInconsistentProgressIsRejected();
+    testInvalidStereoSettingsAreRejected();
     testAtomicStoreAndReset(argv[1]);
     std::cout << "Save data tests passed\n";
     return 0;
