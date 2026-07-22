@@ -52,6 +52,11 @@ COMMON_FLAGS=(
 
 "$HOST_CXX" \
   "${COMMON_FLAGS[@]}" \
+  "$ROOT/tests/audio_ndsp_shim_tests.cpp" \
+  -o "$BUILD_DIR/audio-ndsp-shim-tests"
+
+"$HOST_CXX" \
+  "${COMMON_FLAGS[@]}" \
   "$ROOT/tests/hud_text_tests.cpp" \
   "$ROOT/source/HudText.cpp" \
   -o "$BUILD_DIR/hud-text-tests"
@@ -61,21 +66,34 @@ COMMON_FLAGS=(
 "$BUILD_DIR/audio-events-tests"
 "$BUILD_DIR/audio-backend-tests"
 "$BUILD_DIR/audio-probe-tests"
+"$BUILD_DIR/audio-ndsp-shim-tests"
 "$BUILD_DIR/hud-text-tests"
 
-# The fallback UI must expose the active backend and raw service results.
+# The fallback UI must expose both NDSP attempts and retain the manual tone.
 grep -q "consoleInit(GFX_BOTTOM" "$ROOT/source/main.cpp"
-grep -q "v0.1.13-alpha  AUDIO-PROBE" "$ROOT/source/main.cpp"
+grep -q "v0.1.14-alpha  NDSP-HLE" "$ROOT/source/main.cpp"
+grep -q "HLE-SHIM" "$ROOT/source/main.cpp"
+grep -q "ndspInitialResult" "$ROOT/source/main.cpp"
+grep -q "ndspShimResult" "$ROOT/source/main.cpp"
 grep -q "KEY_B" "$ROOT/source/main.cpp"
 grep -q "playDiagnosticTone" "$ROOT/source/main.cpp"
-grep -q "channelEverActive" "$ROOT/source/main.cpp"
-grep -q "csndGetState" "$ROOT/source/AudioSystem.cpp"
-grep -q "kDurationSeconds = 2.0F" "$ROOT/source/AudioSystem.cpp"
+
+# The shim is permitted only for libctru's exact missing-component result and
+# must contain no external firmware data.
+grep -q "0xD8B0A7FAU" "$ROOT/include/AudioNdspShim.hpp"
+grep -q "kSyntheticHleComponent" "$ROOT/source/AudioSystem.cpp"
+grep -q "ndspUseComponent" "$ROOT/source/AudioSystem.cpp"
+grep -q "std::array<std::uint8_t, 0x400>" "$ROOT/source/AudioSystem.cpp"
+if find "$ROOT" -type f \( -iname 'dspfirm.cdc' -o -iname '*.cdc' \) | grep -q .; then
+  echo "Proprietary DSP firmware must not be committed" >&2
+  exit 1
+fi
+
 grep -q "ndspSetOutputMode(NDSP_OUTPUT_STEREO)" "$ROOT/source/AudioSystem.cpp"
 grep -q "csndPlaySound" "$ROOT/source/AudioSystem.cpp"
 
 # CIA builds must be allowed to use both services. NDSP remains preferred,
-# while CSND provides an emulator and firmware compatibility fallback.
+# while CSND remains a hardware fallback when the synthetic component fails.
 grep -q "dsp::DSP" "$ROOT/config/application.rsf"
 grep -q "dsp: 0x0004013000001a02" "$ROOT/config/application.rsf"
 grep -q "csnd:SND" "$ROOT/config/application.rsf"
