@@ -72,6 +72,12 @@ void testBundledTutorialLevel() {
     require(level.waveEntries[0].type == EnemyType::Scout, "tutorial should start with scouts");
     require(level.waveEntries[1].type == EnemyType::Raider, "tutorial should include raiders");
     require(level.waveEntries[2].type == EnemyType::Brute, "tutorial should end with a brute");
+    require(level.waveEntries[0].spawnIntervalSeconds >= 1.50F,
+        "tutorial scouts should leave preparation time");
+    require(level.waveEntries[1].spawnIntervalSeconds >= 1.90F,
+        "tutorial raiders should have a readable cadence");
+    require(level.waveEntries[2].spawnIntervalSeconds >= 2.30F,
+        "tutorial brute should not enter immediately");
 
     const GridPoint first = level.path[0];
     const GridPoint second = level.path[1];
@@ -122,10 +128,13 @@ void testWaveUsesLevelDefinitions() {
     require(wave.enemyAt(1).type() == EnemyType::Scout, "second enemy should be a scout");
     require(wave.enemyAt(2).type() == EnemyType::Raider, "third enemy should be a raider");
     require(wave.enemyAt(3).type() == EnemyType::Brute, "fourth enemy should be a brute");
+    require(wave.spawnedCount() == 0, "wave should begin with a preparation interval");
 
     wave.update(0.24F);
-    require(wave.spawnedCount() == 1, "second scout should respect its spawn interval");
+    require(wave.spawnedCount() == 0, "first scout should respect the preparation interval");
     wave.update(0.01F);
+    require(wave.spawnedCount() == 1, "first scout should spawn from level timing");
+    wave.update(0.25F);
     require(wave.spawnedCount() == 2, "second scout should spawn from level timing");
     wave.update(0.50F);
     require(wave.spawnedCount() == 3, "raider should spawn from level timing");
@@ -166,6 +175,8 @@ void testTowerCanWinWave() {
 void testProjectileDamagesOnlyOnImpact() {
     const LevelData level = makeLevel();
     Wave wave(level);
+    wave.update(1.15F);
+    require(wave.spawnedCount() == 1, "test target should be spawned");
     ProjectilePool projectiles;
     Enemy& target = wave.enemyAt(0);
     const int initialHealth = target.health();
@@ -185,6 +196,8 @@ void testProjectileDamagesOnlyOnImpact() {
 void testProjectileDropsLostTarget() {
     const LevelData level = makeLevel();
     Wave wave(level);
+    wave.update(1.15F);
+    require(wave.spawnedCount() == 1, "test target should be spawned");
     ProjectilePool projectiles;
     Enemy& target = wave.enemyAt(0);
 
