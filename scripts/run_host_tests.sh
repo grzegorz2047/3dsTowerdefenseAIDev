@@ -34,5 +34,12 @@ COMMON_FLAGS=(
   "$ROOT/source/TutorialFlow.cpp" \
   -o "$BUILD_DIR/tutorial-flow-tests"
 
+"$HOST_CXX" \
+  "${COMMON_FLAGS[@]}" \
+  "$ROOT/tests/audio_events_tests.cpp" \
+  "$ROOT/source/AudioEvents.cpp" \
+  -o "$BUILD_DIR/audio-events-tests"
+
 "$BUILD_DIR/gameplay-tests"
 "$BUILD_DIR/tutorial-flow-tests"
+"$BUILD_DIR/audio-events-tests"
