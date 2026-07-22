@@ -39,14 +39,20 @@ void renderFallbackHud(
     consoleSelect(&console);
     std::printf("\x1b[2J\x1b[H");
     std::printf("\x1b[36mCITADEL DEFENSE 3D\x1b[0m\n");
-    std::printf("v0.1.12-alpha  AUDIO-FALLBACK\n");
+    std::printf("v0.1.13-alpha  AUDIO-PROBE\n");
     std::printf("==============================\n");
     std::printf("AUDIO: %s\n", audioBackendName(audioSystem.backend()));
     std::printf(
-        "NDSP:%08lX CSND:%08lX PLAY:%08lX\n\n",
+        "NDSP:%08lX CSND:%08lX PLAY:%08lX\n",
         static_cast<unsigned long>(audioSystem.ndspResult()),
         static_cast<unsigned long>(audioSystem.csndResult()),
         static_cast<unsigned long>(audioSystem.lastPlayResult()));
+    std::printf(
+        "CH:%d PROBE:%08lX ACTIVE:%s EVER:%s\n\n",
+        audioSystem.lastChannel(),
+        static_cast<unsigned long>(audioSystem.probeResult()),
+        audioSystem.channelActive() ? "TAK" : "NIE",
+        audioSystem.channelEverActive() ? "TAK" : "NIE");
 
     std::printf("\x1b[33mCO TERAZ:\x1b[0m\n%s\n\n", tutorialInstruction(tutorialFlow.phase()));
     std::printf(
@@ -64,7 +70,8 @@ void renderFallbackHud(
 
     std::printf("STATUS: %s\n\n", buildAttemptMessage(buildSystem.lastBuildResult()));
     std::printf("D-PAD  wybierz niebieskie pole\n");
-    std::printf("A      zbuduj wieze / test dzwieku\n");
+    std::printf("A      zbuduj wieze / efekt\n");
+    std::printf("B      2 sekundy tonu 880 Hz\n");
     std::printf("X      uruchom fale\n");
     std::printf("Y      restart po wyniku\n");
     std::printf("START  wyjscie\n");
@@ -166,6 +173,9 @@ int main() {
             break;
         }
 
+        if (input.pressed(KEY_B)) {
+            audioSystem.playDiagnosticTone();
+        }
         if (input.pressed(KEY_X)) {
             tutorialFlow.requestWaveStart(buildSystem.towerCount());
         }
@@ -208,6 +218,7 @@ int main() {
             tutorialFlow.phase(),
             buildSystem.projectiles().activeCount()};
         audioSystem.playMask(audioRouter.update(audioState));
+        audioSystem.updateProbe();
 
         renderFallbackHud(bottomConsole, wave, buildSystem, tutorialFlow, audioSystem);
         renderer.render(camera, wave, buildSystem, tutorialFlow);
