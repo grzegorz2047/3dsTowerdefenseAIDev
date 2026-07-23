@@ -9,10 +9,8 @@ enum class ExtendedControlScheme : std::uint8_t {
 
 struct ExtendedRawInput {
     bool available = false;
-    bool cLeftHeld = false;
-    bool cRightHeld = false;
-    bool cUpHeld = false;
-    bool cDownHeld = false;
+    int cX = 0;
+    int cY = 0;
     bool cLeftDown = false;
     bool cRightDown = false;
     bool cUpDown = false;
@@ -33,6 +31,7 @@ struct ExtendedMappedInput {
 namespace ExtendedControls {
 
 constexpr int kAxisMaximum = 156;
+constexpr int kAxisDeadzone = 24;
 inline bool runtimeAvailable = false;
 inline ExtendedControlScheme runtimeScheme = ExtendedControlScheme::Camera;
 
@@ -42,8 +41,14 @@ inline ExtendedControlScheme runtimeScheme = ExtendedControlScheme::Camera;
         : ExtendedControlScheme::Camera;
 }
 
-[[nodiscard]] constexpr int axis(bool negative, bool positive) {
-    return negative == positive ? 0 : (positive ? kAxisMaximum : -kAxisMaximum);
+[[nodiscard]] constexpr int clampAxis(int value) {
+    return value < -kAxisMaximum ? -kAxisMaximum
+        : (value > kAxisMaximum ? kAxisMaximum : value);
+}
+
+[[nodiscard]] constexpr int filteredAxis(int value) {
+    const int clamped = clampAxis(value);
+    return clamped >= -kAxisDeadzone && clamped <= kAxisDeadzone ? 0 : clamped;
 }
 
 [[nodiscard]] constexpr ExtendedMappedInput map(
@@ -53,8 +58,8 @@ inline ExtendedControlScheme runtimeScheme = ExtendedControlScheme::Camera;
 
     ExtendedMappedInput output{};
     if (scheme == ExtendedControlScheme::Camera) {
-        output.cameraX = axis(input.cLeftHeld, input.cRightHeld);
-        output.cameraY = axis(input.cDownHeld, input.cUpHeld);
+        output.cameraX = filteredAxis(input.cX);
+        output.cameraY = filteredAxis(input.cY);
         output.legacyShoulderDelta =
             (input.zrDown ? 1 : 0) - (input.zlDown ? 1 : 0);
         return output;
@@ -63,7 +68,8 @@ inline ExtendedControlScheme runtimeScheme = ExtendedControlScheme::Camera;
     const int previous = (input.cLeftDown || input.cUpDown) ? 1 : 0;
     const int next = (input.cRightDown || input.cDownDown) ? 1 : 0;
     output.cursorDelta = next - previous;
-    output.cameraX = axis(input.zlHeld, input.zrHeld);
+    output.cameraX = (input.zrHeld ? kAxisMaximum : 0) -
+        (input.zlHeld ? kAxisMaximum : 0);
     return output;
 }
 
