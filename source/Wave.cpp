@@ -20,6 +20,7 @@ Wave::Wave(const LevelData& level) : level_(&level) {
         }
     }
     reset();
+    if (level.id == "performance_stress") setBenchmarkLoop(true);
 }
 
 void Wave::update(float deltaSeconds) {
@@ -41,20 +42,16 @@ void Wave::update(float deltaSeconds) {
         Enemy& enemy = enemies_[index];
         if (enemy.dead()) {
             ++deathEventCount_;
-            if (benchmarkLoop_) {
-                enemy.reset();
-            } else {
-                resolved_[index] = true;
-            }
+            if (benchmarkLoop_) enemy.reset();
+            else resolved_[index] = true;
             continue;
         }
 
         enemy.update(step);
         if (enemy.reachedBase()) {
             ++baseDamageEventCount_;
-            if (benchmarkLoop_) {
-                enemy.reset();
-            } else {
+            if (benchmarkLoop_) enemy.reset();
+            else {
                 resolved_[index] = true;
                 baseHealth_ = std::max(baseHealth_ - enemy.baseDamage(), 0);
             }
