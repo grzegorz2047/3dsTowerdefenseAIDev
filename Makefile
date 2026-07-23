@@ -32,6 +32,9 @@ BANNER_IMAGE  := $(ASSET_DIR)/banner.png
 BANNER_AUDIO  := $(ASSET_DIR)/banner.wav
 BANNER_FILE   := $(ASSET_DIR)/banner.bnr
 CIA_ICON      := $(ASSET_DIR)/icon.icn
+SCENE_SOURCE  := $(TOPDIR)/assets/scenes/tutorial.scene.json
+SCENE_OUTPUT  := $(TOPDIR)/romfs/scenes/tutorial.art
+SCENE_EXPORTER := $(TOPDIR)/scripts/export_scene_art.py
 
 ARCH        := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 CFLAGS      := -g -Wall -Wextra -O2 -mword-relocations -ffunction-sections $(ARCH)
@@ -69,13 +72,15 @@ export _3DSXDEPS := $(if $(NO_SMDH),,$(OUTPUT).smdh)
 export _3DSXFLAGS += --smdh=$(CURDIR)/$(TARGET).smdh --romfs=$(CURDIR)/$(ROMFS)
 export MAKEROM BANNERTOOL PYTHON SOURCE_RSF RSF_FILE ASSET_DIR ICON_FILE BANNER_IMAGE BANNER_AUDIO BANNER_FILE CIA_ICON
 
-.PHONY: all test 3dsx cia release tools assets clean checksums
+.PHONY: all test 3dsx cia release tools assets scene-assets clean checksums
 
 all: 3dsx
 
 test:
 	@bash scripts/run_host_tests.sh
 	@$(PYTHON) scripts/validate_assets.py
+	@$(PYTHON) -m unittest tests/test_scene_export.py
+	@$(PYTHON) $(SCENE_EXPORTER) $(SCENE_SOURCE) --output $(SCENE_OUTPUT) --check
 
 3dsx: tools assets $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile 3dsx
@@ -91,7 +96,12 @@ release:
 tools:
 	@bash scripts/bootstrap_cia_tools.sh
 
-assets: $(ICON_FILE) $(BANNER_IMAGE) $(BANNER_AUDIO) $(RSF_FILE)
+assets: scene-assets $(ICON_FILE) $(BANNER_IMAGE) $(BANNER_AUDIO) $(RSF_FILE)
+
+scene-assets: $(SCENE_OUTPUT)
+
+$(SCENE_OUTPUT): $(SCENE_SOURCE) $(SCENE_EXPORTER)
+	@$(PYTHON) $(SCENE_EXPORTER) $(SCENE_SOURCE) --output $(SCENE_OUTPUT)
 
 $(ICON_FILE) $(BANNER_IMAGE) $(BANNER_AUDIO): scripts/generate_release_assets.py
 	@$(PYTHON) scripts/generate_release_assets.py
