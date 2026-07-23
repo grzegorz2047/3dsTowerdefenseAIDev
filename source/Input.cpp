@@ -44,6 +44,7 @@ InputSystem::InputSystem() {
     }
     extendedAvailable_ = irrstInitialized_;
     publishRuntimeState(extendedAvailable_, extendedScheme_);
+    MotionCameraRuntime::publish(false, false);
 }
 
 InputSystem::~InputSystem() {
@@ -53,6 +54,7 @@ InputSystem::~InputSystem() {
         irrstInitialized_ = false;
     }
     publishRuntimeState(false, ExtendedControlScheme::Camera);
+    MotionCameraRuntime::publish(false, false);
 }
 
 bool InputSystem::configureMotion(bool enabled) {
@@ -63,27 +65,32 @@ bool InputSystem::configureMotion(bool enabled) {
         }
         motionEnabled_ = false;
         gyroscopeRawToDps_ = 0.0F;
+        MotionCameraRuntime::publish(false, false);
         return true;
     }
 
     if (gyroscopeInitialized_) {
         motionEnabled_ = true;
+        MotionCameraRuntime::publish(true, true);
         return true;
     }
 
     if (R_FAILED(HIDUSER_EnableGyroscope())) {
         motionEnabled_ = false;
+        MotionCameraRuntime::publish(true, false);
         return false;
     }
     float coefficient = 0.0F;
     if (R_FAILED(HIDUSER_GetGyroscopeRawToDpsCoefficient(&coefficient)) || coefficient <= 0.0F) {
         (void)HIDUSER_DisableGyroscope();
         motionEnabled_ = false;
+        MotionCameraRuntime::publish(true, false);
         return false;
     }
     gyroscopeInitialized_ = true;
     motionEnabled_ = true;
     gyroscopeRawToDps_ = coefficient;
+    MotionCameraRuntime::publish(true, true);
     return true;
 }
 
