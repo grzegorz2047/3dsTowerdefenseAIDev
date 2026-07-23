@@ -14,18 +14,19 @@ BuildSystem::BuildSystem(const LevelData& level) : level_(&level) {
 }
 
 void BuildSystem::handleInput(const InputSnapshot& input) {
-    if (input.pressed(KEY_DLEFT) || input.pressed(KEY_DUP)) {
+    const ExtendedMappedInput extended = input.extended();
+    if (input.pressed(KEY_DLEFT) || input.pressed(KEY_DUP) || extended.cursorDelta < 0) {
         moveCursor(-1);
         cancelAction();
     }
-    if (input.pressed(KEY_DRIGHT) || input.pressed(KEY_DDOWN)) {
+    if (input.pressed(KEY_DRIGHT) || input.pressed(KEY_DDOWN) || extended.cursorDelta > 0) {
         moveCursor(1);
         cancelAction();
     }
-    if (input.pressed(KEY_L)) {
+    if (input.pressed(KEY_L) || extended.legacyShoulderDelta < 0) {
         selectTowerType(previousTowerType(selectedTowerType_));
     }
-    if (input.pressed(KEY_R)) {
+    if (input.pressed(KEY_R) || extended.legacyShoulderDelta > 0) {
         selectTowerType(nextTowerType(selectedTowerType_));
     }
     if (input.pressed(KEY_A)) {
@@ -34,7 +35,7 @@ void BuildSystem::handleInput(const InputSnapshot& input) {
     if (input.pressed(KEY_B) && !input.isHeld(KEY_SELECT)) {
         lastTowerAction_ = upgradeCursorTower();
     }
-    if (input.pressed(KEY_Y)) {
+    if (input.pressed(KEY_Y) && !input.isHeld(KEY_SELECT)) {
         lastTowerAction_ = sellCursorTower();
     }
 }
@@ -121,45 +122,21 @@ int BuildSystem::gold() const { return economy_.gold(); }
 int BuildSystem::towerCost() const { return ::towerCost(selectedTowerType_); }
 TowerType BuildSystem::selectedTowerType() const { return selectedTowerType_; }
 const char* BuildSystem::selectedTowerName() const { return towerName(selectedTowerType_); }
-BuildAttemptResult BuildSystem::lastBuildResult() const { return lastBuildResult_; }
-TowerActionResult BuildSystem::lastTowerAction() const { return lastTowerAction_; }
-
-std::size_t BuildSystem::cursorX() const {
-    if (buildSpotCount_ == 0) {
-        return 0;
-    }
-    return static_cast<std::size_t>(buildSpots_[cursorIndex_].x);
-}
-
-std::size_t BuildSystem::cursorZ() const {
-    if (buildSpotCount_ == 0) {
-        return 0;
-    }
-    return static_cast<std::size_t>(buildSpots_[cursorIndex_].z);
-}
-
-bool BuildSystem::cursorOccupied() const {
-    return buildSpotCount_ > 0 && occupied(cursorX(), cursorZ());
-}
-
+std::size_t BuildSystem::cursorX() const { return static_cast<std::size_t>(buildSpots_[cursorIndex_].x); }
+std::size_t BuildSystem::cursorZ() const { return static_cast<std::size_t>(buildSpots_[cursorIndex_].z); }
+bool BuildSystem::cursorOccupied() const { return occupied(cursorX(), cursorZ()); }
 const Tower* BuildSystem::cursorTower() const {
     const std::size_t index = towerIndexAt(cursorX(), cursorZ());
     return index < towerCount_ ? &towers_[index] : nullptr;
 }
-
-bool BuildSystem::hasEnoughGold() const {
-    return economy_.canAfford(towerCost());
-}
-
-bool BuildSystem::cursorCanBuild() const {
-    return level_ != nullptr && buildSpotCount_ > 0 && hasEnoughGold() && !cursorOccupied() && towerCount_ < kMaximumTowers;
-}
+bool BuildSystem::hasEnoughGold() const { return economy_.canAfford(towerCost()); }
+bool BuildSystem::cursorCanBuild() const { return !cursorOccupied() && hasEnoughGold(); }
+BuildAttemptResult BuildSystem::lastBuildResult() const { return lastBuildResult_; }
+TowerActionResult BuildSystem::lastTowerAction() const { return lastTowerAction_; }
 
 std::size_t BuildSystem::towerIndexAt(std::size_t x, std::size_t z) const {
     for (std::size_t index = 0; index < towerCount_; ++index) {
-        if (towers_[index].gridX() == x && towers_[index].gridZ() == z) {
-            return index;
-        }
+        if (towers_[index].gridX() == x && towers_[index].gridZ() == z) return index;
     }
     return towerCount_;
 }
@@ -169,48 +146,27 @@ bool BuildSystem::occupied(std::size_t x, std::size_t z) const {
 }
 
 void BuildSystem::moveCursor(int delta) {
-    if (buildSpotCount_ == 0) {
-        return;
-    }
-    const int count = static_cast<int>(buildSpotCount_);
-    const int current = static_cast<int>(cursorIndex_);
-    cursorIndex_ = static_cast<std::size_t>((current + delta + count) % count);
+    if (buildSpotCount_ == 0U || delta == 0) return;
+    if (delta < 0) cursorIndex_ = cursorIndex_ == 0U ? buildSpotCount_ - 1U : cursorIndex_ - 1U;
+    else cursorIndex_ = (cursorIndex_ + 1U) % buildSpotCount_;
 }
 
 void BuildSystem::tryBuild() {
-    const bool hasBuildSpot = level_ != nullptr && buildSpotCount_ > 0;
-    const bool spotOccupied = hasBuildSpot && cursorOccupied();
-    if (spotOccupied) {
-        lastBuildResult_ = BuildAttemptResult::None;
-        lastTowerAction_ = TowerActionResult::Selected;
+    if (buildSpotCount_ == 0U) {
+        lastBuildResult_ = BuildAttemptResult::InvalidTile;
         return;
     }
-
-    const bool enoughGold = hasEnoughGold();
-    const bool hasCapacity = towerCount_ < kMaximumTowers;
-    BuildAttemptResult result = evaluateBuildAttempt(
-        hasBuildSpot,
-        false,
-        enoughGold,
-        hasCapacity,
-        true);
-    if (result != BuildAttemptResult::Built) {
-        lastBuildResult_ = result;
-        lastTowerAction_ = TowerActionResult::None;
+    if (occupied(cursorX(), cursorZ())) {
+        lastBuildResult_ = BuildAttemptResult::Occupied;
         return;
     }
-
-    Tower tower(*level_, cursorX(), cursorZ(), selectedTowerType_);
-    if (!tower.valid()) {
-        lastBuildResult_ = BuildAttemptResult::InvalidTower;
-        return;
-    }
-    if (!economy_.trySpend(towerCost())) {
+    const int cost = towerCost();
+    if (!economy_.trySpend(cost)) {
         lastBuildResult_ = BuildAttemptResult::InsufficientGold;
         return;
     }
-
-    towers_[towerCount_++] = tower;
+    towers_[towerCount_] = Tower(*level_, cursorX(), cursorZ(), selectedTowerType_);
+    ++towerCount_;
     lastBuildResult_ = BuildAttemptResult::Built;
     lastTowerAction_ = TowerActionResult::None;
 }
