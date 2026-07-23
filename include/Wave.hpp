@@ -14,6 +14,7 @@ public:
 
     void update(float deltaSeconds);
     void reset();
+    void setBenchmarkLoop(bool enabled);
     void applyAreaEffect(
         float centerX,
         float centerZ,
@@ -23,6 +24,7 @@ public:
         float slowMovementMultiplier = 1.0F);
 
     [[nodiscard]] std::size_t spawnedCount() const;
+    [[nodiscard]] std::size_t activeCount() const;
     [[nodiscard]] std::size_t enemyCount() const;
     [[nodiscard]] std::size_t defeatedCount() const;
     [[nodiscard]] std::uint32_t deathEventCount() const;
@@ -45,4 +47,5 @@ private:
     int baseHealth_ = kInitialBaseHealth;
     std::uint32_t deathEventCount_ = 0U;
     std::uint32_t baseDamageEventCount_ = 0U;
+    bool benchmarkLoop_ = false;
 };
