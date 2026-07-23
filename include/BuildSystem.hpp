@@ -29,8 +29,8 @@ public:
     void handleInput(const InputSnapshot& input);
     void update(float deltaSeconds, Wave& wave);
     void reset();
-    void prepareBenchmarkLayout(std::size_t requestedTowers = 16U,
-        std::uint8_t rocketSharePercent = 25U);
+    void prepareBenchmarkLayout(std::size_t requestedTowers = 20U,
+        std::uint8_t rocketSharePercent = 50U);
     void setProjectileLimit(std::size_t limit);
     void selectTowerType(TowerType type);
     void buildOrSelectCursor();
@@ -57,7 +57,7 @@ public:
     [[nodiscard]] TowerActionResult lastTowerAction() const;
 
 private:
-    static constexpr std::size_t kMaximumTowers = 16;
+    static constexpr std::size_t kMaximumTowers = 32U;
 
     [[nodiscard]] std::size_t towerIndexAt(std::size_t x, std::size_t z) const;
     [[nodiscard]] bool occupied(std::size_t x, std::size_t z) const;
