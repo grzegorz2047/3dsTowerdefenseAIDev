@@ -1,0 +1,16 @@
+mission.id=last_citadel
+briefing.1.id=last_citadel.revelation
+briefing.1.speaker=Strażnik Bramy
+briefing.1.text=Byłem obrońcą Vhal, zanim Bramy odebrały mi imię. Mechanizm pod cytadelą nie zamknie się bez ostatniej pieczęci.
+briefing.2.id=last_citadel.choice
+briefing.2.speaker=Arven
+briefing.2.text=Nie walczymy o zemstę. Obronimy cytadelę, uruchomimy mechanizm i przerwiemy ten cykl.
+mechanic.id=last_citadel.assault
+mechanic.speaker=Mira
+mechanic.text=Finałowy szturm łączy szybkie, ciężkie i odporne oddziały. Każdy typ wieży ma własne zadanie.
+victory.id=last_citadel.victory
+victory.speaker=Arven
+victory.text=Pięć pieczęci odpowiada jednocześnie. Brama Popiołu zamyka się, a Asteria odzyskuje pierwszy region.
+defeat.id=last_citadel.defeat
+defeat.speaker=Strażnik Bramy
+defeat.text=Mechanizm znów milczy. Wróć, dowódco, zanim następna Brama otworzy się w głębi Asterii.
