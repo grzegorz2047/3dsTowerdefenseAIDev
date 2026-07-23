@@ -6,15 +6,22 @@ namespace {
 
 constexpr float kSpawnTimeEpsilon = 0.00001F;
 
+float laneOffsetFor(const LevelData& level, std::size_t enemyIndex) {
+    if (level.benchmarkSpawnLanes <= 1U || level.benchmarkLaneSpacing == 0) return 0.0F;
+    const std::size_t lane = enemyIndex % level.benchmarkSpawnLanes;
+    const int centered = static_cast<int>(lane) - static_cast<int>(level.benchmarkSpawnLanes / 2U);
+    return static_cast<float>(centered * level.benchmarkLaneSpacing);
+}
+
 }  // namespace
 
 Wave::Wave(const LevelData& level) : level_(&level) {
     enemies_.reserve(level.totalEnemyCount);
-    std::size_t enemyIndex = 0;
-    for (std::size_t entryIndex = 0; entryIndex < level.waveEntryCount; ++entryIndex) {
+    std::size_t enemyIndex = 0U;
+    for (std::size_t entryIndex = 0U; entryIndex < level.waveEntryCount; ++entryIndex) {
         const WaveEntry& entry = level.waveEntries[entryIndex];
-        for (std::size_t count = 0; count < entry.count && enemyIndex < kMaximumWaveEnemies; ++count) {
-            enemies_.emplace_back(level, entry.type);
+        for (std::size_t count = 0U; count < entry.count && enemyIndex < kMaximumWaveEnemies; ++count) {
+            enemies_.emplace_back(level, entry.type, laneOffsetFor(level, enemyIndex));
             spawnIntervals_[enemyIndex] = entry.spawnIntervalSeconds;
             ++enemyIndex;
         }
@@ -36,7 +43,7 @@ void Wave::update(float deltaSeconds) {
         }
     }
 
-    for (std::size_t index = 0; index < spawnedCount_; ++index) {
+    for (std::size_t index = 0U; index < spawnedCount_; ++index) {
         if (resolved_[index]) continue;
 
         Enemy& enemy = enemies_[index];
@@ -82,7 +89,7 @@ void Wave::applyAreaEffect(
     float slowDurationSeconds,
     float slowMovementMultiplier) {
     const float radiusSquared = std::max(radius, 0.0F) * std::max(radius, 0.0F);
-    for (std::size_t index = 0; index < spawnedCount_; ++index) {
+    for (std::size_t index = 0U; index < spawnedCount_; ++index) {
         Enemy& enemy = enemies_[index];
         if (resolved_[index] || enemy.dead() || enemy.reachedBase()) continue;
         const float dx = enemy.x() - centerX;
@@ -106,7 +113,7 @@ std::size_t Wave::activeCount() const {
 std::size_t Wave::enemyCount() const { return enemies_.size(); }
 std::size_t Wave::defeatedCount() const {
     std::size_t count = 0U;
-    for (std::size_t index = 0; index < spawnedCount_; ++index) {
+    for (std::size_t index = 0U; index < spawnedCount_; ++index) {
         if (resolved_[index] && enemies_[index].dead()) ++count;
     }
     return count;
@@ -120,7 +127,7 @@ int Wave::baseHealth() const { return baseHealth_; }
 bool Wave::completed() const {
     if (benchmarkLoop_) return false;
     if (enemies_.empty() || spawnedCount_ < enemies_.size()) return false;
-    for (std::size_t index = 0; index < enemies_.size(); ++index) {
+    for (std::size_t index = 0U; index < enemies_.size(); ++index) {
         if (!resolved_[index]) return false;
     }
     return baseHealth_ > 0;
