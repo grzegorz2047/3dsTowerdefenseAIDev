@@ -24,11 +24,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
 
       # BEGIN ISSUE 157 MIGRATION
       - name: Apply issue 157 runtime integration
-        if: github.event_name == 'push' && github.ref_name == 'agent/configurable-benchmark-lab'
+        if: github.head_ref == 'agent/configurable-benchmark-lab' || github.ref_name == 'agent/configurable-benchmark-lab'
         shell: bash
         run: |
           if [[ -f .github/scripts/issue157_runtime_patch.py ]]; then
