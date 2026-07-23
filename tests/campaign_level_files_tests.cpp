@@ -7,6 +7,8 @@
 #include "Campaign.hpp"
 #include "Level.hpp"
 #include "Narrative.hpp"
+#include "PerformanceBudget.hpp"
+#include "SceneArt.hpp"
 
 namespace {
 
@@ -15,6 +17,48 @@ void expect(bool condition, const std::string& message) {
         std::cerr << "FAIL: " << message << '\n';
         std::exit(1);
     }
+}
+
+std::size_t countTiles(const LevelData& level, TileType type) {
+    std::size_t count = 0U;
+    for (std::size_t z = 0U; z < level.height; ++z) {
+        for (std::size_t x = 0U; x < level.width; ++x) {
+            if (level.tileAt(x, z) == type) ++count;
+        }
+    }
+    return count;
+}
+
+void validateTutorialScene(const std::string& root, const LevelData& level) {
+    const std::string scenePath = root + "/romfs/scenes/tutorial.art";
+    std::ifstream sceneInput(scenePath);
+    expect(sceneInput.is_open(), "tutorial scene file should exist");
+    const SceneArtLoadResult scene = SceneArtLoader::parse(sceneInput);
+    expect(scene.success, std::string("tutorial scene should parse: ") + scene.error);
+    expect(scene.art.levelId == level.id, "scene id should match tutorial level");
+    expect(scene.art.theme == LevelTheme::VhalPass, "tutorial should use Vhal Pass art direction");
+    expect(scene.art.propCount >= 18U, "tutorial should contain a composed environment");
+
+    std::set<ScenePropType> landmarkTypes;
+    std::size_t propVertices = 0U;
+    for (std::size_t index = 0U; index < scene.art.propCount; ++index) {
+        const SceneProp& prop = scene.art.props[index];
+        landmarkTypes.insert(prop.type);
+        propVertices += scenePropVertexBudget(prop.type);
+    }
+    expect(landmarkTypes.count(ScenePropType::Ruin) > 0U, "scene should contain village ruins");
+    expect(landmarkTypes.count(ScenePropType::Watchtower) > 0U, "scene should contain citadel towers");
+    expect(landmarkTypes.count(ScenePropType::Pine) > 0U, "scene should contain valley vegetation");
+    expect(landmarkTypes.size() >= 6U, "scene should use varied modular props");
+
+    const std::size_t tileVertices = static_cast<std::size_t>(level.width) * level.height * 6U;
+    const std::size_t roadVertices = countTiles(level, TileType::Road) * kVerticesPerBox;
+    const std::size_t buildPlatformVertices = countTiles(level, TileType::BuildSpot) * 2U * kVerticesPerBox;
+    const std::size_t landmarksAndTerrain = 13U * kVerticesPerBox;
+    const std::size_t conservativeTotal = tileVertices + roadVertices + buildPlatformVertices +
+        landmarksAndTerrain + propVertices;
+    expect(conservativeTotal <= PerformanceBudget::kMaximumLevelVertices,
+        "tutorial scene should fit the static geometry budget");
 }
 
 }  // namespace
@@ -36,6 +80,7 @@ int main(int argc, char** argv) {
         expect(result.level.pathLength >= 2, std::string("path should be usable: ") + mission.id);
         expect(result.level.waveEntryCount > 0, std::string("waves should be present: ") + mission.id);
         expect(result.level.totalEnemyCount > 0, std::string("enemies should be present: ") + mission.id);
+        if (result.level.id == "tutorial") validateTutorialScene(root, result.level);
 
         const std::string narrativePath = root + "/romfs/narrative/pl/" + mission.id + ".txt";
         std::ifstream narrativeInput(narrativePath);
@@ -58,6 +103,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::cout << "Campaign level and narrative files tests passed\n";
+    std::cout << "Campaign level, narrative and scene art tests passed\n";
     return 0;
 }
