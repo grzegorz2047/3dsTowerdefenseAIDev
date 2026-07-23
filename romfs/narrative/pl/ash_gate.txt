@@ -1,0 +1,16 @@
+mission.id=ash_gate
+briefing.1.id=ash_gate.warning
+briefing.1.speaker=Mira
+briefing.1.text=Popielna Brama otworzyla sie w ruinach. Zwiadowcy wroga juz biegna przez waskie przejscie.
+briefing.2.id=ash_gate.plan
+briefing.2.speaker=Arven
+briefing.2.text=Skupimy ogien tam, gdzie droga sie zweza. Pierwsza pieczec musi pozostac po naszej stronie.
+mechanic.id=ash_gate.fast_enemies
+mechanic.speaker=Mira
+mechanic.text=Scouty sa szybkie. Rozstaw wieze tak, aby ostrzeliwaly dlugi odcinek drogi.
+victory.id=ash_gate.victory
+victory.speaker=Brom
+victory.text=Pierwsza pieczec jest bezpieczna. Jej znak wskazuje na osade za wzgorzami.
+defeat.id=ash_gate.defeat
+defeat.speaker=Arven
+defeat.text=Przejscie bylo zbyt slabo osloniete. Wrocimy z lepszym polem ostrzalu.

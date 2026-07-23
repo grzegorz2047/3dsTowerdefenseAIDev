@@ -18,6 +18,7 @@ public:
     void beginFrame();
 
     void renderStandalone(const UiState& state);
+    void renderNarrative(const UiState& state);
     void renderBottom(const UiState& state);
     void renderTopOverlay(C3D_RenderTarget* target, const UiState& state);
 

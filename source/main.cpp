@@ -3,6 +3,7 @@
 #include <citro3d.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <string>
 #include <sys/stat.h>
@@ -16,6 +17,7 @@
 #include "HudText.hpp"
 #include "Input.hpp"
 #include "Level.hpp"
+#include "Narrative.hpp"
 #include "PerformanceBudget.hpp"
 #include "Renderer.hpp"
 #include "SaveData.hpp"
@@ -76,6 +78,59 @@ bool persistSave(const CampaignProgress& progress, SaveData& saveData, std::stri
     return true;
 }
 
+NarrativeLoadResult loadMissionNarrative(const CampaignMission& mission) {
+    const std::string path = NarrativeLoader::pathFor("pl", mission.id);
+    NarrativeLoadResult result = NarrativeLoader::load(path.c_str());
+    if (result.success && result.narrative.missionId != mission.id) {
+        result.success = false;
+        result.error = "Narracja nie pasuje do misji";
+    }
+    return result;
+}
+
+bool showNarrativeCards(UiRenderer& uiRenderer, InputSystem& inputSystem, const char* title,
+    const NarrativeCard* const* cards, std::size_t count) {
+    if (cards == nullptr || count == 0U) return true;
+    std::size_t page = 0U;
+    while (aptMainLoop()) {
+        const InputSnapshot input = inputSystem.poll();
+        if (input.pressed(KEY_START) || input.pressed(KEY_X)) return true;
+        if (input.pressed(KEY_B) || input.pressed(KEY_DLEFT)) {
+            if (page == 0U) return false;
+            --page;
+        }
+        if (input.pressed(KEY_A) || input.pressed(KEY_DRIGHT)) {
+            if (page + 1U >= count) return true;
+            ++page;
+        }
+
+        UiState state{};
+        state.screen = UiScreen::Briefing;
+        state.title = title;
+        state.narrativeSpeaker = cards[page]->speaker.c_str();
+        state.narrativeText = cards[page]->text.c_str();
+        state.narrativePage = page;
+        state.narrativePageCount = count;
+        state.narrativeCanGoBack = page > 0U;
+        uiRenderer.renderNarrative(state);
+    }
+    return false;
+}
+
+bool showMissionBriefing(UiRenderer& uiRenderer, InputSystem& inputSystem,
+    const CampaignMission& mission, const MissionNarrative& narrative) {
+    const std::array<const NarrativeCard*, 3U> cards{
+        &narrative.briefing[0], &narrative.briefing[1], &narrative.mechanic};
+    return showNarrativeCards(uiRenderer, inputSystem, mission.title, cards.data(), cards.size());
+}
+
+void showMissionOutcome(UiRenderer& uiRenderer, InputSystem& inputSystem,
+    const CampaignMission& mission, const MissionNarrative& narrative, bool victory) {
+    const NarrativeCard* card = victory ? &narrative.victory : &narrative.defeat;
+    const std::array<const NarrativeCard*, 1U> cards{card};
+    (void)showNarrativeCards(uiRenderer, inputSystem, mission.title, cards.data(), cards.size());
+}
+
 UiState campaignUiState(const CampaignProgress& progress, const SaveData& saveData,
     std::size_t selected, bool saveProblem, const std::string& saveMessage) {
     UiState state{};
@@ -130,6 +185,15 @@ std::size_t selectCampaignMission(UiRenderer& uiRenderer, CampaignProgress& prog
             saveData.settings.maximum3DDepthPercent =
                 Stereo3D::nextDepthLimit(saveData.settings.maximum3DDepthPercent);
             saveProblem = !persistSave(progress, saveData, saveMessage);
+        } else if (!input.isHeld(KEY_SELECT) && input.pressed(KEY_Y)) {
+            const CampaignMission& mission = CampaignCatalog::mission(selected);
+            const NarrativeLoadResult narrative = loadMissionNarrative(mission);
+            if (narrative.success) {
+                (void)showMissionBriefing(uiRenderer, inputSystem, mission, narrative.narrative);
+            } else {
+                saveMessage = "BLAD ODPRAWY: " + narrative.error;
+                saveProblem = true;
+            }
         }
 
         const std::size_t selectableCount = progress.unlockedCount();
@@ -239,7 +303,8 @@ UiState missionUiState(const CampaignMission& mission, const Wave& wave,
 
 MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& mission,
     std::size_t missionIndex, bool recordsCampaignProgress, CampaignProgress& progress,
-    SaveData& saveData, bool& saveProblem, std::string& saveMessage) {
+    SaveData& saveData, bool& saveProblem, std::string& saveMessage,
+    const MissionNarrative* narrative) {
     UiState loading{};
     loading.screen = UiScreen::Loading;
     loading.title = mission.title;
@@ -276,6 +341,7 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
     bool paused = false;
     int speedMultiplier = 1;
     bool resultRecorded = false;
+    bool resultNarrativeShown = false;
     MissionResult missionResult{};
     MissionSessionAction action = MissionSessionAction::ExitApplication;
 
@@ -336,6 +402,12 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
                 saveProblem = !persistSave(progress, saveData, saveMessage);
             }
             resultRecorded = true;
+        }
+        if (tutorialFlow.finished() && resultRecorded && !resultNarrativeShown && narrative != nullptr) {
+            showMissionOutcome(uiRenderer, inputSystem, mission, *narrative,
+                tutorialFlow.phase() == TutorialPhase::Victory);
+            resultNarrativeShown = true;
+            previousMilliseconds = osGetTime();
         }
 
         const AudioFrameState audioState{
@@ -439,10 +511,23 @@ int main() {
         const CampaignMission& mission = stressTest ? kPerformanceStressMission : CampaignCatalog::mission(selectedMission);
         const std::size_t progressMissionIndex = stressTest ? 0U : selectedMission;
 
+        NarrativeLoadResult narrative{};
+        if (!stressTest) {
+            narrative = loadMissionNarrative(mission);
+            if (narrative.success) {
+                InputSystem briefingInput;
+                if (!showMissionBriefing(uiRenderer, briefingInput, mission, narrative.narrative)) continue;
+            } else {
+                saveMessage = "BLAD ODPRAWY: " + narrative.error;
+                saveProblem = true;
+            }
+        }
+
         bool replay = true;
         while (aptMainLoop() && replay) {
             const MissionSessionAction action = runMission(uiRenderer, mission, progressMissionIndex,
-                !stressTest, progress, saveData, saveProblem, saveMessage);
+                !stressTest, progress, saveData, saveProblem, saveMessage,
+                narrative.success ? &narrative.narrative : nullptr);
             replay = action == MissionSessionAction::Replay;
             if (action == MissionSessionAction::ExitApplication) { exitApplication = true; break; }
         }

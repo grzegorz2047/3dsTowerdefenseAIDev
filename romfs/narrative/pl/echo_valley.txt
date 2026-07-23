@@ -1,0 +1,16 @@
+mission.id=echo_valley
+briefing.1.id=echo_valley.forest
+briefing.1.speaker=Mira
+briefing.1.text=Las Szeptow ukrywa droge do czwartej pieczeci. Mgla tlumi kroki, a odporne oddzialy poruszaja sie bez ostrzezenia.
+briefing.2.id=echo_valley.patience
+briefing.2.speaker=Arven
+briefing.2.text=Nie bedziemy walczyc z mgla. Spowolnimy wroga i zmusimy go do dlugiego marszu pod ogniem.
+mechanic.id=echo_valley.slow
+mechanic.speaker=Brom
+mechanic.text=Wieza Mrozu spowalnia odpornych przeciwnikow i wydluza czas ostrzalu pozostalych wiez.
+victory.id=echo_valley.victory
+victory.speaker=Mira
+victory.text=Czwarta pieczec odnaleziona. Strażnik Bramy wycofuje sie ku Ostatniej Cytadeli.
+defeat.id=echo_valley.defeat
+defeat.speaker=Arven
+defeat.text=Mgla skraca czas reakcji. Potrzebujemy spowolnienia i nakladajacych sie stref ostrzalu.

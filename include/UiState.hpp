@@ -11,6 +11,7 @@
 
 enum class UiScreen : std::uint8_t {
     Campaign,
+    Briefing,
     Loading,
     Mission,
 };
@@ -35,6 +36,12 @@ struct UiState {
     const char* instruction = "";
     const char* statusMessage = "";
     const char* selectedTowerName = "";
+
+    const char* narrativeSpeaker = "";
+    const char* narrativeText = "";
+    std::size_t narrativePage = 0U;
+    std::size_t narrativePageCount = 0U;
+    bool narrativeCanGoBack = false;
 
     std::array<const char*, kCampaignMissionCount> campaignTitles{};
     std::array<bool, kCampaignMissionCount> missionUnlocked{};
