@@ -65,6 +65,9 @@ std::string payloadFor(const SaveData& data, std::uint32_t version) {
         stream << "stereo=" << (data.settings.stereoEnabled ? 1 : 0) << '\n';
         stream << "stereo_depth=" << static_cast<unsigned int>(data.settings.maximum3DDepthPercent) << '\n';
     }
+    if (version >= 4) {
+        stream << "motion_camera=" << (data.settings.motionCameraEnabled ? 1 : 0) << '\n';
+    }
     return stream.str();
 }
 
@@ -105,7 +108,7 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
     const std::string checksumText = text.substr(checksumPosition + 9, checksumEnd - (checksumPosition + 9));
     unsigned long storedChecksum = 0;
     if (!parseUnsigned(checksumText, storedChecksum) || storedChecksum != fnv1a(payload)) {
-        return corrupt("Nieprawidlowa suma kontrolna");
+        return corrupt("Nieprawidlowa suma kontrolnej");
     }
 
     std::map<std::string, std::string> values;
@@ -127,7 +130,7 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
     data.campaign.unlockedCount = static_cast<std::size_t>(unlocked);
     if (!parseArray(values["stars"], data.campaign.bestStars)) return corrupt("Nieprawidlowe gwiazdki");
 
-    bool migrated = version < kCurrentSaveVersion;
+    const bool migrated = version < kCurrentSaveVersion;
     if (version >= 2) {
         if (!parseArray(values["base_health"], data.campaign.bestBaseHealth) ||
             !parseArray(values["fewest_towers"], data.campaign.fewestTowers)) {
@@ -151,6 +154,13 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
         }
         data.settings.stereoEnabled = stereo == 1;
         data.settings.maximum3DDepthPercent = static_cast<std::uint8_t>(depth);
+    }
+    if (version >= 4) {
+        unsigned long motion = 0;
+        if (!parseUnsigned(values["motion_camera"], motion) || motion > 1) {
+            return corrupt("Nieprawidlowe ustawienie kamery ruchowej");
+        }
+        data.settings.motionCameraEnabled = motion == 1;
     }
 
     CampaignProgress validator;
