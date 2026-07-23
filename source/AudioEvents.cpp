@@ -35,15 +35,16 @@ std::uint32_t AudioEventRouter::update(const AudioFrameState& state, float delta
         else if (state.phase == TutorialPhase::Defeat) cues |= audioCueMask(AudioCue::Defeat);
     }
 
-    if (state.baseHealth < previous_.baseHealth && allow(AudioCue::BaseDamage)) {
+    if (state.baseDamageEvents > previous_.baseDamageEvents) {
         cues |= audioCueMask(AudioCue::BaseDamage);
     }
-    if (state.defeatedEnemies > previous_.defeatedEnemies && allow(AudioCue::EnemyDeath)) {
+    if (state.deathEvents > previous_.deathEvents) {
         cues |= audioCueMask(AudioCue::EnemyDeath);
     }
-    if (state.activeProjectiles > previous_.activeProjectiles && allow(AudioCue::Shot)) {
+    if (state.shotEvents > previous_.shotEvents && allow(AudioCue::Shot)) {
         cues |= audioCueMask(AudioCue::Shot);
-    } else if (state.activeProjectiles < previous_.activeProjectiles && allow(AudioCue::Hit)) {
+    }
+    if (state.impactEvents > previous_.impactEvents && allow(AudioCue::Hit)) {
         cues |= audioCueMask(AudioCue::Hit);
     }
 
