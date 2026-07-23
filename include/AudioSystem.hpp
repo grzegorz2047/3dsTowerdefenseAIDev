@@ -63,7 +63,8 @@ private:
     [[nodiscard]] bool generateSample(AudioCue cue);
     [[nodiscard]] bool generateDiagnosticTone();
     [[nodiscard]] bool generateMissionMusic();
-    void playSample(const Sample& sample);
+    void playSample(AudioCue cue, const Sample& sample);
+    [[nodiscard]] std::size_t channelSlotFor(AudioCue cue);
     void initializeNdspChannels();
     void freeSamples();
 
@@ -78,7 +79,7 @@ private:
     Result probeResult_ = static_cast<Result>(kAudioResultNotAttempted);
     int lastChannel_ = -1;
     AudioProbeState probeState_{};
-    std::size_t nextChannel_ = 0;
+    std::array<std::size_t, 3U> poolCursors_{};
     std::array<Sample, static_cast<std::size_t>(AudioCue::Count)> samples_{};
     Sample diagnosticTone_{};
     Sample missionMusic_{};
