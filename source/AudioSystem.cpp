@@ -6,13 +6,12 @@
 #include <cstring>
 
 #include "AudioChannelPool.hpp"
+#include "AudioMusicPolicy.hpp"
 
 namespace {
 
 constexpr float kPi = 3.14159265358979323846F;
-
-// Removed physical-runtime workaround: kSyntheticHleComponent,
-// ndspUseComponent and std::array<std::uint8_t, 0x400> must never be restored.
+bool gMissionMusicPlaying = false;
 
 struct CueShape {
     float durationSeconds;
@@ -69,6 +68,7 @@ bool AudioSystem::initialize() {
         shutdown();
         return false;
     }
+    gMissionMusicPlaying = false;
     return true;
 }
 
@@ -129,21 +129,52 @@ void AudioSystem::playDiagnosticTone() {
 }
 
 void AudioSystem::startMissionMusic() {
-    if (backend_ == AudioBackend::Ndsp && missionMusic_.data != nullptr && missionMusic_.count != 0U) {
+    if (!shouldStartMissionMusic(
+            backend_, gMissionMusicPlaying,
+            missionMusic_.data != nullptr && missionMusic_.count != 0U)) {
+        return;
+    }
+
+    if (backend_ == AudioBackend::Ndsp) {
         ndspChnWaveBufClear(kMusicChannel);
         std::memset(&musicWaveBuffer_, 0, sizeof(musicWaveBuffer_));
         musicWaveBuffer_.data_vaddr = missionMusic_.data;
         musicWaveBuffer_.nsamples = static_cast<u32>(missionMusic_.count);
         musicWaveBuffer_.looping = true;
         ndspChnWaveBufAdd(kMusicChannel, &musicWaveBuffer_);
+        gMissionMusicPlaying = true;
+        return;
     }
+
+    const u32 byteCount = static_cast<u32>(missionMusic_.count * sizeof(std::int16_t));
+    const Result flushResult = CSND_FlushDataCache(missionMusic_.data, byteCount);
+    if (R_FAILED(flushResult)) {
+        lastPlayResult_ = flushResult;
+        return;
+    }
+    lastPlayResult_ = csndPlaySound(
+        kMusicChannel,
+        SOUND_ENABLE | SOUND_REPEAT | SOUND_FORMAT_16BIT | SOUND_LINEAR_INTERP,
+        static_cast<u32>(kSampleRate),
+        0.24F,
+        0.0F,
+        missionMusic_.data,
+        missionMusic_.data,
+        byteCount);
+    if (R_SUCCEEDED(lastPlayResult_)) lastPlayResult_ = csndExecCmds(true);
+    gMissionMusicPlaying = R_SUCCEEDED(lastPlayResult_);
 }
 
 void AudioSystem::stopMusic() {
+    if (!gMissionMusicPlaying) return;
     if (backend_ == AudioBackend::Ndsp) {
         ndspChnWaveBufClear(kMusicChannel);
         musicWaveBuffer_ = {};
+    } else if (backend_ == AudioBackend::Csnd) {
+        CSND_SetPlayStateR(kMusicChannel, 0U);
+        lastPlayResult_ = csndExecCmds(true);
     }
+    gMissionMusicPlaying = false;
 }
 
 std::size_t AudioSystem::channelSlotFor(AudioCue cue) {
@@ -192,7 +223,7 @@ void AudioSystem::playSample(AudioCue cue, const Sample& sample) {
 }
 
 void AudioSystem::playMask(std::uint32_t cueMask) {
-    if (backend_ == AudioBackend::Ndsp && musicWaveBuffer_.data_vaddr == nullptr) startMissionMusic();
+    startMissionMusic();
     constexpr std::array<AudioCue, 9U> order{
         AudioCue::Victory,
         AudioCue::Defeat,
@@ -226,8 +257,8 @@ void AudioSystem::updateProbe() {
 }
 
 void AudioSystem::stopAll() {
+    stopMusic();
     if (backend_ == AudioBackend::Ndsp) {
-        stopMusic();
         ndspChnWaveBufClear(kDiagnosticChannel);
         diagnosticWaveBuffer_ = {};
         diagnosticSamplePosition_ = 0;
@@ -253,6 +284,7 @@ void AudioSystem::shutdown() {
     else if (backend_ == AudioBackend::Csnd) csndExit();
 
     backend_ = AudioBackend::None;
+    gMissionMusicPlaying = false;
     poolCursors_.fill(0U);
     lastChannel_ = -1;
     ndspResult_ = static_cast<Result>(kAudioResultNotAttempted);
