@@ -24,9 +24,10 @@ enum class AudioCue : std::uint8_t {
 
 struct AudioFrameState {
     TutorialPhase phase = TutorialPhase::BuildFirstTower;
-    std::size_t activeProjectiles = 0;
-    std::size_t defeatedEnemies = 0;
-    int baseHealth = 5;
+    std::uint32_t shotEvents = 0U;
+    std::uint32_t impactEvents = 0U;
+    std::uint32_t deathEvents = 0U;
+    std::uint32_t baseDamageEvents = 0U;
 };
 
 class AudioEventRouter {
