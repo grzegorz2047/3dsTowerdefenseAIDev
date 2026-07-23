@@ -26,12 +26,12 @@ enum class BenchmarkVerdict : std::uint8_t {
 };
 
 struct BenchmarkConfig {
-    std::uint8_t mapSize = 12U;
-    std::uint8_t enemies = 12U;
-    std::uint8_t towers = 12U;
-    std::uint8_t projectiles = 24U;
-    std::uint8_t decorations = 16U;
-    std::uint8_t rocketSharePercent = 25U;
+    std::uint8_t mapSize = 16U;
+    std::uint8_t enemies = 24U;
+    std::uint8_t towers = 20U;
+    std::uint8_t projectiles = 32U;
+    std::uint8_t decorations = 24U;
+    std::uint8_t rocketSharePercent = 50U;
     bool automaticRamp = false;
 
     [[nodiscard]] bool operator==(const BenchmarkConfig& other) const {
@@ -46,16 +46,16 @@ struct BenchmarkConfig {
 
 namespace BenchmarkProfiles {
 
-constexpr std::array<std::uint8_t, 3U> kMapSizes{8U, 12U, 16U};
-constexpr std::array<std::uint8_t, 4U> kEnemyCounts{4U, 8U, 12U, 16U};
-constexpr std::array<std::uint8_t, 4U> kTowerCounts{4U, 8U, 12U, 16U};
-constexpr std::array<std::uint8_t, 4U> kProjectileCounts{8U, 16U, 24U, 32U};
-constexpr std::array<std::uint8_t, 4U> kDecorationCounts{0U, 8U, 16U, 24U};
+constexpr std::array<std::uint8_t, 4U> kMapSizes{12U, 16U, 20U, 24U};
+constexpr std::array<std::uint8_t, 5U> kEnemyCounts{8U, 16U, 24U, 32U, 48U};
+constexpr std::array<std::uint8_t, 5U> kTowerCounts{8U, 16U, 20U, 24U, 32U};
+constexpr std::array<std::uint8_t, 5U> kProjectileCounts{16U, 24U, 32U, 40U, 48U};
+constexpr std::array<std::uint8_t, 5U> kDecorationCounts{8U, 16U, 24U, 32U, 48U};
 constexpr std::array<std::uint8_t, 4U> kRocketShares{0U, 25U, 50U, 100U};
 
-constexpr BenchmarkConfig kBalanced{12U, 12U, 12U, 24U, 16U, 25U, false};
-constexpr BenchmarkConfig kMaximum{16U, 16U, 16U, 32U, 24U, 100U, false};
-constexpr BenchmarkConfig kAutomatic{8U, 4U, 4U, 8U, 0U, 0U, true};
+constexpr BenchmarkConfig kBalanced{16U, 24U, 20U, 32U, 24U, 50U, false};
+constexpr BenchmarkConfig kMaximum{24U, 48U, 32U, 48U, 48U, 100U, false};
+constexpr BenchmarkConfig kAutomatic{12U, 8U, 8U, 16U, 8U, 0U, true};
 
 template <std::size_t N>
 [[nodiscard]] constexpr std::uint8_t steppedValue(
@@ -95,18 +95,18 @@ template <std::size_t N>
 
 [[nodiscard]] constexpr BenchmarkConfig nextAutomaticStage(BenchmarkConfig config) {
     if (!config.automaticRamp) return config;
-    if (config.enemies < 16U) config.enemies = steppedValue(kEnemyCounts, config.enemies, 1);
-    else if (config.towers < 16U) config.towers = steppedValue(kTowerCounts, config.towers, 1);
-    else if (config.projectiles < 32U) config.projectiles = steppedValue(kProjectileCounts, config.projectiles, 1);
-    else if (config.decorations < 24U) config.decorations = steppedValue(kDecorationCounts, config.decorations, 1);
+    if (config.enemies < 48U) config.enemies = steppedValue(kEnemyCounts, config.enemies, 1);
+    else if (config.towers < 32U) config.towers = steppedValue(kTowerCounts, config.towers, 1);
+    else if (config.projectiles < 48U) config.projectiles = steppedValue(kProjectileCounts, config.projectiles, 1);
+    else if (config.decorations < 48U) config.decorations = steppedValue(kDecorationCounts, config.decorations, 1);
     else if (config.rocketSharePercent < 100U) config.rocketSharePercent = steppedValue(kRocketShares, config.rocketSharePercent, 1);
-    else if (config.mapSize < 16U) config.mapSize = steppedValue(kMapSizes, config.mapSize, 1);
+    else if (config.mapSize < 24U) config.mapSize = steppedValue(kMapSizes, config.mapSize, 1);
     return config;
 }
 
 [[nodiscard]] constexpr bool maximumReached(const BenchmarkConfig& config) {
-    return config.mapSize == 16U && config.enemies == 16U && config.towers == 16U &&
-        config.projectiles == 32U && config.decorations == 24U &&
+    return config.mapSize == 24U && config.enemies == 48U && config.towers == 32U &&
+        config.projectiles == 48U && config.decorations == 48U &&
         config.rocketSharePercent == 100U;
 }
 
@@ -117,34 +117,48 @@ template <std::size_t N>
     level.width = std::min<std::uint8_t>(config.mapSize, static_cast<std::uint8_t>(kMaximumMapWidth));
     level.height = std::min<std::uint8_t>(config.mapSize, static_cast<std::uint8_t>(kMaximumMapHeight));
     level.tiles.fill(TileType::Ground);
+    level.benchmarkSpawnLanes = level.height >= 20U ? 3U : 2U;
+    level.benchmarkLaneSpacing = level.height >= 20U ? 5 : 4;
 
     const std::size_t roadZ = static_cast<std::size_t>(level.height / 2U);
     for (std::size_t x = 0U; x < level.width; ++x) {
         level.path[level.pathLength++] = {
             static_cast<std::int16_t>(x), static_cast<std::int16_t>(roadZ)};
-        level.tiles[roadZ * kMaximumMapWidth + x] = TileType::Road;
+        for (std::uint8_t lane = 0U; lane < level.benchmarkSpawnLanes; ++lane) {
+            const int centered = static_cast<int>(lane) - static_cast<int>(level.benchmarkSpawnLanes / 2U);
+            const int laneZ = static_cast<int>(roadZ) + centered * level.benchmarkLaneSpacing;
+            if (laneZ >= 0 && laneZ < static_cast<int>(level.height)) {
+                level.tiles[static_cast<std::size_t>(laneZ) * kMaximumMapWidth + x] = TileType::Road;
+            }
+        }
     }
-    level.tiles[roadZ * kMaximumMapWidth] = TileType::Spawn;
+    for (std::uint8_t lane = 0U; lane < level.benchmarkSpawnLanes; ++lane) {
+        const int centered = static_cast<int>(lane) - static_cast<int>(level.benchmarkSpawnLanes / 2U);
+        const int laneZ = static_cast<int>(roadZ) + centered * level.benchmarkLaneSpacing;
+        if (laneZ >= 0 && laneZ < static_cast<int>(level.height)) {
+            level.tiles[static_cast<std::size_t>(laneZ) * kMaximumMapWidth] = TileType::Spawn;
+        }
+    }
     level.tiles[roadZ * kMaximumMapWidth + level.width - 1U] = TileType::Base;
 
     std::size_t spots = 0U;
-    for (std::size_t distance = 1U; distance < level.height && spots < config.towers; ++distance) {
-        const std::array<int, 2U> rows{
-            static_cast<int>(roadZ) - static_cast<int>(distance),
-            static_cast<int>(roadZ) + static_cast<int>(distance)};
-        for (const int row : rows) {
-            if (row < 0 || row >= static_cast<int>(level.height)) continue;
-            for (std::size_t x = 1U; x + 1U < level.width && spots < config.towers; x += 2U) {
-                level.tiles[static_cast<std::size_t>(row) * kMaximumMapWidth + x] = TileType::BuildSpot;
-                ++spots;
-            }
+    for (std::size_t z = 1U; z + 1U < level.height && spots < config.towers; ++z) {
+        bool roadRow = false;
+        for (std::uint8_t lane = 0U; lane < level.benchmarkSpawnLanes; ++lane) {
+            const int centered = static_cast<int>(lane) - static_cast<int>(level.benchmarkSpawnLanes / 2U);
+            if (static_cast<int>(z) == static_cast<int>(roadZ) + centered * level.benchmarkLaneSpacing) roadRow = true;
+        }
+        if (roadRow) continue;
+        for (std::size_t x = 1U; x + 1U < level.width && spots < config.towers; x += 2U) {
+            level.tiles[z * kMaximumMapWidth + x] = TileType::BuildSpot;
+            ++spots;
         }
     }
 
     level.waveEntries[0] = {
         EnemyType::Raider,
         std::min<std::uint8_t>(config.enemies, static_cast<std::uint8_t>(kMaximumWaveEnemies)),
-        0.12F};
+        0.08F};
     level.waveEntryCount = 1U;
     level.totalEnemyCount = level.waveEntries[0].count;
     return level;
