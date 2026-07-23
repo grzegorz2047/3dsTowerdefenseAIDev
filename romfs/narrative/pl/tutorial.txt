@@ -1,0 +1,16 @@
+mission.id=tutorial
+briefing.1.id=tutorial.arrival
+briefing.1.speaker=Mira
+briefing.1.text=Przelecz Vhal milczy od lat. Za ta brama lezy jedyna droga do stolicy Asterii.
+briefing.2.id=tutorial.duty
+briefing.2.speaker=Brom
+briefing.2.text=Cytadela jeszcze stoi. Postaw kusze na niebieskim polu i pokaz, ze znow ma dowodce.
+mechanic.id=tutorial.first_tower
+mechanic.speaker=Brom
+mechanic.text=Kusza strzela szybko i celnie. Zbuduj ja przed rozpoczeciem pierwszej fali.
+victory.id=tutorial.victory
+victory.speaker=Arven
+victory.text=Brama utrzymana. Pod fundamentami obudzil sie pierwszy znak mechanizmu pieczeci.
+defeat.id=tutorial.defeat
+defeat.speaker=Mira
+defeat.text=Przelecz nie moze pozostac otwarta. Odbuduj obrone i sprobuj ponownie.
