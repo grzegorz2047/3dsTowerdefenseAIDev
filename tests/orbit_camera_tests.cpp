@@ -1,7 +1,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
+#include "ExtendedControls.hpp"
 #include "OrbitCamera.hpp"
 
 namespace {
@@ -55,6 +57,69 @@ void testShoulderButtonsRotateQuarterTurn() {
     expect(near(camera.yaw(), OrbitCamera::kDefaultYaw), "opposite quarter turns must cancel");
 }
 
+void testOld3dsFallbackIsNeutral() {
+    ExtendedRawInput raw{};
+    raw.cX = ExtendedControls::kAxisMaximum;
+    raw.zrDown = true;
+    const ExtendedMappedInput mapped = ExtendedControls::map(raw, ExtendedControlScheme::Camera);
+    expect(mapped.cameraX == 0, "unavailable C-Stick must not move camera");
+    expect(mapped.legacyShoulderDelta == 0, "unavailable ZR must not change tower");
+}
+
+void testNew3dsCameraSchemeUsesAnalogValues() {
+    ExtendedRawInput raw{};
+    raw.available = true;
+    raw.cX = 100;
+    raw.cY = ExtendedControls::kAxisMaximum;
+    raw.zrDown = true;
+    const ExtendedMappedInput mapped = ExtendedControls::map(raw, ExtendedControlScheme::Camera);
+    expect(mapped.cameraX == 100, "C-Stick must preserve partial analog rotation");
+    expect(mapped.cameraY == ExtendedControls::kAxisMaximum, "C-Stick up zooms camera");
+    expect(mapped.legacyShoulderDelta == 1, "ZR selects next tower in camera scheme");
+}
+
+void testAnalogDeadzoneAndClamp() {
+    ExtendedRawInput raw{};
+    raw.available = true;
+    raw.cX = ExtendedControls::kAxisDeadzone;
+    raw.cY = ExtendedControls::kAxisMaximum + 100;
+    const ExtendedMappedInput mapped = ExtendedControls::map(raw, ExtendedControlScheme::Camera);
+    expect(mapped.cameraX == 0, "C-Stick deadzone must prevent drift");
+    expect(mapped.cameraY == ExtendedControls::kAxisMaximum, "C-Stick input must be clamped");
+}
+
+void testNew3dsBuildScheme() {
+    ExtendedRawInput raw{};
+    raw.available = true;
+    raw.cLeftDown = true;
+    raw.zrHeld = true;
+    const ExtendedMappedInput mapped = ExtendedControls::map(raw, ExtendedControlScheme::Build);
+    expect(mapped.cursorDelta == -1, "C-Stick left selects previous build spot");
+    expect(mapped.cameraX == ExtendedControls::kAxisMaximum, "ZR rotates camera in build scheme");
+}
+
+void testOppositeBuildDirectionsCancelAndSchemeToggles() {
+    ExtendedRawInput raw{};
+    raw.available = true;
+    raw.cLeftDown = true;
+    raw.cRightDown = true;
+    const ExtendedMappedInput mapped = ExtendedControls::map(raw, ExtendedControlScheme::Build);
+    expect(mapped.cursorDelta == 0, "opposite C-Stick cursor directions must cancel");
+    expect(ExtendedControls::nextScheme(ExtendedControlScheme::Camera) == ExtendedControlScheme::Build,
+        "camera scheme toggles to build");
+    expect(ExtendedControls::nextScheme(ExtendedControlScheme::Build) == ExtendedControlScheme::Camera,
+        "build scheme toggles to camera");
+}
+
+void testHardwareSpecificHints() {
+    expect(std::string(ExtendedControls::hint(false, ExtendedControlScheme::Camera)).find("CPAD") != std::string::npos,
+        "Old 3DS hint must mention standard Circle Pad controls");
+    expect(std::string(ExtendedControls::hint(true, ExtendedControlScheme::Camera)).find("C:KAMERA") != std::string::npos,
+        "New 3DS camera hint must mention C-Stick camera");
+    expect(std::string(ExtendedControls::hint(true, ExtendedControlScheme::Build)).find("C:KURSOR") != std::string::npos,
+        "New 3DS build hint must mention C-Stick cursor");
+}
+
 }  // namespace
 
 int main() {
@@ -63,6 +128,12 @@ int main() {
     testVerticalAxisZooms();
     testZoomIsClamped();
     testShoulderButtonsRotateQuarterTurn();
-    std::cout << "Orbit camera tests passed\n";
+    testOld3dsFallbackIsNeutral();
+    testNew3dsCameraSchemeUsesAnalogValues();
+    testAnalogDeadzoneAndClamp();
+    testNew3dsBuildScheme();
+    testOppositeBuildDirectionsCancelAndSchemeToggles();
+    testHardwareSpecificHints();
+    std::cout << "Orbit camera and extended control tests passed\n";
     return 0;
 }

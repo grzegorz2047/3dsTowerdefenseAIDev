@@ -1,0 +1,8 @@
+New Nintendo 3DS extended control contract
+
+1. Hardware availability must be confirmed before any C-Stick or ZL/ZR action is emitted.
+2. Failed or missing detection must map all extended actions to zero.
+3. Old Nintendo 3DS controls remain available in every scheme.
+4. SELECT+Y changes only the extended control scheme and must not sell a tower.
+5. Opposite digital C-Stick directions cancel to a neutral axis.
+6. Extended input changes presentation and control mapping only; gameplay simulation remains deterministic.

@@ -14,18 +14,19 @@ BuildSystem::BuildSystem(const LevelData& level) : level_(&level) {
 }
 
 void BuildSystem::handleInput(const InputSnapshot& input) {
-    if (input.pressed(KEY_DLEFT) || input.pressed(KEY_DUP)) {
+    const ExtendedMappedInput extended = input.extended();
+    if (input.pressed(KEY_DLEFT) || input.pressed(KEY_DUP) || extended.cursorDelta < 0) {
         moveCursor(-1);
         cancelAction();
     }
-    if (input.pressed(KEY_DRIGHT) || input.pressed(KEY_DDOWN)) {
+    if (input.pressed(KEY_DRIGHT) || input.pressed(KEY_DDOWN) || extended.cursorDelta > 0) {
         moveCursor(1);
         cancelAction();
     }
-    if (input.pressed(KEY_L)) {
+    if (input.pressed(KEY_L) || extended.legacyShoulderDelta < 0) {
         selectTowerType(previousTowerType(selectedTowerType_));
     }
-    if (input.pressed(KEY_R)) {
+    if (input.pressed(KEY_R) || extended.legacyShoulderDelta > 0) {
         selectTowerType(nextTowerType(selectedTowerType_));
     }
     if (input.pressed(KEY_A)) {
@@ -34,7 +35,7 @@ void BuildSystem::handleInput(const InputSnapshot& input) {
     if (input.pressed(KEY_B) && !input.isHeld(KEY_SELECT)) {
         lastTowerAction_ = upgradeCursorTower();
     }
-    if (input.pressed(KEY_Y)) {
+    if (input.pressed(KEY_Y) && !input.isHeld(KEY_SELECT)) {
         lastTowerAction_ = sellCursorTower();
     }
 }

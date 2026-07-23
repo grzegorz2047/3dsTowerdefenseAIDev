@@ -16,7 +16,11 @@ constexpr float kQuarterTurn = kPi * 0.5F;
 Camera::Camera() = default;
 
 void Camera::update(const InputSnapshot& input, float deltaSeconds) {
-    orbit_.update(static_cast<int>(input.circle.dx), static_cast<int>(input.circle.dy), deltaSeconds);
+    const ExtendedMappedInput extended = input.extended();
+    orbit_.update(
+        static_cast<int>(input.circle.dx) + extended.cameraX,
+        static_cast<int>(input.circle.dy) + extended.cameraY,
+        deltaSeconds);
     if (input.pressed(KEY_L)) orbit_.rotateQuarterTurn(-1);
     if (input.pressed(KEY_R)) orbit_.rotateQuarterTurn(1);
 }
