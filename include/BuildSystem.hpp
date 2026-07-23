@@ -29,6 +29,7 @@ public:
     void handleInput(const InputSnapshot& input);
     void update(float deltaSeconds, Wave& wave);
     void reset();
+    void prepareBenchmarkLayout();
     void selectTowerType(TowerType type);
     void buildOrSelectCursor();
     void cancelAction();
