@@ -20,7 +20,7 @@ TowerStats baseStatsFor(TowerType type) {
             return {3.05F, 0.90F, {ProjectileEffect::Frost, 1, 0.85F, 2.20F, 0.55F}};
         case TowerType::Rocket:
             return {4.45F, 2.35F,
-                {ProjectileEffect::GuidedRocket, 3, 1.35F, 0.0F, 1.0F, 4.8F, 2.75F, 0.72F}};
+                {ProjectileEffect::GuidedRocket, 3, 1.35F, 0.0F, 1.0F, 4.5F, 4.5F, 0.45F}};
         case TowerType::Ballista:
         default:
             return {3.40F, 0.55F, {ProjectileEffect::Direct, 1, 0.0F, 0.0F, 1.0F}};
