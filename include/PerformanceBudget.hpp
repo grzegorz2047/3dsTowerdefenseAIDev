@@ -11,11 +11,10 @@ constexpr float kWarningFrameMilliseconds = 36.0F;
 constexpr float kMonoRenderBudgetMilliseconds = 18.0F;
 constexpr float kStereoRenderBudgetMilliseconds = 28.0F;
 constexpr std::size_t kMinimumLinearMemoryReserveBytes = 512U * 1024U;
-constexpr std::size_t kMaximumEnemies = 16U;
-constexpr std::size_t kMaximumTowers = 16U;
-constexpr std::size_t kMaximumProjectiles = 32U;
-// Historical pre-16x16 contract kept visible for migration checks: kMaximumLevelVertices = 4096U.
-constexpr std::size_t kMaximumLevelVertices = 5120U;
+constexpr std::size_t kMaximumEnemies = 48U;
+constexpr std::size_t kMaximumTowers = 32U;
+constexpr std::size_t kMaximumProjectiles = 48U;
+constexpr std::size_t kMaximumLevelVertices = 8192U;
 constexpr std::size_t kFrameWindowSize = 120U;
 
 }  // namespace PerformanceBudget
