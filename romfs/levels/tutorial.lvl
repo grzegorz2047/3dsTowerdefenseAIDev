@@ -1,19 +1,19 @@
 ; Citadel Defense 3D level format v2
 id=tutorial
-name=Straznica
+name=Przelecz Vhal
 size=12,12
 grid=begin
 ############
-#..........#
-#..BBB.....#
+###......###
+##.BBB....##
 #SRRRRRRR..#
-#..B....R..#
-#..B....R..#
+##.B....R..#
+#..B....R.##
 #..BBB..R..#
-#.......R..#
-#...BBBBR..#
-#.......E..#
-#..........#
+##......R..#
+#...BBBBR.##
+##......E..#
+###.......##
 ############
 path=1,3;2,3;3,3;4,3;5,3;6,3;7,3;8,3;8,4;8,5;8,6;8,7;8,8;8,9
 waves=Scout,2,1.60;Raider,2,2.00;Brute,1,2.40
