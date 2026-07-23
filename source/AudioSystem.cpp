@@ -27,8 +27,10 @@ CueShape shapeFor(AudioCue cue) {
         case AudioCue::BuildSuccess: return {0.16F, 520.0F, 880.0F, 0.55F, false};
         case AudioCue::BuildFailure: return {0.14F, 190.0F, 110.0F, 0.48F, true};
         case AudioCue::WaveStart: return {0.28F, 330.0F, 660.0F, 0.52F, false};
-        case AudioCue::Shot: return {0.08F, 720.0F, 420.0F, 0.38F, true};
-        case AudioCue::Hit: return {0.07F, 260.0F, 120.0F, 0.42F, true};
+        case AudioCue::Shot: return {0.08F, 720.0F, 420.0F, 0.34F, true};
+        case AudioCue::Hit: return {0.07F, 260.0F, 120.0F, 0.36F, true};
+        case AudioCue::EnemyDeath: return {0.18F, 430.0F, 145.0F, 0.42F, false};
+        case AudioCue::BaseDamage: return {0.32F, 155.0F, 68.0F, 0.58F, true};
         case AudioCue::Victory: return {0.48F, 440.0F, 1040.0F, 0.56F, false};
         case AudioCue::Defeat: return {0.52F, 300.0F, 90.0F, 0.52F, false};
         case AudioCue::Count: break;
@@ -229,12 +231,14 @@ void AudioSystem::playMask(std::uint32_t cueMask) {
     if (backend_ == AudioBackend::Ndsp && musicWaveBuffer_.data_vaddr == nullptr) {
         startMissionMusic();
     }
-    constexpr std::array<AudioCue, 7U> order{
+    constexpr std::array<AudioCue, 9U> order{
         AudioCue::Victory,
         AudioCue::Defeat,
+        AudioCue::BaseDamage,
         AudioCue::WaveStart,
         AudioCue::BuildSuccess,
         AudioCue::BuildFailure,
+        AudioCue::EnemyDeath,
         AudioCue::Hit,
         AudioCue::Shot,
     };
