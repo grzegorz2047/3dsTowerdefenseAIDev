@@ -1,0 +1,16 @@
+mission.id=stone_bridge
+briefing.1.id=stone_bridge.quarry
+briefing.1.speaker=Brom
+briefing.1.text=Kamieniolom Gromu zasila stare mechanizmy cytadeli. Ciezkie oddzialy wroga chca odciac nam wydobycie.
+briefing.2.id=stone_bridge.height
+briefing.2.speaker=Arven
+briefing.2.text=Most i skalne tarasy daja nam przewage. Wykorzystamy teren, zanim Brute dojda do bramy.
+mechanic.id=stone_bridge.area_damage
+mechanic.speaker=Brom
+mechanic.text=Brute wytrzymuja wiele trafien. Mozdzierz rozbija zwarte grupy i wspiera kusze obrazeniami obszarowymi.
+victory.id=stone_bridge.victory
+victory.speaker=Arven
+victory.text=Kamieniolom pracuje, a trzecia pieczec odpowiada na sygnal spod cytadeli.
+defeat.id=stone_bridge.defeat
+defeat.speaker=Brom
+defeat.text=Ciezkie oddzialy przeszly przez skupiony ogien. Potrzebujemy wiecej obrazen obszarowych.
