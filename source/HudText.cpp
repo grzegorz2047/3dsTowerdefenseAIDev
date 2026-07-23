@@ -1,6 +1,25 @@
 #include "HudText.hpp"
 
+#include "ExtendedControls.hpp"
+
 const char* tutorialInstruction(TutorialPhase phase) {
+    if (phase != TutorialPhase::Victory && phase != TutorialPhase::Defeat &&
+        ExtendedControls::runtimeAvailable) {
+        switch (phase) {
+            case TutorialPhase::BuildFirstTower:
+                return ExtendedControls::runtimeScheme == ExtendedControlScheme::Camera
+                    ? "N3DS C:KAMERA ZL/ZR:WIEZA A:BUDUJ"
+                    : "N3DS C:POLE ZL/ZR:KAMERA A:BUDUJ";
+            case TutorialPhase::ReadyToStart:
+                return "X:START  SELECT+Y:TRYB N3DS";
+            case TutorialPhase::WaveRunning:
+                return ExtendedControls::runtimeHint();
+            case TutorialPhase::Victory:
+            case TutorialPhase::Defeat:
+                break;
+        }
+    }
+
     switch (phase) {
         case TutorialPhase::BuildFirstTower:
             return "D-PAD: wybierz niebieskie pole\nA: zbuduj pierwsza wieze";
