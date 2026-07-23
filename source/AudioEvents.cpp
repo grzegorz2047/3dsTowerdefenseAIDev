@@ -1,10 +1,27 @@
 #include "AudioEvents.hpp"
 
+#include <algorithm>
+
+#include "AudioPolicy.hpp"
+
 AudioCue cueForBuildResult(BuildAttemptResult result) {
     return result == BuildAttemptResult::Built ? AudioCue::BuildSuccess : AudioCue::BuildFailure;
 }
 
-std::uint32_t AudioEventRouter::update(const AudioFrameState& state) {
+void AudioEventRouter::advanceCooldowns(float deltaSeconds) {
+    const float step = std::max(deltaSeconds, 0.0F);
+    for (float& remaining : cooldowns_) remaining = std::max(remaining - step, 0.0F);
+}
+
+bool AudioEventRouter::allow(AudioCue cue) {
+    const std::size_t index = static_cast<std::size_t>(cue);
+    if (cooldowns_[index] > 0.0F) return false;
+    cooldowns_[index] = audioCooldownSeconds(cue);
+    return true;
+}
+
+std::uint32_t AudioEventRouter::update(const AudioFrameState& state, float deltaSeconds) {
+    advanceCooldowns(deltaSeconds);
     if (!initialized_) {
         previous_ = state;
         initialized_ = true;
@@ -13,18 +30,20 @@ std::uint32_t AudioEventRouter::update(const AudioFrameState& state) {
 
     std::uint32_t cues = 0U;
     if (previous_.phase != state.phase) {
-        if (state.phase == TutorialPhase::WaveRunning) {
-            cues |= audioCueMask(AudioCue::WaveStart);
-        } else if (state.phase == TutorialPhase::Victory) {
-            cues |= audioCueMask(AudioCue::Victory);
-        } else if (state.phase == TutorialPhase::Defeat) {
-            cues |= audioCueMask(AudioCue::Defeat);
-        }
+        if (state.phase == TutorialPhase::WaveRunning) cues |= audioCueMask(AudioCue::WaveStart);
+        else if (state.phase == TutorialPhase::Victory) cues |= audioCueMask(AudioCue::Victory);
+        else if (state.phase == TutorialPhase::Defeat) cues |= audioCueMask(AudioCue::Defeat);
     }
 
-    if (state.activeProjectiles > previous_.activeProjectiles) {
+    if (state.baseHealth < previous_.baseHealth && allow(AudioCue::BaseDamage)) {
+        cues |= audioCueMask(AudioCue::BaseDamage);
+    }
+    if (state.defeatedEnemies > previous_.defeatedEnemies && allow(AudioCue::EnemyDeath)) {
+        cues |= audioCueMask(AudioCue::EnemyDeath);
+    }
+    if (state.activeProjectiles > previous_.activeProjectiles && allow(AudioCue::Shot)) {
         cues |= audioCueMask(AudioCue::Shot);
-    } else if (state.activeProjectiles < previous_.activeProjectiles) {
+    } else if (state.activeProjectiles < previous_.activeProjectiles && allow(AudioCue::Hit)) {
         cues |= audioCueMask(AudioCue::Hit);
     }
 
@@ -34,5 +53,6 @@ std::uint32_t AudioEventRouter::update(const AudioFrameState& state) {
 
 void AudioEventRouter::reset(const AudioFrameState& state) {
     previous_ = state;
+    cooldowns_.fill(0.0F);
     initialized_ = true;
 }
