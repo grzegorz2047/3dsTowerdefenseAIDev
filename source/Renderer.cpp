@@ -2,15 +2,18 @@
 
 #include <3ds.h>
 
+#include <cmath>
 #include <cstring>
 #include <vector>
 
+#include "PerformanceBudget.hpp"
+#include "SceneArt.hpp"
 #include "UiRenderer.hpp"
 #include "vshader_shbin.h"
 
 namespace {
 
-constexpr u32 kTopClearColor = 0x182030FF;
+constexpr u32 kTopClearColor = 0x52677BFF;
 constexpr u32 kDisplayTransferFlags =
     GX_TRANSFER_FLIP_VERT(0) |
     GX_TRANSFER_OUT_TILED(0) |
@@ -18,6 +21,7 @@ constexpr u32 kDisplayTransferFlags =
     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) |
     GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) |
     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO);
+constexpr float kPi = 3.14159265358979323846F;
 
 struct Vertex {
     float x;
@@ -37,7 +41,19 @@ struct TileVisual {
     float inset;
 };
 
-TileVisual visualFor(TileType tile) {
+TileVisual visualFor(TileType tile, LevelTheme theme, std::size_t x, std::size_t z) {
+    const float variation = ((x + z * 3U) % 3U == 0U) ? 0.025F : 0.0F;
+    if (theme == LevelTheme::VhalPass) {
+        switch (tile) {
+            case TileType::Road: return {0.43F + variation, 0.34F, 0.25F, 0.035F, 0.055F};
+            case TileType::BuildSpot: return {0.30F, 0.43F, 0.52F, 0.09F, 0.13F};
+            case TileType::Blocked: return {0.27F, 0.29F, 0.28F, 0.24F + variation, 0.04F};
+            case TileType::Spawn: return {0.20F, 0.27F, 0.24F, 0.10F, 0.05F};
+            case TileType::Base: return {0.37F, 0.34F, 0.30F, 0.18F, 0.04F};
+            case TileType::Ground:
+            default: return {0.25F + variation, 0.39F + variation, 0.24F, 0.0F, 0.025F};
+        }
+    }
     switch (tile) {
         case TileType::Road: return {0.48F, 0.34F, 0.20F, 0.03F, 0.03F};
         case TileType::BuildSpot: return {0.20F, 0.42F, 0.68F, 0.07F, 0.10F};
@@ -72,6 +88,31 @@ void appendBox(std::vector<Vertex>& vertices, float centerX, float centerZ,
     appendQuad(vertices, {x0,y1,z1,r,g,b,1}, {x1,y1,z1,r,g,b,1}, {x1,y1,z0,r,g,b,1}, {x0,y1,z0,r,g,b,1});
 }
 
+Vertex rotatedVertex(float centerX, float centerZ, float localX, float y, float localZ,
+    float radians, float r, float g, float b) {
+    const float cosine = std::cos(radians);
+    const float sine = std::sin(radians);
+    return {centerX + localX * cosine - localZ * sine, y,
+        centerZ + localX * sine + localZ * cosine, r, g, b, 1.0F};
+}
+
+void appendRotatedBox(std::vector<Vertex>& vertices, float centerX, float centerZ,
+    float halfX, float halfZ, float y0, float y1, float radians, float r, float g, float b) {
+    const Vertex a0 = rotatedVertex(centerX, centerZ, -halfX, y0, halfZ, radians, r, g, b);
+    const Vertex b0 = rotatedVertex(centerX, centerZ, halfX, y0, halfZ, radians, r, g, b);
+    const Vertex c0 = rotatedVertex(centerX, centerZ, halfX, y0, -halfZ, radians, r, g, b);
+    const Vertex d0 = rotatedVertex(centerX, centerZ, -halfX, y0, -halfZ, radians, r, g, b);
+    const Vertex a1 = rotatedVertex(centerX, centerZ, -halfX, y1, halfZ, radians, r, g, b);
+    const Vertex b1 = rotatedVertex(centerX, centerZ, halfX, y1, halfZ, radians, r, g, b);
+    const Vertex c1 = rotatedVertex(centerX, centerZ, halfX, y1, -halfZ, radians, r, g, b);
+    const Vertex d1 = rotatedVertex(centerX, centerZ, -halfX, y1, -halfZ, radians, r, g, b);
+    appendQuad(vertices, a0, b0, b1, a1);
+    appendQuad(vertices, c0, d0, d1, c1);
+    appendQuad(vertices, b0, c0, c1, b1);
+    appendQuad(vertices, d0, a0, a1, d1);
+    appendQuad(vertices, a1, b1, c1, d1);
+}
+
 void appendTile(std::vector<Vertex>& vertices, float x, float z, const TileVisual& visual) {
     const float half = 0.5F - visual.inset;
     appendQuad(vertices,
@@ -81,19 +122,75 @@ void appendTile(std::vector<Vertex>& vertices, float x, float z, const TileVisua
         {x+half, visual.height, z-half, visual.r, visual.g, visual.b, 1.0F});
 }
 
+void appendRoadDetail(std::vector<Vertex>& vertices, float x, float z, std::size_t index) {
+    const float offset = (index % 2U == 0U) ? -0.16F : 0.16F;
+    appendBox(vertices, x + offset, z, 0.13F, 0.35F, 0.038F, 0.052F, 0.31F, 0.27F, 0.23F);
+}
+
+void appendBuildPlatform(std::vector<Vertex>& vertices, float x, float z) {
+    appendBox(vertices, x, z, 0.37F, 0.37F, 0.08F, 0.16F, 0.38F, 0.40F, 0.40F);
+    appendBox(vertices, x, z, 0.27F, 0.27F, 0.16F, 0.20F, 0.24F, 0.54F, 0.66F);
+}
+
 void appendCitadel(std::vector<Vertex>& vertices, float x, float z) {
-    appendBox(vertices, x, z, 0.46F, 0.46F, 0.15F, 0.27F, 0.25F, 0.28F, 0.32F);
-    appendBox(vertices, x, z, 0.28F, 0.28F, 0.25F, 0.82F, 0.47F, 0.50F, 0.54F);
-    appendBox(vertices, x, z, 0.34F, 0.34F, 0.80F, 0.92F, 0.25F, 0.28F, 0.32F);
-    appendBox(vertices, x, z + 0.31F, 0.03F, 0.03F, 0.68F, 1.13F, 0.82F, 0.62F, 0.18F);
-    appendBox(vertices, x, z + 0.34F, 0.13F, 0.03F, 1.02F, 1.10F, 0.64F, 0.12F, 0.16F);
+    appendBox(vertices, x, z, 0.58F, 0.52F, 0.15F, 0.31F, 0.24F, 0.26F, 0.28F);
+    appendBox(vertices, x, z, 0.34F, 0.34F, 0.30F, 1.08F, 0.49F, 0.50F, 0.49F);
+    appendBox(vertices, x, z, 0.43F, 0.43F, 1.05F, 1.18F, 0.25F, 0.27F, 0.29F);
+    appendBox(vertices, x - 0.43F, z, 0.13F, 0.18F, 0.28F, 0.92F, 0.43F, 0.44F, 0.43F);
+    appendBox(vertices, x + 0.43F, z, 0.13F, 0.18F, 0.28F, 0.92F, 0.43F, 0.44F, 0.43F);
+    appendBox(vertices, x, z + 0.37F, 0.06F, 0.04F, 0.70F, 1.40F, 0.78F, 0.58F, 0.16F);
+    appendBox(vertices, x, z + 0.40F, 0.20F, 0.04F, 1.24F, 1.38F, 0.63F, 0.12F, 0.13F);
 }
 
 void appendGate(std::vector<Vertex>& vertices, float x, float z) {
-    appendBox(vertices, x, z - 0.30F, 0.13F, 0.13F, 0.08F, 0.78F, 0.30F, 0.32F, 0.34F);
-    appendBox(vertices, x, z + 0.30F, 0.13F, 0.13F, 0.08F, 0.78F, 0.30F, 0.32F, 0.34F);
-    appendBox(vertices, x, z, 0.14F, 0.43F, 0.66F, 0.84F, 0.16F, 0.18F, 0.20F);
-    appendBox(vertices, x + 0.03F, z, 0.04F, 0.18F, 0.16F, 0.66F, 0.14F, 0.78F, 0.62F);
+    appendBox(vertices, x, z - 0.38F, 0.18F, 0.16F, 0.08F, 0.93F, 0.28F, 0.30F, 0.31F);
+    appendBox(vertices, x, z + 0.38F, 0.18F, 0.16F, 0.08F, 0.74F, 0.28F, 0.30F, 0.31F);
+    appendBox(vertices, x, z, 0.16F, 0.52F, 0.68F, 0.88F, 0.18F, 0.19F, 0.20F);
+    appendBox(vertices, x + 0.02F, z, 0.06F, 0.24F, 0.16F, 0.75F, 0.12F, 0.76F, 0.57F);
+    appendBox(vertices, x - 0.32F, z + 0.49F, 0.24F, 0.13F, 0.03F, 0.28F, 0.34F, 0.31F, 0.27F);
+}
+
+void appendProp(std::vector<Vertex>& vertices, const SceneProp& prop,
+    float offsetX, float offsetZ) {
+    const float x = offsetX + prop.gridX;
+    const float z = offsetZ + prop.gridZ;
+    const float s = prop.scale;
+    const float angle = prop.rotationDegrees * kPi / 180.0F;
+    switch (prop.type) {
+        case ScenePropType::Pine:
+            appendBox(vertices, x, z, 0.07F*s, 0.07F*s, 0.0F, 0.50F*s, 0.28F, 0.18F, 0.10F);
+            appendBox(vertices, x, z, 0.30F*s, 0.30F*s, 0.40F*s, 0.72F*s, 0.18F, 0.32F, 0.19F);
+            appendBox(vertices, x, z, 0.22F*s, 0.22F*s, 0.68F*s, 0.92F*s, 0.20F, 0.37F, 0.21F);
+            break;
+        case ScenePropType::Rock:
+            appendRotatedBox(vertices, x, z, 0.30F*s, 0.22F*s, 0.0F, 0.31F*s, angle, 0.34F, 0.35F, 0.34F);
+            break;
+        case ScenePropType::Ruin:
+            appendRotatedBox(vertices, x, z, 0.42F*s, 0.10F*s, 0.0F, 0.70F*s, angle, 0.40F, 0.39F, 0.36F);
+            appendRotatedBox(vertices, x + 0.23F*s, z + 0.18F*s, 0.12F*s, 0.31F*s, 0.0F, 0.42F*s, angle, 0.34F, 0.33F, 0.31F);
+            break;
+        case ScenePropType::Banner:
+            appendRotatedBox(vertices, x, z, 0.035F*s, 0.035F*s, 0.0F, 0.92F*s, angle, 0.28F, 0.18F, 0.09F);
+            appendRotatedBox(vertices, x + 0.12F*s, z, 0.15F*s, 0.025F*s, 0.58F*s, 0.82F*s, angle, 0.66F, 0.13F, 0.15F);
+            break;
+        case ScenePropType::Barricade:
+            appendRotatedBox(vertices, x, z, 0.45F*s, 0.07F*s, 0.10F*s, 0.27F*s, angle, 0.42F, 0.25F, 0.10F);
+            appendRotatedBox(vertices, x - 0.23F*s, z, 0.06F*s, 0.08F*s, 0.0F, 0.39F*s, angle, 0.28F, 0.18F, 0.09F);
+            appendRotatedBox(vertices, x + 0.23F*s, z, 0.06F*s, 0.08F*s, 0.0F, 0.39F*s, angle, 0.28F, 0.18F, 0.09F);
+            break;
+        case ScenePropType::Wagon:
+            appendRotatedBox(vertices, x, z, 0.38F*s, 0.25F*s, 0.18F*s, 0.42F*s, angle, 0.39F, 0.22F, 0.09F);
+            appendRotatedBox(vertices, x - 0.32F*s, z, 0.09F*s, 0.30F*s, 0.04F*s, 0.20F*s, angle, 0.18F, 0.16F, 0.13F);
+            appendRotatedBox(vertices, x + 0.32F*s, z, 0.09F*s, 0.30F*s, 0.04F*s, 0.20F*s, angle, 0.18F, 0.16F, 0.13F);
+            break;
+        case ScenePropType::Cliff:
+            appendRotatedBox(vertices, x, z, 0.65F*s, 0.48F*s, -0.16F*s, 0.38F*s, angle, 0.30F, 0.31F, 0.30F);
+            break;
+        case ScenePropType::Watchtower:
+            appendRotatedBox(vertices, x, z, 0.24F*s, 0.24F*s, 0.0F, 0.70F*s, angle, 0.40F, 0.39F, 0.36F);
+            appendRotatedBox(vertices, x, z, 0.34F*s, 0.34F*s, 0.68F*s, 0.82F*s, angle, 0.24F, 0.28F, 0.31F);
+            break;
+    }
 }
 
 void appendEnemy(std::vector<Vertex>& vertices) {
@@ -156,19 +253,38 @@ bool Renderer::initialize(const LevelData& level) {
 
 bool Renderer::buildLevelMesh(const LevelData& level) {
     std::vector<Vertex> vertices;
-    vertices.reserve(static_cast<std::size_t>(level.width) * level.height * 6U + 1000U);
+    vertices.reserve(PerformanceBudget::kMaximumLevelVertices + 512U);
     const float offsetX = -static_cast<float>(level.width) * 0.5F + 0.5F;
     const float offsetZ = -static_cast<float>(level.height) * 0.5F + 0.5F;
+    const SceneArtLoadResult artResult = SceneArtLoader::load(SceneArtLoader::pathFor(level.id.c_str()).c_str());
+    const LevelTheme theme = artResult.success && artResult.art.levelId == level.id
+        ? artResult.art.theme : LevelTheme::Default;
+
+    if (theme == LevelTheme::VhalPass) {
+        appendBox(vertices, 0.0F, 0.0F, static_cast<float>(level.width) * 0.62F,
+            static_cast<float>(level.height) * 0.62F, -0.22F, -0.03F, 0.20F, 0.27F, 0.21F);
+    }
+
+    std::size_t roadIndex = 0U;
     for (std::size_t z = 0; z < level.height; ++z) {
         for (std::size_t x = 0; x < level.width; ++x) {
             const TileType tile = level.tileAt(x, z);
             const float tileX = offsetX + static_cast<float>(x);
             const float tileZ = offsetZ + static_cast<float>(z);
-            appendTile(vertices, tileX, tileZ, visualFor(tile));
+            appendTile(vertices, tileX, tileZ, visualFor(tile, theme, x, z));
+            if (theme == LevelTheme::VhalPass && tile == TileType::Road) appendRoadDetail(vertices, tileX, tileZ, roadIndex++);
+            if (theme == LevelTheme::VhalPass && tile == TileType::BuildSpot) appendBuildPlatform(vertices, tileX, tileZ);
             if (tile == TileType::Base) appendCitadel(vertices, tileX, tileZ);
             else if (tile == TileType::Spawn) appendGate(vertices, tileX, tileZ);
         }
     }
+    if (artResult.success && artResult.art.levelId == level.id) {
+        for (std::size_t index = 0U; index < artResult.art.propCount; ++index) {
+            appendProp(vertices, artResult.art.props[index], offsetX, offsetZ);
+        }
+    }
+    if (vertices.size() > PerformanceBudget::kMaximumLevelVertices) return false;
+
     levelVertexCount_ = vertices.size();
     enemyVertexOffset_ = vertices.size(); appendEnemy(vertices); enemyVertexCount_ = vertices.size() - enemyVertexOffset_;
     towerVertexOffset_ = vertices.size(); appendTower(vertices); towerVertexCount_ = vertices.size() - towerVertexOffset_;
