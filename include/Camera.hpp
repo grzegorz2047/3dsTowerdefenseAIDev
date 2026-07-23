@@ -3,6 +3,7 @@
 #include <citro3d.h>
 
 #include "Input.hpp"
+#include "MotionCamera.hpp"
 #include "OrbitCamera.hpp"
 
 class Camera {
@@ -22,4 +23,5 @@ public:
 
 private:
     OrbitCamera orbit_{};
+    MotionCameraFilter motionFilter_{};
 };
