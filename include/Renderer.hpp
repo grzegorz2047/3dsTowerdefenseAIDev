@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -23,13 +24,12 @@ public:
     Renderer(const Renderer&) = delete;
     Renderer& operator=(const Renderer&) = delete;
 
-    [[nodiscard]] bool initialize(const LevelData& level);
+    [[nodiscard]] bool initialize(const LevelData& level, std::size_t benchmarkDecorations = 0U);
     void render(
         const Camera& camera,
         const Wave& wave,
         const BuildSystem& buildSystem,
         const TutorialFlow& tutorialFlow,
-        bool stereoEnabled,
         std::uint8_t maximum3DDepthPercent,
         UiRenderer& uiRenderer,
         const UiState& uiState);
@@ -56,9 +56,12 @@ private:
     std::size_t levelVertexCount_ = 0;
     std::size_t enemyVertexOffset_ = 0;
     std::size_t enemyVertexCount_ = 0;
-    std::size_t towerVertexOffset_ = 0;
-    std::size_t towerVertexCount_ = 0;
-    std::size_t projectileVertexOffset_ = 0;
-    std::size_t projectileVertexCount_ = 0;
+    std::array<std::size_t, 4U> towerVertexOffsets_{};
+    std::array<std::size_t, 4U> towerVertexCounts_{};
+    std::size_t projectileVertexOffset_ = 0U;
+    std::size_t projectileVertexCount_ = 0U;
+    std::size_t rocketVertexOffset_ = 0U;
+    std::size_t rocketVertexCount_ = 0U;
     StereoFramePlan lastStereoPlan_{};
+    std::size_t benchmarkDecorations_ = 0U;
 };

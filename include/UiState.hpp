@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "BenchmarkConfig.hpp"
 #include "Campaign.hpp"
 #include "PerformanceBudget.hpp"
 #include "Tower.hpp"
@@ -12,6 +13,7 @@
 enum class UiScreen : std::uint8_t {
     Campaign,
     Briefing,
+    BenchmarkConfig,
     Loading,
     Mission,
 };
@@ -22,6 +24,7 @@ struct UiState {
     int gold = 0;
     int baseHealth = 0;
     std::size_t spawnedEnemies = 0U;
+    std::size_t activeEnemies = 0U;
     std::size_t totalEnemies = 0U;
     TowerType selectedTower = TowerType::Ballista;
     TutorialPhase tutorialPhase = TutorialPhase::BuildFirstTower;
@@ -53,12 +56,12 @@ struct UiState {
 
     bool soundEnabled = true;
     bool musicEnabled = true;
-    bool stereoEnabled = true;
     std::uint8_t maximum3DDepthPercent = 0U;
 
     std::size_t towerCount = 0U;
     std::size_t buildSpotCount = 0U;
     std::size_t availableBuildSpotCount = 0U;
+    std::size_t activeProjectiles = 0U;
     int towerCost = 0;
     std::size_t cursorX = 0U;
     std::size_t cursorZ = 0U;
@@ -70,6 +73,10 @@ struct UiState {
     bool missionFinished = false;
     bool recordsCampaignProgress = true;
     std::uint8_t resultStars = 0U;
+
+    bool benchmarkMode = false;
+    BenchmarkConfig benchmark{};
+    BenchmarkVerdict benchmarkVerdict = BenchmarkVerdict::Warn;
 
     PerformanceSnapshot performance{};
     std::uint8_t stereoEyeCount = 0U;

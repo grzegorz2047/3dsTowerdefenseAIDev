@@ -182,7 +182,8 @@ bool ProjectilePool::launch(
     float startZ,
     std::size_t targetIndex,
     const ProjectilePayload& payload) {
-    for (Projectile& projectile : projectiles_) {
+    for (std::size_t index = 0U; index < activeLimit_; ++index) {
+        Projectile& projectile = projectiles_[index];
         if (!projectile.active()) {
             projectile.launch(startX, startY, startZ, targetIndex, payload);
             ++shotEventCount_;
@@ -205,6 +206,11 @@ void ProjectilePool::update(float deltaSeconds, Wave& wave) {
     }
 }
 
+void ProjectilePool::setActiveLimit(std::size_t limit) {
+    activeLimit_ = std::max<std::size_t>(1U, std::min(limit, kCapacity));
+    for (std::size_t index = activeLimit_; index < kCapacity; ++index) projectiles_[index].reset();
+}
+
 void ProjectilePool::reset() {
     for (Projectile& projectile : projectiles_) projectile.reset();
     shotEventCount_ = 0U;
@@ -218,6 +224,8 @@ std::size_t ProjectilePool::activeCount() const {
     }
     return count;
 }
+
+std::size_t ProjectilePool::activeLimit() const { return activeLimit_; }
 
 std::uint32_t ProjectilePool::shotEventCount() const { return shotEventCount_; }
 std::uint32_t ProjectilePool::impactEventCount() const { return impactEventCount_; }

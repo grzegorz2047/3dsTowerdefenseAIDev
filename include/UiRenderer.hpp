@@ -25,6 +25,7 @@ public:
 private:
     void drawStandaloneTop(const UiState& state);
     void drawCampaign(const UiState& state);
+    void drawBenchmarkConfig(const UiState& state);
     void drawMission(const UiState& state);
     void drawDiagnostics(const UiState& state);
     void drawText(const char* text, float x, float y, float scale, u32 color);

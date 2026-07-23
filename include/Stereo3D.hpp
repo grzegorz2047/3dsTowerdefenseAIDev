@@ -4,7 +4,7 @@
 
 struct StereoFramePlan {
     bool stereo = false;
-    std::uint8_t eyeCount = 1;
+    std::uint8_t eyeCount = 1U;
     float slider = 0.0F;
     float separation = 0.0F;
     float leftEyeIod = 0.0F;
@@ -17,8 +17,6 @@ public:
     static constexpr std::uint8_t kDefaultDepthPercent = 70;
 
     [[nodiscard]] static StereoFramePlan plan(
-        float sliderState,
-        bool enabled,
-        std::uint8_t maximumDepthPercent);
+        float sliderState, std::uint8_t maximumDepthPercent);
     [[nodiscard]] static std::uint8_t nextDepthLimit(std::uint8_t currentDepthPercent);
 };

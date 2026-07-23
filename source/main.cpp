@@ -10,6 +10,7 @@
 
 #include "AudioEvents.hpp"
 #include "AudioSystem.hpp"
+#include "BenchmarkConfig.hpp"
 #include "BuildSystem.hpp"
 #include "Camera.hpp"
 #include "Campaign.hpp"
@@ -53,6 +54,7 @@ constexpr CampaignMission kPerformanceStressMission{
 enum class MissionSessionAction {
     ReturnToCampaign,
     Replay,
+    AdvanceBenchmark,
     ExitApplication,
 };
 
@@ -92,14 +94,19 @@ bool showNarrativeCards(UiRenderer& uiRenderer, InputSystem& inputSystem, const 
     const NarrativeCard* const* cards, std::size_t count) {
     if (cards == nullptr || count == 0U) return true;
     std::size_t page = 0U;
+    TouchGesture touchGesture;
     while (aptMainLoop()) {
         const InputSnapshot input = inputSystem.poll();
-        if (input.pressed(KEY_START) || input.pressed(KEY_X)) return true;
-        if (input.pressed(KEY_B) || input.pressed(KEY_DLEFT)) {
+        const TouchGestureResult gesture = touchGesture.update(input.touching(),
+            static_cast<std::int16_t>(input.touch.px), static_cast<std::int16_t>(input.touch.py));
+        const TouchUiAction touch = gesture.tapped
+            ? TouchUiLayout::narrativeActionAt(gesture.endX, gesture.endY) : TouchUiAction::None;
+        if (input.pressed(KEY_START) || input.pressed(KEY_X) || touch == TouchUiAction::NarrativeSkip) return true;
+        if (input.pressed(KEY_B) || input.pressed(KEY_DLEFT) || touch == TouchUiAction::NarrativeBack) {
             if (page == 0U) return false;
             --page;
         }
-        if (input.pressed(KEY_A) || input.pressed(KEY_DRIGHT)) {
+        if (input.pressed(KEY_A) || input.pressed(KEY_DRIGHT) || touch == TouchUiAction::NarrativeNext) {
             if (page + 1U >= count) return true;
             ++page;
         }
@@ -140,7 +147,6 @@ UiState campaignUiState(const CampaignProgress& progress, const SaveData& saveDa
     state.statusMessage = saveMessage.c_str();
     state.soundEnabled = saveData.settings.soundEnabled;
     state.musicEnabled = saveData.settings.musicEnabled;
-    state.stereoEnabled = saveData.settings.stereoEnabled;
     state.maximum3DDepthPercent = saveData.settings.maximum3DDepthPercent;
 
     const auto& missions = CampaignCatalog::missions();
@@ -162,11 +168,16 @@ UiState campaignUiState(const CampaignProgress& progress, const SaveData& saveDa
 std::size_t selectCampaignMission(UiRenderer& uiRenderer, CampaignProgress& progress,
     SaveData& saveData, std::size_t selected, bool& saveProblem, std::string& saveMessage) {
     InputSystem inputSystem;
+    TouchGesture touchGesture;
     selected = std::min(selected, progress.unlockedCount() - 1U);
 
     while (aptMainLoop()) {
         const InputSnapshot input = inputSystem.poll();
-        if (input.pressed(KEY_START)) return kExitCampaignSelection;
+        const TouchGestureResult gesture = touchGesture.update(input.touching(),
+            static_cast<std::int16_t>(input.touch.px), static_cast<std::int16_t>(input.touch.py));
+        const TouchUiAction touch = gesture.tapped
+            ? TouchUiLayout::campaignActionAt(gesture.endX, gesture.endY) : TouchUiAction::None;
+        if (input.pressed(KEY_START) || touch == TouchUiAction::Exit) return kExitCampaignSelection;
         if (saveProblem && input.isHeld(KEY_SELECT) && input.pressed(KEY_Y)) {
             (void)SaveDataStore::reset(kSavePath);
             progress.reset();
@@ -174,16 +185,14 @@ std::size_t selectCampaignMission(UiRenderer& uiRenderer, CampaignProgress& prog
             saveProblem = false;
             saveMessage = "Zapis zresetowany.";
             selected = 0U;
-        } else if (input.isHeld(KEY_SELECT) && input.pressed(KEY_X)) {
+        } else if ((input.isHeld(KEY_SELECT) && input.pressed(KEY_X)) ||
+            touch == TouchUiAction::CampaignBenchmark) {
             return kPerformanceStressSelection;
-        } else if (input.pressed(KEY_X)) {
+        } else if (input.pressed(KEY_X) || touch == TouchUiAction::ToggleSound) {
             saveData.settings.soundEnabled = !saveData.settings.soundEnabled;
             saveProblem = !persistSave(progress, saveData, saveMessage);
-        } else if (input.pressed(KEY_B)) {
+        } else if (input.pressed(KEY_B) || touch == TouchUiAction::ToggleMusic) {
             saveData.settings.musicEnabled = !saveData.settings.musicEnabled;
-            saveProblem = !persistSave(progress, saveData, saveMessage);
-        } else if (input.pressed(KEY_L)) {
-            saveData.settings.stereoEnabled = !saveData.settings.stereoEnabled;
             saveProblem = !persistSave(progress, saveData, saveMessage);
         } else if (input.pressed(KEY_R)) {
             saveData.settings.maximum3DDepthPercent =
@@ -201,6 +210,13 @@ std::size_t selectCampaignMission(UiRenderer& uiRenderer, CampaignProgress& prog
         }
 
         const std::size_t selectableCount = progress.unlockedCount();
+        if (touch >= TouchUiAction::CampaignRow0 && touch <= TouchUiAction::CampaignRow5) {
+            const std::size_t first = selected < 6U ? 0U : std::min(selected - 5U, kCampaignMissionCount - 6U);
+            const std::size_t row = static_cast<std::size_t>(touch) -
+                static_cast<std::size_t>(TouchUiAction::CampaignRow0);
+            const std::size_t candidate = first + row;
+            if (candidate < selectableCount) selected = candidate;
+        }
         if (input.pressed(KEY_DUP) || input.pressed(KEY_DLEFT)) {
             selected = selected == 0U ? selectableCount - 1U : selected - 1U;
         }
@@ -209,7 +225,7 @@ std::size_t selectCampaignMission(UiRenderer& uiRenderer, CampaignProgress& prog
         }
 
         uiRenderer.renderStandalone(campaignUiState(progress, saveData, selected, saveProblem, saveMessage));
-        if (input.pressed(KEY_A)) return selected;
+        if (input.pressed(KEY_A) || touch == TouchUiAction::CampaignPlay) return selected;
     }
     return kExitCampaignSelection;
 }
@@ -220,6 +236,7 @@ void applyTouchAction(TouchUiAction action, BuildSystem& buildSystem, TutorialFl
         case TouchUiAction::SelectBallista: buildSystem.selectTowerType(TowerType::Ballista); break;
         case TouchUiAction::SelectMortar: buildSystem.selectTowerType(TowerType::Mortar); break;
         case TouchUiAction::SelectFrost: buildSystem.selectTowerType(TowerType::Frost); break;
+        case TouchUiAction::SelectRocket: buildSystem.selectTowerType(TowerType::Rocket); break;
         case TouchUiAction::BuildOrSelect:
             buildSystem.buildOrSelectCursor();
             if (soundEnabled) audioSystem.play(cueForBuildResult(buildSystem.lastBuildResult()));
@@ -239,11 +256,65 @@ void applyTouchAction(TouchUiAction action, BuildSystem& buildSystem, TutorialFl
     }
 }
 
+bool configureBenchmark(UiRenderer& uiRenderer, BenchmarkConfig& config) {
+    InputSystem inputSystem;
+    TouchGesture touchGesture;
+    std::size_t selected = 0U;
+    while (aptMainLoop()) {
+        const InputSnapshot input = inputSystem.poll();
+        const TouchGestureResult gesture = touchGesture.update(input.touching(),
+            static_cast<std::int16_t>(input.touch.px), static_cast<std::int16_t>(input.touch.py));
+        const TouchUiAction touch = gesture.tapped
+            ? TouchUiLayout::benchmarkActionAt(gesture.endX, gesture.endY) : TouchUiAction::None;
+        if (input.pressed(KEY_B) || touch == TouchUiAction::BenchmarkBack) return false;
+        if (input.pressed(KEY_A) || touch == TouchUiAction::BenchmarkStart) return true;
+        if (input.pressed(KEY_DUP)) selected = selected == 0U ? 6U : selected - 1U;
+        if (input.pressed(KEY_DDOWN)) selected = (selected + 1U) % 7U;
+        if (input.pressed(KEY_DLEFT)) config = BenchmarkProfiles::adjusted(
+            config, static_cast<BenchmarkSetting>(selected), -1);
+        if (input.pressed(KEY_DRIGHT)) config = BenchmarkProfiles::adjusted(
+            config, static_cast<BenchmarkSetting>(selected), 1);
+
+        const std::array<std::pair<TouchUiAction, BenchmarkSetting>, 12U> adjustments{{
+            {TouchUiAction::BenchmarkMapDown, BenchmarkSetting::MapSize},
+            {TouchUiAction::BenchmarkMapUp, BenchmarkSetting::MapSize},
+            {TouchUiAction::BenchmarkEnemiesDown, BenchmarkSetting::Enemies},
+            {TouchUiAction::BenchmarkEnemiesUp, BenchmarkSetting::Enemies},
+            {TouchUiAction::BenchmarkTowersDown, BenchmarkSetting::Towers},
+            {TouchUiAction::BenchmarkTowersUp, BenchmarkSetting::Towers},
+            {TouchUiAction::BenchmarkProjectilesDown, BenchmarkSetting::Projectiles},
+            {TouchUiAction::BenchmarkProjectilesUp, BenchmarkSetting::Projectiles},
+            {TouchUiAction::BenchmarkDecorationsDown, BenchmarkSetting::Decorations},
+            {TouchUiAction::BenchmarkDecorationsUp, BenchmarkSetting::Decorations},
+            {TouchUiAction::BenchmarkRocketsDown, BenchmarkSetting::RocketShare},
+            {TouchUiAction::BenchmarkRocketsUp, BenchmarkSetting::RocketShare},
+        }};
+        for (std::size_t index = 0U; index < adjustments.size(); ++index) {
+            if (touch != adjustments[index].first) continue;
+            config = BenchmarkProfiles::adjusted(config, adjustments[index].second,
+                index % 2U == 0U ? -1 : 1);
+        }
+        if (touch == TouchUiAction::BenchmarkAutomatic) {
+            config = BenchmarkProfiles::adjusted(config, BenchmarkSetting::AutomaticRamp, 1);
+        }
+
+        UiState state{};
+        state.screen = UiScreen::BenchmarkConfig;
+        state.title = "LABORATORIUM WYDAJNOSCI";
+        state.objective = "Ustaw obciazenie, potem uruchom deterministyczny pomiar 12 s.";
+        state.benchmark = config;
+        state.selectedMission = selected;
+        uiRenderer.renderStandalone(state);
+    }
+    return false;
+}
+
 UiState missionUiState(const CampaignMission& mission, const Wave& wave,
     const BuildSystem& buildSystem, const TutorialFlow& tutorialFlow,
     const AudioSystem& audioSystem, const Renderer& renderer, const GameSettings& settings,
     const PerformanceSnapshot& performance, HudMode hudMode, bool paused, int speedMultiplier,
-    const MissionResult& missionResult, bool recordsCampaignProgress) {
+    const MissionResult& missionResult, bool recordsCampaignProgress, bool sessionFinished,
+    const BenchmarkConfig* benchmarkConfig) {
     UiState state{};
     state.screen = UiScreen::Mission;
     state.title = mission.title;
@@ -251,30 +322,37 @@ UiState missionUiState(const CampaignMission& mission, const Wave& wave,
     state.gold = buildSystem.gold();
     state.baseHealth = wave.baseHealth();
     state.spawnedEnemies = wave.spawnedCount();
+    state.activeEnemies = wave.activeCount();
     state.totalEnemies = wave.enemyCount();
     state.selectedTower = buildSystem.selectedTowerType();
     state.selectedTowerName = buildSystem.selectedTowerName();
     state.towerCost = buildSystem.towerCost();
     state.towerCount = buildSystem.towerCount();
+    state.activeProjectiles = buildSystem.projectiles().activeCount();
     state.cursorX = buildSystem.cursorX();
     state.cursorZ = buildSystem.cursorZ();
     state.cursorOccupied = buildSystem.cursorOccupied();
     state.tutorialPhase = tutorialFlow.phase();
-    state.instruction = tutorialInstruction(tutorialFlow.phase());
+    state.instruction = benchmarkConfig != nullptr ? "Pomiar automatyczny: SELECT pokazuje diagnostyke" :
+        tutorialInstruction(tutorialFlow.phase());
     state.paused = paused;
     state.speedMultiplier = speedMultiplier;
     state.diagnosticsVisible = showAudioDiagnostics(hudMode);
-    state.missionFinished = tutorialFlow.finished();
+    state.missionFinished = sessionFinished;
     state.recordsCampaignProgress = recordsCampaignProgress;
     state.resultStars = missionResult.stars;
     state.soundEnabled = settings.soundEnabled;
     state.musicEnabled = settings.musicEnabled;
-    state.stereoEnabled = settings.stereoEnabled;
     state.maximum3DDepthPercent = settings.maximum3DDepthPercent;
     state.performance = performance;
     state.stereoEyeCount = renderer.lastEyeCount();
     state.stereoSlider = renderer.lastStereoSlider();
     state.stereoSeparation = renderer.lastStereoSeparation();
+    if (benchmarkConfig != nullptr) {
+        state.benchmarkMode = true;
+        state.benchmark = *benchmarkConfig;
+        state.benchmarkVerdict = BenchmarkProfiles::verdict(performance);
+    }
 
     const Tower* tower = buildSystem.cursorTower();
     if (tower != nullptr) {
@@ -282,8 +360,9 @@ UiState missionUiState(const CampaignMission& mission, const Wave& wave,
         state.cursorTowerUpgradeCost = tower->upgradeCost();
         state.cursorTowerSellValue = tower->sellValue();
         state.statusMessage = towerName(tower->type());
-    } else if (tutorialFlow.finished()) {
-        state.statusMessage = recordsCampaignProgress ? "X kampania, Y powtorz" : "Test zakonczony bez zapisu";
+    } else if (sessionFinished) {
+        state.statusMessage = benchmarkConfig != nullptr ? BenchmarkProfiles::verdictName(state.benchmarkVerdict) :
+            (recordsCampaignProgress ? "X kampania, Y powtorz" : "Test zakonczony bez zapisu");
     } else {
         state.statusMessage = buildAttemptMessage(buildSystem.lastBuildResult());
     }
@@ -309,20 +388,27 @@ UiState missionUiState(const CampaignMission& mission, const Wave& wave,
 MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& mission,
     std::size_t missionIndex, bool recordsCampaignProgress, CampaignProgress& progress,
     SaveData& saveData, bool& saveProblem, std::string& saveMessage,
-    const MissionNarrative* narrative) {
+    const MissionNarrative* narrative, const BenchmarkConfig* benchmarkConfig) {
     UiState loading{};
     loading.screen = UiScreen::Loading;
     loading.title = mission.title;
     uiRenderer.renderStandalone(loading);
 
-    const LevelLoadResult levelResult = LevelLoader::loadFromRomFs(mission.levelPath);
+    LevelLoadResult levelResult{};
+    if (benchmarkConfig != nullptr) {
+        levelResult.success = true;
+        levelResult.level = BenchmarkProfiles::makeLevel(*benchmarkConfig);
+    } else {
+        levelResult = LevelLoader::loadFromRomFs(mission.levelPath);
+    }
     if (!levelResult.success) {
         saveMessage = "BLAD POZIOMU: " + levelResult.error;
         return MissionSessionAction::ReturnToCampaign;
     }
 
     Renderer renderer;
-    if (!renderer.initialize(levelResult.level)) {
+    if (!renderer.initialize(levelResult.level,
+        benchmarkConfig != nullptr ? benchmarkConfig->decorations : 0U)) {
         saveMessage = "BLAD GRAFIKI: brak pamieci.";
         return MissionSessionAction::ReturnToCampaign;
     }
@@ -332,21 +418,24 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
     Camera camera;
     Wave wave(levelResult.level);
     BuildSystem buildSystem(levelResult.level);
+    if (benchmarkConfig != nullptr) {
+        buildSystem.prepareBenchmarkLayout(benchmarkConfig->towers,
+            benchmarkConfig->rocketSharePercent);
+        buildSystem.setProjectileLimit(benchmarkConfig->projectiles);
+    }
     TutorialFlow tutorialFlow;
+    if (benchmarkConfig != nullptr) (void)tutorialFlow.requestWaveStart(buildSystem.towerCount());
     AudioSystem audioSystem;
     (void)audioSystem.initialize();
     AudioEventRouter audioRouter;
-    audioRouter.reset({
-        tutorialFlow.phase(),
-        buildSystem.projectiles().shotEventCount(),
-        buildSystem.projectiles().impactEventCount(),
-        wave.deathEventCount(),
-        wave.baseDamageEventCount(),
-    });
+    audioRouter.reset({tutorialFlow.phase(), buildSystem.projectiles().shotEventCount(),
+        buildSystem.projectiles().impactEventCount(), wave.deathEventCount(), wave.baseDamageEventCount()});
     PerformanceSampler performanceSampler;
     PerformanceSnapshot performanceSnapshot{};
 
     float simulationAccumulator = 0.0F;
+    float benchmarkElapsed = 0.0F;
+    float benchmarkResultElapsed = 0.0F;
     u64 previousMilliseconds = osGetTime();
     bool paused = false;
     int speedMultiplier = 1;
@@ -359,26 +448,36 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
         const u64 frameStartMilliseconds = osGetTime();
         const InputSnapshot input = inputSystem.poll();
         if (input.pressed(KEY_START)) { action = MissionSessionAction::ExitApplication; break; }
-        if (tutorialFlow.finished()) {
-            if (input.pressed(KEY_X)) { action = MissionSessionAction::ReturnToCampaign; break; }
-            if (input.pressed(KEY_Y)) { action = MissionSessionAction::Replay; break; }
+        const bool benchmarkFinished = benchmarkConfig != nullptr && benchmarkElapsed >= 12.0F;
+        const bool sessionFinished = benchmarkFinished || tutorialFlow.finished();
+
+        const TouchGestureResult gesture = touchGesture.update(input.touching(),
+            static_cast<std::int16_t>(input.touch.px), static_cast<std::int16_t>(input.touch.py));
+        const TouchUiAction touch = gesture.tapped ? (sessionFinished
+            ? TouchUiLayout::resultActionAt(gesture.endX, gesture.endY)
+            : TouchUiLayout::actionAt(gesture.endX, gesture.endY)) : TouchUiAction::None;
+        if (sessionFinished) {
+            if (input.pressed(KEY_X) || touch == TouchUiAction::ResultCampaign) {
+                action = MissionSessionAction::ReturnToCampaign; break;
+            }
+            if (input.pressed(KEY_Y) || touch == TouchUiAction::ResultReplay) {
+                action = MissionSessionAction::Replay; break;
+            }
         }
 
         const HudMode hudMode = hudModeForSelectHeld(input.isHeld(KEY_SELECT));
         if (saveData.settings.soundEnabled && allowDiagnosticTone(hudMode, input.pressed(KEY_B))) {
             audioSystem.playDiagnosticTone();
         }
-        const TouchGestureResult gesture = touchGesture.update(input.touching(),
-            static_cast<std::int16_t>(input.touch.px), static_cast<std::int16_t>(input.touch.py));
-        if (gesture.tapped && !tutorialFlow.finished()) {
-            applyTouchAction(TouchUiLayout::actionAt(gesture.endX, gesture.endY), buildSystem,
-                tutorialFlow, audioSystem, saveData.settings.soundEnabled, paused, speedMultiplier);
+        if (gesture.tapped && !sessionFinished) {
+            applyTouchAction(touch, buildSystem, tutorialFlow, audioSystem,
+                saveData.settings.soundEnabled, paused, speedMultiplier);
         }
-        if (!tutorialFlow.finished() && input.pressed(KEY_X)) {
+        if (!sessionFinished && benchmarkConfig == nullptr && input.pressed(KEY_X)) {
             if (tutorialFlow.waveRunning()) paused = !paused;
             else { (void)tutorialFlow.requestWaveStart(buildSystem.towerCount()); paused = false; }
         }
-        if (!tutorialFlow.finished() && input.pressed(KEY_L) && input.pressed(KEY_R)) {
+        if (!sessionFinished && input.pressed(KEY_L) && input.pressed(KEY_R)) {
             speedMultiplier = speedMultiplier == 1 ? 2 : 1;
         }
 
@@ -386,16 +485,17 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
         const float frameSeconds = calculateFrameSeconds(nowMilliseconds, previousMilliseconds);
         previousMilliseconds = nowMilliseconds;
         camera.update(input, frameSeconds);
-        if (!tutorialFlow.finished()) {
+        if (!sessionFinished && benchmarkConfig == nullptr) {
             buildSystem.handleInput(input);
             if (saveData.settings.soundEnabled && input.pressed(KEY_A)) {
                 audioSystem.play(cueForBuildResult(buildSystem.lastBuildResult()));
             }
         }
         tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost());
-        if (!paused) {
+        if (!paused && !sessionFinished) {
             simulationAccumulator = std::min(simulationAccumulator + frameSeconds * speedMultiplier,
                 kMaximumAccumulatorSeconds);
+            if (benchmarkConfig != nullptr) benchmarkElapsed += frameSeconds;
         }
         while (simulationAccumulator >= kFixedStepSeconds) {
             if (tutorialFlow.waveRunning()) {
@@ -406,7 +506,7 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
             simulationAccumulator -= kFixedStepSeconds;
         }
 
-        if (tutorialFlow.finished() && !resultRecorded) {
+        if (tutorialFlow.finished() && benchmarkConfig == nullptr && !resultRecorded) {
             if (recordsCampaignProgress && tutorialFlow.phase() == TutorialPhase::Victory) {
                 missionResult = progress.complete(missionIndex, wave.baseHealth(), buildSystem.towerCount());
                 saveProblem = !persistSave(progress, saveData, saveMessage);
@@ -419,28 +519,29 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
             resultNarrativeShown = true;
             previousMilliseconds = osGetTime();
         }
+        if (benchmarkFinished && benchmarkConfig->automaticRamp) {
+            benchmarkResultElapsed += frameSeconds;
+            if (benchmarkResultElapsed >= 2.0F && !BenchmarkProfiles::maximumReached(*benchmarkConfig)) {
+                action = MissionSessionAction::AdvanceBenchmark;
+                break;
+            }
+        }
 
-        const AudioFrameState audioState{
-            tutorialFlow.phase(),
-            buildSystem.projectiles().shotEventCount(),
-            buildSystem.projectiles().impactEventCount(),
-            wave.deathEventCount(),
-            wave.baseDamageEventCount(),
-        };
+        const AudioFrameState audioState{tutorialFlow.phase(),
+            buildSystem.projectiles().shotEventCount(), buildSystem.projectiles().impactEventCount(),
+            wave.deathEventCount(), wave.baseDamageEventCount()};
         audioSystem.updateMusic(tutorialFlow.phase(), saveData.settings.musicEnabled, frameSeconds);
         if (saveData.settings.soundEnabled) audioSystem.playMask(audioRouter.update(audioState, frameSeconds));
         audioSystem.updateProbe();
 
         UiState uiState = missionUiState(mission, wave, buildSystem, tutorialFlow, audioSystem,
             renderer, saveData.settings, performanceSnapshot, hudMode, paused, speedMultiplier,
-            missionResult, recordsCampaignProgress);
+            missionResult, recordsCampaignProgress, sessionFinished, benchmarkConfig);
         const u64 renderStartMilliseconds = osGetTime();
         renderer.render(camera, wave, buildSystem, tutorialFlow,
-            saveData.settings.stereoEnabled, saveData.settings.maximum3DDepthPercent,
-            uiRenderer, uiState);
+            saveData.settings.maximum3DDepthPercent, uiRenderer, uiState);
         const u64 frameEndMilliseconds = osGetTime();
-        performanceSampler.record(
-            elapsedMilliseconds(frameStartMilliseconds, frameEndMilliseconds),
+        performanceSampler.record(elapsedMilliseconds(frameStartMilliseconds, frameEndMilliseconds),
             elapsedMilliseconds(renderStartMilliseconds, frameEndMilliseconds),
             static_cast<std::size_t>(linearSpaceFree()));
         performanceSnapshot = performanceSampler.snapshot();
@@ -520,6 +621,9 @@ int main() {
         if (selectedMission == kExitCampaignSelection) break;
 
         const bool stressTest = selectedMission == kPerformanceStressSelection;
+        BenchmarkConfig benchmarkConfig = BenchmarkProfiles::kBalanced;
+        if (stressTest && !configureBenchmark(uiRenderer, benchmarkConfig)) continue;
+        if (stressTest && benchmarkConfig.automaticRamp) benchmarkConfig = BenchmarkProfiles::kAutomatic;
         const CampaignMission& mission = stressTest ? kPerformanceStressMission : CampaignCatalog::mission(selectedMission);
         const std::size_t progressMissionIndex = stressTest ? 0U : selectedMission;
 
@@ -539,8 +643,14 @@ int main() {
         while (aptMainLoop() && replay) {
             const MissionSessionAction action = runMission(uiRenderer, mission, progressMissionIndex,
                 !stressTest, progress, saveData, saveProblem, saveMessage,
-                narrative.success ? &narrative.narrative : nullptr);
-            replay = action == MissionSessionAction::Replay;
+                narrative.success ? &narrative.narrative : nullptr,
+                stressTest ? &benchmarkConfig : nullptr);
+            if (action == MissionSessionAction::AdvanceBenchmark) {
+                benchmarkConfig = BenchmarkProfiles::nextAutomaticStage(benchmarkConfig);
+                replay = true;
+            } else {
+                replay = action == MissionSessionAction::Replay;
+            }
             if (action == MissionSessionAction::ExitApplication) { exitApplication = true; break; }
         }
     }
