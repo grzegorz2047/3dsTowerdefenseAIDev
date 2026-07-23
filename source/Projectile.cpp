@@ -30,18 +30,18 @@ void Projectile::launch(float startX, float startY, float startZ, std::size_t ta
     launch(startX, startY, startZ, targetIndex, {ProjectileEffect::Direct, damage, 0.0F, 0.0F, 1.0F});
 }
 
-void Projectile::update(float deltaSeconds, Wave& wave) {
-    if (!active_ || deltaSeconds <= 0.0F || targetIndex_ >= wave.spawnedCount()) {
-        if (targetIndex_ >= wave.spawnedCount()) {
-            active_ = false;
-        }
-        return;
+ProjectileUpdateResult Projectile::update(float deltaSeconds, Wave& wave) {
+    if (!active_) return ProjectileUpdateResult::None;
+    if (deltaSeconds <= 0.0F) return ProjectileUpdateResult::None;
+    if (targetIndex_ >= wave.spawnedCount()) {
+        active_ = false;
+        return ProjectileUpdateResult::Cancelled;
     }
 
     Enemy& target = wave.enemyAt(targetIndex_);
     if (target.dead() || target.reachedBase()) {
         active_ = false;
-        return;
+        return ProjectileUpdateResult::Cancelled;
     }
 
     const float dx = target.x() - x_;
@@ -51,7 +51,7 @@ void Projectile::update(float deltaSeconds, Wave& wave) {
     if (distanceSquared <= kImpactRadiusSquared) {
         resolveImpact(wave, target);
         active_ = false;
-        return;
+        return ProjectileUpdateResult::Impact;
     }
 
     const float distance = std::sqrt(distanceSquared);
@@ -64,7 +64,9 @@ void Projectile::update(float deltaSeconds, Wave& wave) {
     if (travel >= distance) {
         resolveImpact(wave, target);
         active_ = false;
+        return ProjectileUpdateResult::Impact;
     }
+    return ProjectileUpdateResult::None;
 }
 
 void Projectile::resolveImpact(Wave& wave, Enemy& target) {
@@ -107,6 +109,7 @@ bool ProjectilePool::launch(
     for (Projectile& projectile : projectiles_) {
         if (!projectile.active()) {
             projectile.launch(startX, startY, startZ, targetIndex, payload);
+            ++shotEventCount_;
             return true;
         }
     }
@@ -119,25 +122,28 @@ bool ProjectilePool::launch(float startX, float startY, float startZ, std::size_
 
 void ProjectilePool::update(float deltaSeconds, Wave& wave) {
     for (Projectile& projectile : projectiles_) {
-        projectile.update(deltaSeconds, wave);
+        if (projectile.update(deltaSeconds, wave) == ProjectileUpdateResult::Impact) {
+            ++impactEventCount_;
+        }
     }
 }
 
 void ProjectilePool::reset() {
-    for (Projectile& projectile : projectiles_) {
-        projectile.reset();
-    }
+    for (Projectile& projectile : projectiles_) projectile.reset();
+    shotEventCount_ = 0U;
+    impactEventCount_ = 0U;
 }
 
 std::size_t ProjectilePool::activeCount() const {
     std::size_t count = 0;
     for (const Projectile& projectile : projectiles_) {
-        if (projectile.active()) {
-            ++count;
-        }
+        if (projectile.active()) ++count;
     }
     return count;
 }
+
+std::uint32_t ProjectilePool::shotEventCount() const { return shotEventCount_; }
+std::uint32_t ProjectilePool::impactEventCount() const { return impactEventCount_; }
 
 const Projectile& ProjectilePool::projectileAt(std::size_t index) const {
     return projectiles_.at(index);
