@@ -69,7 +69,7 @@ private:
 
 class ProjectilePool {
 public:
-    static constexpr std::size_t kCapacity = 32;
+    static constexpr std::size_t kCapacity = 48U;
 
     [[nodiscard]] bool launch(
         float startX,
