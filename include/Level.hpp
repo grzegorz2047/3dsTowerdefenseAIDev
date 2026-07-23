@@ -5,11 +5,11 @@
 #include <cstdint>
 #include <string>
 
-constexpr std::size_t kMaximumMapWidth = 16;
-constexpr std::size_t kMaximumMapHeight = 16;
-constexpr std::size_t kMaximumPathPoints = 64;
+constexpr std::size_t kMaximumMapWidth = 24;
+constexpr std::size_t kMaximumMapHeight = 24;
+constexpr std::size_t kMaximumPathPoints = 96;
 constexpr std::size_t kMaximumWaveEntries = 8;
-constexpr std::size_t kMaximumWaveEnemies = 16;
+constexpr std::size_t kMaximumWaveEnemies = 48;
 
 enum class TileType : std::uint8_t {
     Ground,
@@ -48,6 +48,8 @@ struct LevelData {
     std::array<WaveEntry, kMaximumWaveEntries> waveEntries{};
     std::size_t waveEntryCount = 0;
     std::size_t totalEnemyCount = 0;
+    std::uint8_t benchmarkSpawnLanes = 1U;
+    std::int8_t benchmarkLaneSpacing = 0;
 
     [[nodiscard]] TileType tileAt(std::size_t x, std::size_t z) const;
 };
