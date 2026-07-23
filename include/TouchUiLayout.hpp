@@ -7,6 +7,7 @@ enum class TouchUiAction : std::uint8_t {
     SelectBallista,
     SelectMortar,
     SelectFrost,
+    SelectRocket,
     BuildOrSelect,
     Upgrade,
     Sell,
