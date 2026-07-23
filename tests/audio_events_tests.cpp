@@ -22,9 +22,12 @@ bool hasCue(std::uint32_t mask, AudioCue cue) {
 int main() {
     require(cueForBuildResult(BuildAttemptResult::Built) == AudioCue::BuildSuccess, "successful build has success cue");
     require(cueForBuildResult(BuildAttemptResult::Occupied) == AudioCue::BuildFailure, "failed build has failure cue");
-    require(audioPriority(AudioCue::Victory) == AudioPriority::Critical, "victory uses critical priority");
-    require(audioPriority(AudioCue::BaseDamage) == AudioPriority::Critical, "base damage uses protected priority");
-    require(audioPriority(AudioCue::EnemyDeath) == AudioPriority::Combat, "enemy death uses combat priority");
+    require(audioPriority(AudioCue::Victory) == AudioPriority::Critical, "victory uses protected priority");
+    require(audioPriority(AudioCue::Defeat) == AudioPriority::Critical, "defeat uses protected priority");
+    require(audioPriority(AudioCue::BaseDamage) == AudioPriority::Action, "base damage cannot replace mission result");
+    require(audioPriority(AudioCue::EnemyDeath) == AudioPriority::Action, "enemy death has a dedicated action channel");
+    require(audioCooldownSeconds(AudioCue::EnemyDeath) == 0.0F, "death events are never dropped by cooldown");
+    require(audioCooldownSeconds(AudioCue::BaseDamage) == 0.0F, "base events are never dropped by cooldown");
 
     AudioEventRouter router;
     require(router.update({TutorialPhase::BuildFirstTower, 0, 0, 5}) == 0U, "first frame initializes without sound");
@@ -43,14 +46,14 @@ int main() {
     require(hasCue(cues, AudioCue::EnemyDeath), "defeated count increase emits death cue");
 
     cues = router.update({TutorialPhase::WaveRunning, 1, 2, 5}, 0.01F);
-    require(!hasCue(cues, AudioCue::EnemyDeath), "rapid duplicate death is suppressed");
-    cues = router.update({TutorialPhase::WaveRunning, 1, 3, 5}, 0.12F);
-    require(hasCue(cues, AudioCue::EnemyDeath), "death cue returns after cooldown");
+    require(hasCue(cues, AudioCue::EnemyDeath), "consecutive death event is not suppressed");
+    cues = router.update({TutorialPhase::WaveRunning, 1, 3, 5}, 0.01F);
+    require(hasCue(cues, AudioCue::EnemyDeath), "every observed death transition emits a cue");
 
-    cues = router.update({TutorialPhase::WaveRunning, 1, 3, 4}, 0.10F);
-    require(hasCue(cues, AudioCue::BaseDamage), "base health loss emits protected cue");
+    cues = router.update({TutorialPhase::WaveRunning, 1, 3, 4}, 0.01F);
+    require(hasCue(cues, AudioCue::BaseDamage), "base health loss emits a dedicated cue");
     cues = router.update({TutorialPhase::WaveRunning, 1, 3, 3}, 0.01F);
-    require(!hasCue(cues, AudioCue::BaseDamage), "rapid duplicate base hit is suppressed");
+    require(hasCue(cues, AudioCue::BaseDamage), "consecutive base event is not suppressed");
 
     cues = router.update({TutorialPhase::Victory, 0, 3, 3}, 0.20F);
     require(hasCue(cues, AudioCue::Victory), "victory transition emits cue");
