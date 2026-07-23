@@ -168,14 +168,19 @@ grep -q "appendEnemy(vertices)" "$ROOT/source/Renderer.cpp"
 grep -q "appendTower(vertices)" "$ROOT/source/Renderer.cpp"
 grep -q "appendProjectile(vertices)" "$ROOT/source/Renderer.cpp"
 
-# Audio platform, music, cooldown and protected channel contracts.
+# Audio platform, backend fallback, music and protected channel contracts.
 grep -q "0xD880A7FAU" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultSummary(result) == kResultSummaryNotFound" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultModule(result) == kResultModuleDsp" "$ROOT/include/AudioNdspShim.hpp"
 grep -q "resultDescription(result) == kResultDescriptionNotFound" "$ROOT/include/AudioNdspShim.hpp"
-grep -q "kSyntheticHleComponent" "$ROOT/source/AudioSystem.cpp"
-grep -q "ndspUseComponent" "$ROOT/source/AudioSystem.cpp"
-grep -q "std::array<std::uint8_t, 0x400>" "$ROOT/source/AudioSystem.cpp"
+if grep -q "ndspUseComponent(" "$ROOT/source/AudioSystem.cpp"; then
+  echo "Runtime must not inject a synthetic NDSP component" >&2
+  exit 1
+fi
+if grep -q "std::array<std::uint8_t, 0x400>" "$ROOT/source/AudioSystem.cpp"; then
+  echo "Runtime must not carry a zero-filled fake DSP component" >&2
+  exit 1
+fi
 if find "$ROOT" -type f \( -iname 'dspfirm.cdc' -o -iname '*.cdc' \) | grep -q .; then
   echo "Proprietary DSP firmware must not be committed" >&2
   exit 1
@@ -196,6 +201,11 @@ grep -q "frame \* 2U + 1U" "$ROOT/source/AudioSystem.cpp"
 grep -q "ndspChnGetSamplePos" "$ROOT/source/AudioSystem.cpp"
 grep -q "diagnosticWaveBuffer_.status" "$ROOT/source/AudioSystem.cpp"
 grep -q "ndspSetOutputMode(NDSP_OUTPUT_STEREO)" "$ROOT/source/AudioSystem.cpp"
+grep -q "csndInit()" "$ROOT/source/AudioSystem.cpp"
+grep -q "SOUND_ENABLE" "$ROOT/source/AudioSystem.cpp"
+grep -q "SOUND_REPEAT" "$ROOT/source/AudioSystem.cpp"
+grep -q "csndExecCmds(true)" "$ROOT/source/AudioSystem.cpp"
+grep -q "shouldStartMissionMusic" "$ROOT/source/AudioSystem.cpp"
 grep -q "csndPlaySound" "$ROOT/source/AudioSystem.cpp"
 grep -q "dsp::DSP" "$ROOT/config/application.rsf"
 grep -q "dsp: 0x0004013000001a02" "$ROOT/config/application.rsf"
