@@ -328,8 +328,8 @@ void UiRenderer::drawMission(const UiState& state) {
                 state.benchmark.rocketSharePercent, state.stereoSeparation);
             drawText(result, 12.0F, 171.0F, 0.40F, kMuted);
         }
-        drawButton(8.0F, 190.0F, 144.0F, 42.0F, "KAMPANIA", true);
-        drawButton(160.0F, 190.0F, 152.0F, 42.0F, "POWTORZ", false);
+        drawButton(8.0F, 190.0F, 144.0F, 42.0F, "X KAMPANIA", true);
+        drawButton(160.0F, 190.0F, 152.0F, 42.0F, "Y POWTORZ", false);
     } else {
         const TouchRect pause = TouchUiLayout::rectFor(TouchUiAction::TogglePause);
         const TouchRect speed = TouchUiLayout::rectFor(TouchUiAction::ToggleSpeed);
