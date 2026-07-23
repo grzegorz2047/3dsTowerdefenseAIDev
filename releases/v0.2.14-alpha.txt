@@ -1,0 +1,2 @@
+v0.2.14-alpha
+Exact gameplay audio counters are now wired into the runtime router.
