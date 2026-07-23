@@ -65,6 +65,9 @@ std::string payloadFor(const SaveData& data, std::uint32_t version) {
         stream << "stereo=" << (data.settings.stereoEnabled ? 1 : 0) << '\n';
         stream << "stereo_depth=" << static_cast<unsigned int>(data.settings.maximum3DDepthPercent) << '\n';
     }
+    if (version >= 4) {
+        stream << "music=" << (data.settings.musicEnabled ? 1 : 0) << '\n';
+    }
     return stream.str();
 }
 
@@ -127,7 +130,7 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
     data.campaign.unlockedCount = static_cast<std::size_t>(unlocked);
     if (!parseArray(values["stars"], data.campaign.bestStars)) return corrupt("Nieprawidlowe gwiazdki");
 
-    bool migrated = version < kCurrentSaveVersion;
+    const bool migrated = version < kCurrentSaveVersion;
     if (version >= 2) {
         if (!parseArray(values["base_health"], data.campaign.bestBaseHealth) ||
             !parseArray(values["fewest_towers"], data.campaign.fewestTowers)) {
@@ -151,6 +154,15 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
         }
         data.settings.stereoEnabled = stereo == 1;
         data.settings.maximum3DDepthPercent = static_cast<std::uint8_t>(depth);
+    }
+    if (version >= 4) {
+        unsigned long music = 0;
+        if (!parseUnsigned(values["music"], music) || music > 1) {
+            return corrupt("Nieprawidlowe ustawienie muzyki");
+        }
+        data.settings.musicEnabled = music == 1;
+    } else {
+        data.settings.musicEnabled = true;
     }
 
     CampaignProgress validator;

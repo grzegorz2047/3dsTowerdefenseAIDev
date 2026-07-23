@@ -51,6 +51,7 @@ struct UiState {
     bool saveProblem = false;
 
     bool soundEnabled = true;
+    bool musicEnabled = true;
     bool stereoEnabled = true;
     std::uint8_t maximum3DDepthPercent = 0U;
 

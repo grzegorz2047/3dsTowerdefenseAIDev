@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <string_view>
@@ -25,6 +26,35 @@ int main() {
     expect(std::string_view(audioBackendName(AudioBackend::Ndsp)) == "NDSP", "NDSP name must be stable");
     expect(std::string_view(audioBackendName(AudioBackend::Csnd)) == "CSND", "CSND name must be stable");
     expect(std::string_view(audioBackendName(AudioBackend::None)) == "BRAK", "missing backend must be visible");
+
+    expect(musicPhaseFor(TutorialPhase::BuildFirstTower) == MusicPhase::Preparation,
+        "building uses preparation music");
+    expect(musicPhaseFor(TutorialPhase::ReadyToStart) == MusicPhase::Preparation,
+        "ready state keeps preparation music");
+    expect(musicPhaseFor(TutorialPhase::WaveRunning) == MusicPhase::Combat,
+        "wave uses combat music");
+    expect(musicPhaseFor(TutorialPhase::Victory) == MusicPhase::Silent,
+        "victory fades music for the result cue");
+    expect(musicPhaseFor(TutorialPhase::Defeat) == MusicPhase::Silent,
+        "defeat fades music for the result cue");
+
+    const MusicGainTargets prep = targetMusicGains(MusicPhase::Preparation, true);
+    expect(prep.preparation == 1.0F && prep.combat == 0.0F && prep.ambient == 1.0F,
+        "preparation enables calm music and ambient");
+    const MusicGainTargets combat = targetMusicGains(MusicPhase::Combat, true);
+    expect(combat.preparation == 0.0F && combat.combat == 1.0F && combat.ambient == 1.0F,
+        "combat enables intense music and ambient");
+    const MusicGainTargets muted = targetMusicGains(MusicPhase::Combat, false);
+    expect(muted.preparation == 0.0F && muted.combat == 0.0F && muted.ambient == 0.0F,
+        "music mute does not depend on SFX state");
+
+    float gain = 0.0F;
+    gain = approachMusicGain(gain, 1.0F, 0.225F);
+    expect(std::fabs(gain - 0.5F) < 0.0001F, "half fade duration reaches half gain");
+    gain = approachMusicGain(gain, 1.0F, 0.225F);
+    expect(std::fabs(gain - 1.0F) < 0.0001F, "full fade duration reaches target gain");
+    gain = approachMusicGain(gain, 0.0F, 0.45F);
+    expect(std::fabs(gain) < 0.0001F, "fade out reaches silence without overshoot");
 
     expect(shouldStartMissionMusic(AudioBackend::Ndsp, false, true), "NDSP should start available mission music");
     expect(shouldStartMissionMusic(AudioBackend::Csnd, false, true), "CSND fallback should start available mission music");

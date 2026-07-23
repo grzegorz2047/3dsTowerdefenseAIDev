@@ -6,12 +6,13 @@
 #include <cstring>
 
 #include "AudioChannelPool.hpp"
-#include "AudioMusicPolicy.hpp"
 
 namespace {
 
 constexpr float kPi = 3.14159265358979323846F;
-bool gMissionMusicPlaying = false;
+constexpr float kPreparationVolume = 0.20F;
+constexpr float kCombatVolume = 0.24F;
+constexpr float kAmbientVolume = 0.055F;
 
 struct CueShape {
     float durationSeconds;
@@ -41,6 +42,13 @@ float noteFrequency(int semitoneFromA4) {
     return 440.0F * std::pow(2.0F, static_cast<float>(semitoneFromA4) / 12.0F);
 }
 
+void setNdspMonoMix(int channel, float volume) {
+    float mix[12]{};
+    mix[0] = volume;
+    mix[1] = volume;
+    ndspChnSetMix(channel, mix);
+}
+
 }  // namespace
 
 AudioSystem::~AudioSystem() { shutdown(); }
@@ -64,11 +72,10 @@ bool AudioSystem::initialize() {
     }
 
     if (backend_ == AudioBackend::None) return false;
-    if (!generateSamples() || !generateDiagnosticTone() || !generateMissionMusic()) {
+    if (!generateSamples() || !generateDiagnosticTone() || !generateMusicLayers()) {
         shutdown();
         return false;
     }
-    gMissionMusicPlaying = false;
     return true;
 }
 
@@ -88,20 +95,16 @@ void AudioSystem::initializeNdspChannels() {
         ndspChnSetInterp(channel, NDSP_INTERP_LINEAR);
         ndspChnSetRate(channel, static_cast<float>(kSampleRate));
         ndspChnSetFormat(channel, NDSP_FORMAT_MONO_PCM16);
-        float mix[12]{};
-        mix[0] = 0.82F;
-        mix[1] = 0.82F;
-        ndspChnSetMix(channel, mix);
+        setNdspMonoMix(channel, 0.82F);
     }
 
-    ndspChnReset(kMusicChannel);
-    ndspChnSetInterp(kMusicChannel, NDSP_INTERP_LINEAR);
-    ndspChnSetRate(kMusicChannel, static_cast<float>(kSampleRate));
-    ndspChnSetFormat(kMusicChannel, NDSP_FORMAT_MONO_PCM16);
-    float musicMix[12]{};
-    musicMix[0] = 0.24F;
-    musicMix[1] = 0.24F;
-    ndspChnSetMix(kMusicChannel, musicMix);
+    for (int channel : {kPreparationMusicChannel, kCombatMusicChannel, kAmbientChannel}) {
+        ndspChnReset(channel);
+        ndspChnSetInterp(channel, NDSP_INTERP_LINEAR);
+        ndspChnSetRate(channel, static_cast<float>(kSampleRate));
+        ndspChnSetFormat(channel, NDSP_FORMAT_MONO_PCM16);
+        setNdspMonoMix(channel, 0.0F);
+    }
 }
 
 void AudioSystem::play(AudioCue cue) {
@@ -128,53 +131,87 @@ void AudioSystem::playDiagnosticTone() {
     if (backend_ == AudioBackend::Csnd) play(AudioCue::BuildSuccess);
 }
 
-void AudioSystem::startMissionMusic() {
-    if (!shouldStartMissionMusic(
-            backend_, gMissionMusicPlaying,
-            missionMusic_.data != nullptr && missionMusic_.count != 0U)) {
-        return;
+void AudioSystem::startMusicLayers() {
+    if (musicLayersStarted_ || backend_ == AudioBackend::None) return;
+    const std::array<Sample*, 3U> samples{&preparationMusic_, &combatMusic_, &ambient_};
+    const std::array<int, 3U> channels{kPreparationMusicChannel, kCombatMusicChannel, kAmbientChannel};
+    for (std::size_t index = 0; index < samples.size(); ++index) {
+        const Sample& sample = *samples[index];
+        if (sample.data == nullptr || sample.count == 0U) return;
+        if (backend_ == AudioBackend::Ndsp) {
+            ndspWaveBuf& buffer = musicWaveBuffers_[index];
+            std::memset(&buffer, 0, sizeof(buffer));
+            buffer.data_vaddr = sample.data;
+            buffer.nsamples = static_cast<u32>(sample.count);
+            buffer.looping = true;
+            ndspChnWaveBufAdd(channels[index], &buffer);
+        } else {
+            const u32 byteCount = static_cast<u32>(sample.count * sizeof(std::int16_t));
+            const Result flushResult = CSND_FlushDataCache(sample.data, byteCount);
+            if (R_FAILED(flushResult)) {
+                lastPlayResult_ = flushResult;
+                return;
+            }
+            lastPlayResult_ = csndPlaySound(
+                channels[index],
+                SOUND_ENABLE | SOUND_REPEAT | SOUND_FORMAT_16BIT | SOUND_LINEAR_INTERP,
+                static_cast<u32>(kSampleRate),
+                0.0F,
+                0.0F,
+                sample.data,
+                sample.data,
+                byteCount);
+            if (R_FAILED(lastPlayResult_)) return;
+        }
     }
+    if (backend_ == AudioBackend::Csnd) lastPlayResult_ = csndExecCmds(true);
+    musicLayersStarted_ = R_SUCCEEDED(lastPlayResult_) || backend_ == AudioBackend::Ndsp;
+}
 
+void AudioSystem::applyMusicMix() {
+    const float prep = preparationGain_ * kPreparationVolume;
+    const float combat = combatGain_ * kCombatVolume;
+    const float ambient = ambientGain_ * kAmbientVolume;
     if (backend_ == AudioBackend::Ndsp) {
-        ndspChnWaveBufClear(kMusicChannel);
-        std::memset(&musicWaveBuffer_, 0, sizeof(musicWaveBuffer_));
-        musicWaveBuffer_.data_vaddr = missionMusic_.data;
-        musicWaveBuffer_.nsamples = static_cast<u32>(missionMusic_.count);
-        musicWaveBuffer_.looping = true;
-        ndspChnWaveBufAdd(kMusicChannel, &musicWaveBuffer_);
-        gMissionMusicPlaying = true;
-        return;
+        setNdspMonoMix(kPreparationMusicChannel, prep);
+        setNdspMonoMix(kCombatMusicChannel, combat);
+        setNdspMonoMix(kAmbientChannel, ambient);
+    } else if (backend_ == AudioBackend::Csnd && musicLayersStarted_) {
+        CSND_SetVol(kPreparationMusicChannel, CSND_VOL(prep, 0.0F), 0U);
+        CSND_SetVol(kCombatMusicChannel, CSND_VOL(combat, 0.0F), 0U);
+        CSND_SetVol(kAmbientChannel, CSND_VOL(ambient, 0.0F), 0U);
+        lastPlayResult_ = csndExecCmds(true);
     }
+}
 
-    const u32 byteCount = static_cast<u32>(missionMusic_.count * sizeof(std::int16_t));
-    const Result flushResult = CSND_FlushDataCache(missionMusic_.data, byteCount);
-    if (R_FAILED(flushResult)) {
-        lastPlayResult_ = flushResult;
-        return;
-    }
-    lastPlayResult_ = csndPlaySound(
-        kMusicChannel,
-        SOUND_ENABLE | SOUND_REPEAT | SOUND_FORMAT_16BIT | SOUND_LINEAR_INTERP,
-        static_cast<u32>(kSampleRate),
-        0.24F,
-        0.0F,
-        missionMusic_.data,
-        missionMusic_.data,
-        byteCount);
-    if (R_SUCCEEDED(lastPlayResult_)) lastPlayResult_ = csndExecCmds(true);
-    gMissionMusicPlaying = R_SUCCEEDED(lastPlayResult_);
+void AudioSystem::updateMusic(TutorialPhase phase, bool enabled, float deltaSeconds) {
+    musicPhase_ = musicPhaseFor(phase);
+    if (enabled) startMusicLayers();
+    const MusicGainTargets targets = targetMusicGains(musicPhase_, enabled && musicLayersStarted_);
+    preparationGain_ = approachMusicGain(preparationGain_, targets.preparation, deltaSeconds);
+    combatGain_ = approachMusicGain(combatGain_, targets.combat, deltaSeconds);
+    ambientGain_ = approachMusicGain(ambientGain_, targets.ambient, deltaSeconds);
+    applyMusicMix();
 }
 
 void AudioSystem::stopMusic() {
-    if (!gMissionMusicPlaying) return;
+    if (!musicLayersStarted_) return;
     if (backend_ == AudioBackend::Ndsp) {
-        ndspChnWaveBufClear(kMusicChannel);
-        musicWaveBuffer_ = {};
+        for (std::size_t index = 0; index < musicWaveBuffers_.size(); ++index) {
+            ndspChnWaveBufClear(kPreparationMusicChannel + static_cast<int>(index));
+            musicWaveBuffers_[index] = {};
+        }
     } else if (backend_ == AudioBackend::Csnd) {
-        CSND_SetPlayStateR(kMusicChannel, 0U);
+        for (int channel : {kPreparationMusicChannel, kCombatMusicChannel, kAmbientChannel}) {
+            CSND_SetPlayStateR(channel, 0U);
+        }
         lastPlayResult_ = csndExecCmds(true);
     }
-    gMissionMusicPlaying = false;
+    musicLayersStarted_ = false;
+    musicPhase_ = MusicPhase::Silent;
+    preparationGain_ = 0.0F;
+    combatGain_ = 0.0F;
+    ambientGain_ = 0.0F;
 }
 
 std::size_t AudioSystem::channelSlotFor(AudioCue cue) {
@@ -223,10 +260,7 @@ void AudioSystem::playSample(AudioCue cue, const Sample& sample) {
 }
 
 void AudioSystem::playMask(std::uint32_t cueMask) {
-    startMissionMusic();
     constexpr std::array<AudioCue, 9U> order{
-        AudioCue::Victory,
-        AudioCue::Defeat,
         AudioCue::BaseDamage,
         AudioCue::WaveStart,
         AudioCue::BuildSuccess,
@@ -234,6 +268,8 @@ void AudioSystem::playMask(std::uint32_t cueMask) {
         AudioCue::EnemyDeath,
         AudioCue::Hit,
         AudioCue::Shot,
+        AudioCue::Victory,
+        AudioCue::Defeat,
     };
     for (AudioCue cue : order) {
         if ((cueMask & audioCueMask(cue)) != 0U) play(cue);
@@ -284,7 +320,6 @@ void AudioSystem::shutdown() {
     else if (backend_ == AudioBackend::Csnd) csndExit();
 
     backend_ = AudioBackend::None;
-    gMissionMusicPlaying = false;
     poolCursors_.fill(0U);
     lastChannel_ = -1;
     ndspResult_ = static_cast<Result>(kAudioResultNotAttempted);
@@ -297,7 +332,7 @@ void AudioSystem::shutdown() {
     probeResult_ = static_cast<Result>(kAudioResultNotAttempted);
     probeState_ = {};
     diagnosticWaveBuffer_ = {};
-    musicWaveBuffer_ = {};
+    musicWaveBuffers_ = {};
     diagnosticSamplePosition_ = 0;
 }
 
@@ -321,6 +356,7 @@ std::uint32_t AudioSystem::diagnosticSamplePosition() const { return diagnosticS
 std::uint32_t AudioSystem::diagnosticSampleCount() const {
     return static_cast<std::uint32_t>(diagnosticTone_.count);
 }
+MusicPhase AudioSystem::musicPhase() const { return musicPhase_; }
 
 bool AudioSystem::generateSamples() {
     for (std::uint8_t value = 0; value < static_cast<std::uint8_t>(AudioCue::Count); ++value) {
@@ -384,16 +420,20 @@ bool AudioSystem::generateDiagnosticTone() {
     return true;
 }
 
-bool AudioSystem::generateMissionMusic() {
-    constexpr float kSecondsPerBeat = 0.40F;
+bool AudioSystem::generateMusicLayer(Sample& destination, bool combat) {
     constexpr std::size_t kBeatCount = 16U;
-    constexpr std::array<int, kBeatCount> melody{
+    constexpr std::array<int, kBeatCount> preparationMelody{
         -12, -7, -5, -7, -12, -7, -3, -7,
         -10, -5, -3, -5, -12, -7, -5, -3,
     };
+    constexpr std::array<int, kBeatCount> combatMelody{
+        -12, -5, 0, -3, -10, -3, 2, -1,
+        -8, -1, 3, 0, -10, -3, 2, 5,
+    };
     constexpr std::array<int, 4U> bass{-24, -22, -20, -19};
+    const float secondsPerBeat = combat ? 0.28F : 0.40F;
     const std::size_t samplesPerBeat = static_cast<std::size_t>(
-        kSecondsPerBeat * static_cast<float>(kSampleRate));
+        secondsPerBeat * static_cast<float>(kSampleRate));
     const std::size_t count = samplesPerBeat * kBeatCount;
     auto* data = static_cast<std::int16_t*>(linearAlloc(count * sizeof(std::int16_t)));
     if (data == nullptr) return false;
@@ -402,26 +442,60 @@ bool AudioSystem::generateMissionMusic() {
     float bassPhase = 0.0F;
     for (std::size_t index = 0; index < count; ++index) {
         const std::size_t beat = index / samplesPerBeat;
-        const float progress = static_cast<float>(index % samplesPerBeat) /
+        const float beatProgress = static_cast<float>(index % samplesPerBeat) /
             static_cast<float>(samplesPerBeat);
-        melodyPhase += 2.0F * kPi * noteFrequency(melody[beat]) /
-            static_cast<float>(kSampleRate);
-        bassPhase += 2.0F * kPi * noteFrequency(bass[beat / 4U]) /
-            static_cast<float>(kSampleRate);
-        const float envelope = std::min(1.0F, progress * 18.0F) *
-            std::min(1.0F, (1.0F - progress) * 5.0F);
-        const float sample = std::clamp(
-            std::sin(melodyPhase) * 0.23F * envelope +
-            std::sin(bassPhase) * 0.15F +
-            std::sin(melodyPhase * 2.0F) * 0.04F * envelope,
-            -0.55F,
-            0.55F);
+        const float loopProgress = static_cast<float>(index) / static_cast<float>(count - 1U);
+        const int note = combat ? combatMelody[beat] : preparationMelody[beat];
+        melodyPhase += 2.0F * kPi * noteFrequency(note) / static_cast<float>(kSampleRate);
+        bassPhase += 2.0F * kPi * noteFrequency(bass[beat / 4U]) / static_cast<float>(kSampleRate);
+        const float beatEnvelope = std::min(1.0F, beatProgress * 16.0F) *
+            std::min(1.0F, (1.0F - beatProgress) * 5.0F);
+        const float loopEnvelope = std::sin(kPi * loopProgress);
+        const float percussion = combat && beatProgress < 0.08F
+            ? (1.0F - beatProgress / 0.08F) * std::sin(melodyPhase * 0.35F) * 0.09F
+            : 0.0F;
+        const float sample = std::clamp((
+            std::sin(melodyPhase) * (combat ? 0.25F : 0.20F) * beatEnvelope +
+            std::sin(bassPhase) * (combat ? 0.18F : 0.13F) +
+            percussion) * loopEnvelope * loopEnvelope,
+            -0.58F,
+            0.58F);
         data[index] = static_cast<std::int16_t>(sample * 32767.0F);
     }
-
+    data[0] = 0;
+    data[count - 1U] = 0;
     DSP_FlushDataCache(data, count * sizeof(std::int16_t));
-    missionMusic_ = {data, count};
+    destination = {data, count};
     return true;
+}
+
+bool AudioSystem::generateAmbientLayer() {
+    constexpr float kDurationSeconds = 5.0F;
+    const std::size_t count = static_cast<std::size_t>(kDurationSeconds * kSampleRate);
+    auto* data = static_cast<std::int16_t*>(linearAlloc(count * sizeof(std::int16_t)));
+    if (data == nullptr) return false;
+    for (std::size_t index = 0; index < count; ++index) {
+        const float progress = static_cast<float>(index) / static_cast<float>(count - 1U);
+        const float loopEnvelope = std::sin(kPi * progress);
+        const float wind = std::sin(2.0F * kPi * 43.0F * progress) * 0.10F +
+            std::sin(2.0F * kPi * 71.0F * progress) * 0.05F;
+        const float distantBird = std::sin(2.0F * kPi * 7.0F * progress) > 0.985F
+            ? std::sin(2.0F * kPi * 820.0F * static_cast<float>(index) / kSampleRate) * 0.08F
+            : 0.0F;
+        const float sample = (wind + distantBird) * loopEnvelope * loopEnvelope;
+        data[index] = static_cast<std::int16_t>(std::clamp(sample, -0.25F, 0.25F) * 32767.0F);
+    }
+    data[0] = 0;
+    data[count - 1U] = 0;
+    DSP_FlushDataCache(data, count * sizeof(std::int16_t));
+    ambient_ = {data, count};
+    return true;
+}
+
+bool AudioSystem::generateMusicLayers() {
+    return generateMusicLayer(preparationMusic_, false) &&
+        generateMusicLayer(combatMusic_, true) &&
+        generateAmbientLayer();
 }
 
 void AudioSystem::freeSamples() {
@@ -431,12 +505,10 @@ void AudioSystem::freeSamples() {
             sample = {};
         }
     }
-    if (diagnosticTone_.data != nullptr) {
-        linearFree(diagnosticTone_.data);
-        diagnosticTone_ = {};
-    }
-    if (missionMusic_.data != nullptr) {
-        linearFree(missionMusic_.data);
-        missionMusic_ = {};
+    for (Sample* sample : {&diagnosticTone_, &preparationMusic_, &combatMusic_, &ambient_}) {
+        if (sample->data != nullptr) {
+            linearFree(sample->data);
+            *sample = {};
+        }
     }
 }

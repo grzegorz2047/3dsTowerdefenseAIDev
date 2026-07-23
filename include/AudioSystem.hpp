@@ -8,6 +8,7 @@
 
 #include "AudioBackend.hpp"
 #include "AudioEvents.hpp"
+#include "AudioMusicPolicy.hpp"
 #include "AudioNdspShim.hpp"
 #include "AudioProbe.hpp"
 #include "AudioWaveStatus.hpp"
@@ -24,7 +25,7 @@ public:
     void play(AudioCue cue);
     void playMask(std::uint32_t cueMask);
     void playDiagnosticTone();
-    void startMissionMusic();
+    void updateMusic(TutorialPhase phase, bool enabled, float deltaSeconds);
     void stopMusic();
     void updateProbe();
     void stopAll();
@@ -46,13 +47,16 @@ public:
     [[nodiscard]] AudioWaveStatus diagnosticWaveStatus() const;
     [[nodiscard]] std::uint32_t diagnosticSamplePosition() const;
     [[nodiscard]] std::uint32_t diagnosticSampleCount() const;
+    [[nodiscard]] MusicPhase musicPhase() const;
 
 private:
     static constexpr int kSampleRate = 22050;
     static constexpr int kDiagnosticChannel = 0;
     static constexpr std::size_t kSfxChannelCount = 6;
     static constexpr int kFirstSfxChannel = 1;
-    static constexpr int kMusicChannel = kFirstSfxChannel + static_cast<int>(kSfxChannelCount);
+    static constexpr int kPreparationMusicChannel = 7;
+    static constexpr int kCombatMusicChannel = 8;
+    static constexpr int kAmbientChannel = 9;
 
     struct Sample {
         std::int16_t* data = nullptr;
@@ -62,10 +66,14 @@ private:
     [[nodiscard]] bool generateSamples();
     [[nodiscard]] bool generateSample(AudioCue cue);
     [[nodiscard]] bool generateDiagnosticTone();
-    [[nodiscard]] bool generateMissionMusic();
+    [[nodiscard]] bool generateMusicLayers();
+    [[nodiscard]] bool generateMusicLayer(Sample& destination, bool combat);
+    [[nodiscard]] bool generateAmbientLayer();
     void playSample(AudioCue cue, const Sample& sample);
     [[nodiscard]] std::size_t channelSlotFor(AudioCue cue);
     void initializeNdspChannels();
+    void startMusicLayers();
+    void applyMusicMix();
     void freeSamples();
 
     AudioBackend backend_ = AudioBackend::None;
@@ -82,9 +90,16 @@ private:
     std::array<std::size_t, 3U> poolCursors_{};
     std::array<Sample, static_cast<std::size_t>(AudioCue::Count)> samples_{};
     Sample diagnosticTone_{};
-    Sample missionMusic_{};
+    Sample preparationMusic_{};
+    Sample combatMusic_{};
+    Sample ambient_{};
     ndspWaveBuf diagnosticWaveBuffer_{};
-    ndspWaveBuf musicWaveBuffer_{};
-    std::uint32_t diagnosticSamplePosition_ = 0;
+    std::array<ndspWaveBuf, 3U> musicWaveBuffers_{};
     std::array<ndspWaveBuf, kSfxChannelCount> waveBuffers_{};
+    std::uint32_t diagnosticSamplePosition_ = 0;
+    bool musicLayersStarted_ = false;
+    MusicPhase musicPhase_ = MusicPhase::Silent;
+    float preparationGain_ = 0.0F;
+    float combatGain_ = 0.0F;
+    float ambientGain_ = 0.0F;
 };
