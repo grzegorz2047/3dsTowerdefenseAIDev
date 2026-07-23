@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "AudioBackend.hpp"
+#include "AudioMusicPolicy.hpp"
 
 namespace {
 
@@ -25,6 +26,14 @@ int main() {
     expect(std::string_view(audioBackendName(AudioBackend::Csnd)) == "CSND", "CSND name must be stable");
     expect(std::string_view(audioBackendName(AudioBackend::None)) == "BRAK", "missing backend must be visible");
 
-    std::cout << "Audio backend unit tests passed\n";
+    expect(shouldStartMissionMusic(AudioBackend::Ndsp, false, true), "NDSP should start available mission music");
+    expect(shouldStartMissionMusic(AudioBackend::Csnd, false, true), "CSND fallback should start available mission music");
+    expect(!shouldStartMissionMusic(AudioBackend::None, false, true), "missing backend must not start music");
+    expect(!shouldStartMissionMusic(AudioBackend::Csnd, true, true), "active CSND music must not restart");
+    expect(!shouldStartMissionMusic(AudioBackend::Ndsp, false, false), "missing samples must not start music");
+    expect(usesCsndMusicLoop(AudioBackend::Csnd), "CSND must use the hardware loop path");
+    expect(!usesCsndMusicLoop(AudioBackend::Ndsp), "NDSP must keep its wave-buffer loop path");
+
+    std::cout << "Audio backend and music policy tests passed\n";
     return 0;
 }
