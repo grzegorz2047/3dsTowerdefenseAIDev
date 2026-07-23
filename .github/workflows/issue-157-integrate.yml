@@ -1,0 +1,59 @@
+name: Integrate issue 157 runtime changes
+
+on:
+  push:
+    branches:
+      - agent/configurable-benchmark-lab
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Integrate issue 157 runtime changes'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/configurable-benchmark-lab
+          fetch-depth: 0
+      - name: Apply runtime integration
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('source/main.cpp')
+          text = path.read_text()
+          text = text.replace('#include "AudioSystem.hpp"\n', '#include "AudioSystem.hpp"\n#include "BenchmarkConfig.hpp"\n')
+          text = text.replace('''        } else if (input.pressed(KEY_L)) {
+              saveData.settings.stereoEnabled = !saveData.settings.stereoEnabled;
+              saveProblem = !persistSave(progress, saveData, saveMessage);
+          } else if (input.pressed(KEY_R)) {''', '''        } else if (input.pressed(KEY_R)) {''')
+          text = text.replace('''        case TouchUiAction::SelectFrost: buildSystem.selectTowerType(TowerType::Frost); break;
+          case TouchUiAction::BuildOrSelect:''', '''        case TouchUiAction::SelectFrost: buildSystem.selectTowerType(TowerType::Frost); break;
+          case TouchUiAction::SelectRocket: buildSystem.selectTowerType(TowerType::Rocket); break;
+          case TouchUiAction::BuildOrSelect:''')
+          if 'SelectRocket: buildSystem.selectTowerType' not in text:
+              raise SystemExit('SelectRocket integration replacement failed')
+          if 'saveData.settings.stereoEnabled = !saveData.settings.stereoEnabled' in text:
+              raise SystemExit('legacy stereo toggle remains')
+          path.write_text(text)
+
+          path = Path('source/UiRenderer.cpp')
+          text = path.read_text()
+          text = text.replace('''    std::snprintf(line, sizeof(line), "3D SUWAK %.2f LIMIT %u%% OCZY %u",
+              state.stereoSlider,
+              static_cast<unsigned int>(state.maximum3DDepthPercent),
+              static_cast<unsigned int>(state.stereoEyeCount));''', '''    std::snprintf(line, sizeof(line), "3D %.2f SEP %.3f OCZY %u LIM %u%%",
+              state.stereoSlider, state.stereoSeparation,
+              static_cast<unsigned int>(state.stereoEyeCount),
+              static_cast<unsigned int>(state.maximum3DDepthPercent));''')
+          path.write_text(text)
+
+          Path('.github/workflows/issue-157-integrate.yml').unlink()
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add source/main.cpp source/UiRenderer.cpp .github/workflows/issue-157-integrate.yml
+          git commit -m "Wire rocket touch and physical stereo runtime"
+          git push origin HEAD:agent/configurable-benchmark-lab
