@@ -1,0 +1,16 @@
+mission.id=ruined_village
+briefing.1.id=ruined_village.survivors
+briefing.1.speaker=Mira
+briefing.1.text=W Spalonej Osadzie ukrywaja sie ocalali. Dwie drogi prowadza prosto do ich schronienia.
+briefing.2.id=ruined_village.promise
+briefing.2.speaker=Arven
+briefing.2.text=Nie bronimy pustych ruin. Bronimy ludzi, ktorzy maja dokad wrocic po tej wojnie.
+mechanic.id=ruined_village.fork
+mechanic.speaker=Brom
+mechanic.text=Rozwidlenie rozprasza ogien. Laczenie zasiegow wiez jest wazniejsze niz jedna mocna pozycja.
+victory.id=ruined_village.victory
+victory.speaker=Mira
+victory.text=Ocalali sa bezpieczni. Przekazali nam druga pieczec i droge do kamieniolomu.
+defeat.id=ruined_village.defeat
+defeat.speaker=Mira
+defeat.text=Jedna z drog pozostala bez oslon. Musimy zabezpieczyc oba ramiona rozwidlenia.
