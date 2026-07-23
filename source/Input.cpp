@@ -47,11 +47,44 @@ InputSystem::InputSystem() {
 }
 
 InputSystem::~InputSystem() {
+    (void)configureMotion(false);
     if (irrstInitialized_) {
         irrstExit();
         irrstInitialized_ = false;
     }
     publishRuntimeState(false, ExtendedControlScheme::Camera);
+}
+
+bool InputSystem::configureMotion(bool enabled) {
+    if (!enabled) {
+        if (gyroscopeInitialized_) {
+            (void)HIDUSER_DisableGyroscope();
+            gyroscopeInitialized_ = false;
+        }
+        motionEnabled_ = false;
+        gyroscopeRawToDps_ = 0.0F;
+        return true;
+    }
+
+    if (gyroscopeInitialized_) {
+        motionEnabled_ = true;
+        return true;
+    }
+
+    if (R_FAILED(HIDUSER_EnableGyroscope())) {
+        motionEnabled_ = false;
+        return false;
+    }
+    float coefficient = 0.0F;
+    if (R_FAILED(HIDUSER_GetGyroscopeRawToDpsCoefficient(&coefficient)) || coefficient <= 0.0F) {
+        (void)HIDUSER_DisableGyroscope();
+        motionEnabled_ = false;
+        return false;
+    }
+    gyroscopeInitialized_ = true;
+    motionEnabled_ = true;
+    gyroscopeRawToDps_ = coefficient;
+    return true;
 }
 
 InputSnapshot InputSystem::poll() {
@@ -95,6 +128,15 @@ InputSnapshot InputSystem::poll() {
     snapshot.extendedRaw.zrHeld = keyHeld(irrstHeld, KEY_ZR);
     snapshot.extendedRaw.zlDown = keyDown(irrstDown, KEY_ZL);
     snapshot.extendedRaw.zrDown = keyDown(irrstDown, KEY_ZR);
+
+    snapshot.motionRecalibrate = motionEnabled_ && keyHeld(snapshot.held, KEY_SELECT) && keyDown(snapshot.down, KEY_B);
+    if (motionEnabled_ && gyroscopeInitialized_) {
+        angularRate rate{};
+        hidGyroRead(&rate);
+        snapshot.motionRaw.available = true;
+        snapshot.motionRaw.yawDegreesPerSecond = static_cast<float>(rate.z) * gyroscopeRawToDps_;
+        snapshot.motionRaw.pitchDegreesPerSecond = static_cast<float>(rate.y) * gyroscopeRawToDps_;
+    }
     return snapshot;
 }
 
@@ -104,6 +146,10 @@ bool InputSystem::extendedAvailable() const {
 
 ExtendedControlScheme InputSystem::extendedScheme() const {
     return extendedScheme_;
+}
+
+bool InputSystem::motionAvailable() const {
+    return motionEnabled_ && gyroscopeInitialized_;
 }
 
 bool new3dsExtendedControlsAvailable() {
