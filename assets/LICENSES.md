@@ -27,6 +27,7 @@ Każdy asset wizualny, dźwiękowy lub font używany przez grę musi mieć wpis 
 | `tutorial_citadel` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | warownia, blanki, wieżyczki i sztandar | runtime static level VBO |
 | `tutorial_invasion_gate` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | kamienna brama i świecący portal | runtime static level VBO |
 | `tutorial_scene_layout` | scene transforms | grzegorz2047 | Project | `assets/scenes/tutorial.scene.json` | deterministyczna konwersja osi i transformacji | `romfs/scenes/tutorial.art` |
+| `tutorial_phase_music` | procedural audio | grzegorz2047 | Project | generowane w `source/AudioSystem.cpp` | spokojna pętla przygotowania, pętla walki i ambient | runtime PCM16 buffers |
 | `release_icon_banner` | image/audio | grzegorz2047 | Project | `scripts/generate_release_assets.py` | generowane deterministycznie | `build/release-assets/*` |
 
 ## Szablon nowego wpisu
