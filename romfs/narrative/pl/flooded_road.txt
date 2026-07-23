@@ -12,6 +12,5 @@ victory.id=flooded_road.victory
 victory.speaker=Arven
 victory.text=Trakt znow nalezy do Asterii. Rakiety otworzyly droge przez mokradla.
 defeat.id=flooded_road.defeat
-briefing.1.speaker=Mira
 defeat.speaker=Mira
 defeat.text=Zbyt wiele sektorow pozostalo bez oslony. Rozloz obrone wzdluz calej trasy.
