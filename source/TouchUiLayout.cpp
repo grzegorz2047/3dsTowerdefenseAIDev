@@ -2,10 +2,9 @@
 
 namespace {
 
-constexpr TouchRect kBallista{8, 8, 72, 44};
-constexpr TouchRect kMortar{88, 8, 72, 44};
-constexpr TouchRect kFrost{168, 8, 64, 44};
-constexpr TouchRect kRocket{240, 8, 72, 44};
+constexpr TouchRect kBallista{8, 8, 96, 44};
+constexpr TouchRect kMortar{112, 8, 96, 44};
+constexpr TouchRect kFrost{216, 8, 96, 44};
 constexpr TouchRect kCancel{240, 128, 72, 40};
 constexpr TouchRect kPause{8, 128, 72, 40};
 constexpr TouchRect kSpeed{88, 128, 72, 40};
@@ -21,7 +20,6 @@ TouchUiAction TouchUiLayout::actionAt(std::int16_t x, std::int16_t y) {
     if (kBallista.contains(x, y)) return TouchUiAction::SelectBallista;
     if (kMortar.contains(x, y)) return TouchUiAction::SelectMortar;
     if (kFrost.contains(x, y)) return TouchUiAction::SelectFrost;
-    if (kRocket.contains(x, y)) return TouchUiAction::SelectRocket;
     if (kPause.contains(x, y)) return TouchUiAction::TogglePause;
     if (kSpeed.contains(x, y)) return TouchUiAction::ToggleSpeed;
     if (kCancel.contains(x, y)) return TouchUiAction::Cancel;
@@ -37,7 +35,6 @@ TouchRect TouchUiLayout::rectFor(TouchUiAction action) {
         case TouchUiAction::SelectBallista: return kBallista;
         case TouchUiAction::SelectMortar: return kMortar;
         case TouchUiAction::SelectFrost: return kFrost;
-        case TouchUiAction::SelectRocket: return kRocket;
         case TouchUiAction::BuildOrSelect: return kBuild;
         case TouchUiAction::Upgrade: return kUpgrade;
         case TouchUiAction::Sell: return kSell;
