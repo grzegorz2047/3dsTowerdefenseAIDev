@@ -14,6 +14,21 @@ struct MotionCameraInput {
     float pitch = 0.0F;
 };
 
+namespace MotionCameraRuntime {
+inline bool enabled = false;
+inline bool available = false;
+
+inline void publish(bool isEnabled, bool isAvailable) {
+    enabled = isEnabled;
+    available = isAvailable;
+}
+
+[[nodiscard]] inline const char* hint() {
+    if (!enabled) return "SELECT+UP: RUCH ON";
+    return available ? "RUCH ON SELECT+B: CENTRUJ" : "RUCH: BRAK SENSORA";
+}
+}  // namespace MotionCameraRuntime
+
 class MotionCameraFilter {
 public:
     static constexpr float kDeadzoneDegreesPerSecond = 2.5F;
