@@ -56,6 +56,24 @@ void BuildSystem::reset() {
     cancelAction();
 }
 
+void BuildSystem::prepareBenchmarkLayout() {
+    reset();
+    if (level_ == nullptr) return;
+    const std::array<TowerType, 4U> pattern{
+        TowerType::Ballista, TowerType::Mortar, TowerType::Frost, TowerType::Rocket};
+    for (std::size_t index = 0U; index < buildSpotCount_ && towerCount_ < kMaximumTowers; ++index) {
+        const GridPoint spot = buildSpots_[index];
+        Tower tower(*level_, static_cast<std::size_t>(spot.x), static_cast<std::size_t>(spot.z),
+            pattern[index % pattern.size()]);
+        if (!tower.valid()) continue;
+        while (tower.canUpgrade()) (void)tower.upgrade();
+        towers_[towerCount_++] = tower;
+    }
+    cursorIndex_ = 0U;
+    selectedTowerType_ = TowerType::Rocket;
+    cancelAction();
+}
+
 void BuildSystem::selectTowerType(TowerType type) {
     selectedTowerType_ = type;
     cancelAction();
