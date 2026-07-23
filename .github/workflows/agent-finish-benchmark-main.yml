@@ -120,6 +120,6 @@ grep -q '"MS %.1f/%.1f/%.1f R %.1f MEM %luK"' "$ROOT/source/UiRenderer.cpp"
           rm -f .agent-benchmark-trigger .github/workflows/agent-finish-benchmark.yml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add source/main.cpp source/UiRenderer.cpp scripts/run_host_tests.sh .agent-benchmark-trigger .github/workflows/agent-finish-benchmark.yml
+          git add -A
           git commit -m "benchmark: finish physical-device result contract"
           git push origin HEAD:agent/finish-hardware-benchmark-contract
