@@ -122,7 +122,7 @@ void testGuidedRocketCurvesAndImpacts() {
 
     ProjectilePool projectiles;
     const ProjectilePayload rocket{
-        ProjectileEffect::GuidedRocket, 2, 1.4F, 0.0F, 1.0F, 4.8F, 2.75F, 0.72F};
+        ProjectileEffect::GuidedRocket, 2, 1.4F, 0.0F, 1.0F, 4.5F, 4.5F, 0.45F};
     expect(projectiles.launch(-1.5F, 1.05F, -1.5F, 0, rocket), "guided rocket should launch");
     const Projectile& launched = projectiles.projectileAt(0);
     const float initialX = launched.velocityX();
