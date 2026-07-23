@@ -199,7 +199,7 @@ void appendEnemy(std::vector<Vertex>& vertices) {
     appendBox(vertices, -0.28F, 0.0F, 0.07F, 0.22F, 0.30F, 0.74F, 0.45F, 0.48F, 0.52F);
 }
 
-void appendBallistaTower(std::vector<Vertex>& v) {
+void appendTower(std::vector<Vertex>& v) {
     appendBox(v,0,0,.42F,.42F,.05F,.22F,.25F,.31F,.38F);
     appendBox(v,0,0,.12F,.12F,.20F,.78F,.47F,.31F,.14F);
     appendBox(v,0,-.18F,.48F,.07F,.70F,.82F,.67F,.45F,.20F);
@@ -330,7 +330,7 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
 
     levelVertexCount_ = vertices.size();
     enemyVertexOffset_=vertices.size(); appendEnemy(vertices); enemyVertexCount_=vertices.size()-enemyVertexOffset_;
-    towerVertexOffsets_[0]=vertices.size(); appendBallistaTower(vertices); towerVertexCounts_[0]=vertices.size()-towerVertexOffsets_[0];
+    towerVertexOffsets_[0]=vertices.size(); appendTower(vertices); towerVertexCounts_[0]=vertices.size()-towerVertexOffsets_[0];
     towerVertexOffsets_[1]=vertices.size(); appendMortarTower(vertices); towerVertexCounts_[1]=vertices.size()-towerVertexOffsets_[1];
     towerVertexOffsets_[2]=vertices.size(); appendFrostTower(vertices); towerVertexCounts_[2]=vertices.size()-towerVertexOffsets_[2];
     towerVertexOffsets_[3]=vertices.size(); appendRocketTower(vertices); towerVertexCounts_[3]=vertices.size()-towerVertexOffsets_[3];
