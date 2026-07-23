@@ -36,14 +36,21 @@ struct InputSnapshot {
 class InputSystem {
 public:
     InputSystem();
+    ~InputSystem();
+
+    InputSystem(const InputSystem&) = delete;
+    InputSystem& operator=(const InputSystem&) = delete;
 
     [[nodiscard]] InputSnapshot poll();
     [[nodiscard]] bool extendedAvailable() const;
     [[nodiscard]] ExtendedControlScheme extendedScheme() const;
 
 private:
+    bool irrstInitialized_ = false;
     bool extendedAvailable_ = false;
     ExtendedControlScheme extendedScheme_ = ExtendedControlScheme::Camera;
+    u32 previousIrrstHeld_ = 0U;
+    u32 previousCStickDirections_ = 0U;
 };
 
 [[nodiscard]] bool new3dsExtendedControlsAvailable();
