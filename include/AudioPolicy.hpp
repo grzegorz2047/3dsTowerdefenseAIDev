@@ -15,13 +15,11 @@ enum class AudioPriority : std::uint8_t {
     switch (cue) {
         case AudioCue::Shot:
         case AudioCue::Hit:
-        case AudioCue::EnemyDeath:
             return AudioPriority::Combat;
         case AudioCue::BuildSuccess:
         case AudioCue::BuildFailure:
         case AudioCue::WaveStart:
             return AudioPriority::Action;
-        case AudioCue::BaseDamage:
         case AudioCue::Victory:
         case AudioCue::Defeat:
         case AudioCue::Count:
@@ -34,8 +32,6 @@ enum class AudioPriority : std::uint8_t {
     switch (cue) {
         case AudioCue::Shot: return 0.09F;
         case AudioCue::Hit: return 0.07F;
-        case AudioCue::EnemyDeath: return 0.12F;
-        case AudioCue::BaseDamage: return 0.20F;
         default: return 0.0F;
     }
 }
