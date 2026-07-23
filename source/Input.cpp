@@ -13,14 +13,19 @@ bool keyHeld(u32 held, u32 key) {
     return (held & key) != 0U;
 }
 
+void publishRuntimeState(bool available, ExtendedControlScheme scheme) {
+    gExtendedControlsAvailable = available;
+    gExtendedControlScheme = scheme;
+    ExtendedControls::setRuntimeState(available, scheme);
+}
+
 }  // namespace
 
 InputSystem::InputSystem() {
     bool isNew3DS = false;
     const Result result = APT_CheckNew3DS(&isNew3DS);
     extendedAvailable_ = R_SUCCEEDED(result) && isNew3DS;
-    gExtendedControlsAvailable = extendedAvailable_;
-    gExtendedControlScheme = extendedScheme_;
+    publishRuntimeState(extendedAvailable_, extendedScheme_);
 }
 
 InputSnapshot InputSystem::poll() {
@@ -34,7 +39,7 @@ InputSnapshot InputSystem::poll() {
 
     if (extendedAvailable_ && keyHeld(snapshot.held, KEY_SELECT) && keyDown(snapshot.down, KEY_Y)) {
         extendedScheme_ = ExtendedControls::nextScheme(extendedScheme_);
-        gExtendedControlScheme = extendedScheme_;
+        publishRuntimeState(extendedAvailable_, extendedScheme_);
     }
 
     snapshot.extendedScheme = extendedScheme_;
