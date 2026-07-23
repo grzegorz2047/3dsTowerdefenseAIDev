@@ -11,15 +11,19 @@ constexpr float kFarPlane = 100.0F;
 constexpr float kStereoConvergenceDistance = 14.0F;
 constexpr float kCameraHeight = -3.8F;
 constexpr float kQuarterTurn = kPi * 0.5F;
+constexpr float kMotionYawAxisScale = 92.0F;
+constexpr float kMotionPitchAxisScale = 54.0F;
 }  // namespace
 
 Camera::Camera() = default;
 
 void Camera::update(const InputSnapshot& input, float deltaSeconds) {
+    if (input.motionRecalibrate) motionFilter_.calibrate(input.motionRaw);
+    const MotionCameraInput motion = motionFilter_.update(input.motionRaw, deltaSeconds);
     const ExtendedMappedInput extended = input.extended();
     orbit_.update(
-        static_cast<int>(input.circle.dx) + extended.cameraX,
-        static_cast<int>(input.circle.dy) + extended.cameraY,
+        static_cast<int>(input.circle.dx) + extended.cameraX + static_cast<int>(motion.yaw * kMotionYawAxisScale),
+        static_cast<int>(input.circle.dy) + extended.cameraY + static_cast<int>(motion.pitch * kMotionPitchAxisScale),
         deltaSeconds);
     if (input.pressed(KEY_L)) orbit_.rotateQuarterTurn(-1);
     if (input.pressed(KEY_R)) orbit_.rotateQuarterTurn(1);
