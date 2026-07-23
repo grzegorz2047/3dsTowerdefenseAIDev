@@ -1,16 +1,14 @@
 name: Temporary benchmark patch runner
 
 on:
-  issue_comment:
-    types: [created]
+  push:
+    branches: [main]
 
 permissions:
   contents: write
-  pull-requests: read
 
 jobs:
   patch-and-test:
-    if: github.event.issue.pull_request && github.event.issue.number == 161 && github.event.comment.body == '/apply-benchmark-contract'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
