@@ -70,10 +70,8 @@ void testTowersLaunchDistinctPayloads() {
     const ProjectileEffect effects[] = {
         ProjectileEffect::Direct, ProjectileEffect::Splash,
         ProjectileEffect::Frost, ProjectileEffect::GuidedRocket};
-    const std::size_t xPositions[] = {2U, 3U, 4U, 3U};
-    const std::size_t zPositions[] = {1U, 1U, 1U, 3U};
     for (std::size_t index = 0; index < 4; ++index) {
-        Tower tower(level, xPositions[index], zPositions[index], types[index]);
+        Tower tower(level, 2, 1, types[index]);
         ProjectilePool projectiles;
         tower.update(1.0F, wave, projectiles);
         expect(projectiles.activeCount() == 1, "each defense should launch one pooled projectile");
