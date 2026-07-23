@@ -308,24 +308,30 @@ void UiRenderer::drawMission(const UiState& state) {
     if (state.missionFinished) {
         if (state.benchmarkMode) {
             C2D_DrawRectSolid(8.0F, 124.0F, 0.2F, 304.0F, 62.0F, kPanelStrong);
-            char result[96]{};
-            const float fps = state.performance.averageFrameMilliseconds > 0.0F
+            const float currentFps = state.performance.lastFrameMilliseconds > 0.0F
+                ? 1000.0F / state.performance.lastFrameMilliseconds : 0.0F;
+            const float averageFps = state.performance.averageFrameMilliseconds > 0.0F
                 ? 1000.0F / state.performance.averageFrameMilliseconds : 0.0F;
-            std::snprintf(result, sizeof(result), "%s FPS %.1f AVG %.1f MAX %.1f",
-                BenchmarkProfiles::verdictName(state.benchmarkVerdict), fps,
-                state.performance.averageFrameMilliseconds, state.performance.worstFrameMilliseconds);
+            const float worstFps = state.performance.worstFrameMilliseconds > 0.0F
+                ? 1000.0F / state.performance.worstFrameMilliseconds : 0.0F;
+            char result[112]{};
+            std::snprintf(result, sizeof(result), "%s T30s FPS %.1f/%.1f/%.1f",
+                BenchmarkProfiles::verdictName(state.benchmarkVerdict),
+                currentFps, averageFps, worstFps);
             drawText(result, 12.0F, 130.0F, 0.40F,
                 state.benchmarkVerdict == BenchmarkVerdict::Fail ? kDanger : kGold);
-            std::snprintf(result, sizeof(result), "R %.1f MEM %luK E%zu T%zu P%zu D%u O%u",
+            std::snprintf(result, sizeof(result), "MS %.1f/%.1f/%.1f R %.1f MEM %luK",
+                state.performance.lastFrameMilliseconds,
+                state.performance.averageFrameMilliseconds,
+                state.performance.worstFrameMilliseconds,
                 state.performance.lastRenderMilliseconds,
-                static_cast<unsigned long>(state.performance.freeLinearMemoryBytes / 1024U),
+                static_cast<unsigned long>(state.performance.freeLinearMemoryBytes / 1024U));
+            drawText(result, 12.0F, 151.0F, 0.40F, kText);
+            std::snprintf(result, sizeof(result), "E%zu T%zu P%zu D%u O%u MAP%u",
                 state.activeEnemies, state.towerCount, state.activeProjectiles,
                 static_cast<unsigned int>(state.benchmark.decorations),
-                static_cast<unsigned int>(state.stereoEyeCount));
-            drawText(result, 12.0F, 151.0F, 0.40F, kText);
-            std::snprintf(result, sizeof(result), "MAP %ux%u RAK %u%% SEP %.3f",
-                state.benchmark.mapSize, state.benchmark.mapSize,
-                state.benchmark.rocketSharePercent, state.stereoSeparation);
+                static_cast<unsigned int>(state.stereoEyeCount),
+                static_cast<unsigned int>(state.benchmark.mapSize));
             drawText(result, 12.0F, 171.0F, 0.40F, kMuted);
         }
         drawButton(8.0F, 190.0F, 144.0F, 42.0F, "X KAMPANIA", true);
