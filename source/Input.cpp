@@ -96,6 +96,12 @@ InputSnapshot InputSystem::poll() {
     hidCircleRead(&snapshot.circle);
     hidTouchRead(&snapshot.touch);
 
+    const bool selectHeld = keyHeld(snapshot.held, KEY_SELECT);
+    if (selectHeld && keyDown(snapshot.down, KEY_DUP)) {
+        (void)configureMotion(!motionEnabled_);
+        snapshot.down &= ~KEY_DUP;
+    }
+
     u32 irrstHeld = 0U;
     u32 irrstDown = 0U;
     u32 directionDown = 0U;
@@ -111,7 +117,7 @@ InputSnapshot InputSystem::poll() {
         previousCStickDirections_ = directions;
     }
 
-    if (extendedAvailable_ && keyHeld(snapshot.held, KEY_SELECT) && keyDown(snapshot.down, KEY_Y)) {
+    if (extendedAvailable_ && selectHeld && keyDown(snapshot.down, KEY_Y)) {
         extendedScheme_ = ExtendedControls::nextScheme(extendedScheme_);
         publishRuntimeState(extendedAvailable_, extendedScheme_);
     }
@@ -129,7 +135,7 @@ InputSnapshot InputSystem::poll() {
     snapshot.extendedRaw.zlDown = keyDown(irrstDown, KEY_ZL);
     snapshot.extendedRaw.zrDown = keyDown(irrstDown, KEY_ZR);
 
-    snapshot.motionRecalibrate = motionEnabled_ && keyHeld(snapshot.held, KEY_SELECT) && keyDown(snapshot.down, KEY_B);
+    snapshot.motionRecalibrate = motionEnabled_ && selectHeld && keyDown(snapshot.down, KEY_B);
     if (motionEnabled_ && gyroscopeInitialized_) {
         angularRate rate{};
         hidGyroRead(&rate);
