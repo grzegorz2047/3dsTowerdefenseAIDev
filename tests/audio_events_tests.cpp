@@ -1,4 +1,5 @@
 #include "AudioEvents.hpp"
+#include "AudioPolicy.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -21,6 +22,9 @@ bool hasCue(std::uint32_t mask, AudioCue cue) {
 int main() {
     require(cueForBuildResult(BuildAttemptResult::Built) == AudioCue::BuildSuccess, "successful build has success cue");
     require(cueForBuildResult(BuildAttemptResult::Occupied) == AudioCue::BuildFailure, "failed build has failure cue");
+    require(audioPriority(AudioCue::Victory) == AudioPriority::Critical, "victory uses critical priority");
+    require(audioPriority(AudioCue::BuildSuccess) == AudioPriority::Action, "build uses action priority");
+    require(audioPriority(AudioCue::Shot) == AudioPriority::Combat, "shot uses combat priority");
 
     AudioEventRouter router;
     require(router.update({TutorialPhase::BuildFirstTower, 0}) == 0U, "first frame initializes without sound");
@@ -37,12 +41,18 @@ int main() {
     require(hasCue(cues, AudioCue::Shot), "projectile increase emits shot cue");
     require(!hasCue(cues, AudioCue::Hit), "projectile increase is not a hit");
 
-    cues = router.update({TutorialPhase::WaveRunning, 1});
-    require(hasCue(cues, AudioCue::Hit), "projectile decrease emits hit cue");
+    cues = router.update({TutorialPhase::WaveRunning, 3}, 0.01F);
+    require(!hasCue(cues, AudioCue::Shot), "rapid duplicate shot is suppressed");
+    cues = router.update({TutorialPhase::WaveRunning, 4}, 0.10F);
+    require(hasCue(cues, AudioCue::Shot), "shot returns after cooldown");
 
-    cues = router.update({TutorialPhase::Victory, 0});
+    cues = router.update({TutorialPhase::WaveRunning, 2}, 0.10F);
+    require(hasCue(cues, AudioCue::Hit), "projectile decrease emits hit cue");
+    cues = router.update({TutorialPhase::WaveRunning, 1}, 0.01F);
+    require(!hasCue(cues, AudioCue::Hit), "rapid duplicate hit is suppressed");
+
+    cues = router.update({TutorialPhase::Victory, 0}, 0.10F);
     require(hasCue(cues, AudioCue::Victory), "victory transition emits cue");
-    require(hasCue(cues, AudioCue::Hit), "remaining projectile resolution can coexist with victory");
     require(router.update({TutorialPhase::Victory, 0}) == 0U, "victory cue is not repeated");
 
     router.reset({TutorialPhase::BuildFirstTower, 0});

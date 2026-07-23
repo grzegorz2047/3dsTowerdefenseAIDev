@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -26,12 +27,16 @@ struct AudioFrameState {
 
 class AudioEventRouter {
 public:
-    [[nodiscard]] std::uint32_t update(const AudioFrameState& state);
+    [[nodiscard]] std::uint32_t update(const AudioFrameState& state, float deltaSeconds = 1.0F / 30.0F);
     void reset(const AudioFrameState& state = {});
 
 private:
+    [[nodiscard]] bool allow(AudioCue cue);
+    void advanceCooldowns(float deltaSeconds);
+
     bool initialized_ = false;
     AudioFrameState previous_{};
+    std::array<float, static_cast<std::size_t>(AudioCue::Count)> cooldowns_{};
 };
 
 [[nodiscard]] constexpr std::uint32_t audioCueMask(AudioCue cue) {
