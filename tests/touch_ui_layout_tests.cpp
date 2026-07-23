@@ -27,6 +27,7 @@ void testAllActionsHaveUsableHitboxes() {
         TouchUiAction::SelectBallista,
         TouchUiAction::SelectMortar,
         TouchUiAction::SelectFrost,
+        TouchUiAction::SelectRocket,
         TouchUiAction::BuildOrSelect,
         TouchUiAction::Upgrade,
         TouchUiAction::Sell,
@@ -48,7 +49,7 @@ void testEdgesAreHalfOpen() {
 }
 
 void testGapsAndOutsideScreenDoNothing() {
-    expect(TouchUiLayout::actionAt(108, 20) == TouchUiAction::None, "gap between tower buttons should be inert");
+    expect(TouchUiLayout::actionAt(79, 20) == TouchUiAction::None, "gap between tower buttons should be inert");
     expect(TouchUiLayout::actionAt(20, 100) == TouchUiAction::None, "central information area should be inert");
     expect(TouchUiLayout::actionAt(168, 145) == TouchUiAction::None, "gap beside speed button should be inert");
     expect(TouchUiLayout::actionAt(-1, 20) == TouchUiAction::None, "negative coordinates should be ignored");
