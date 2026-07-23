@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstring>
 
+#include "AudioChannelPool.hpp"
 #include "AudioNdspShim.hpp"
 
 namespace {
@@ -111,8 +112,8 @@ void AudioSystem::initializeNdspChannels() {
         ndspChnSetRate(channel, static_cast<float>(kSampleRate));
         ndspChnSetFormat(channel, NDSP_FORMAT_MONO_PCM16);
         float mix[12]{};
-        mix[0] = 1.0F;
-        mix[1] = 1.0F;
+        mix[0] = 0.82F;
+        mix[1] = 0.82F;
         ndspChnSetMix(channel, mix);
     }
 
@@ -132,7 +133,7 @@ void AudioSystem::play(AudioCue cue) {
     }
 
     const Sample& sample = samples_[static_cast<std::size_t>(cue)];
-    playSample(sample);
+    playSample(cue, sample);
 }
 
 void AudioSystem::playDiagnosticTone() {
@@ -178,12 +179,19 @@ void AudioSystem::stopMusic() {
     }
 }
 
-void AudioSystem::playSample(const Sample& sample) {
+std::size_t AudioSystem::channelSlotFor(AudioCue cue) {
+    const std::size_t pool = audioPoolIndex(cue);
+    const std::size_t slot = AudioChannelPool::slotFor(cue, poolCursors_[pool]);
+    poolCursors_[pool] = AudioChannelPool::nextCursor(cue, poolCursors_[pool]);
+    return slot;
+}
+
+void AudioSystem::playSample(AudioCue cue, const Sample& sample) {
     if (backend_ == AudioBackend::None || sample.data == nullptr || sample.count == 0U) {
         return;
     }
 
-    const std::size_t slot = nextChannel_++ % kSfxChannelCount;
+    const std::size_t slot = channelSlotFor(cue);
     const int channel = kFirstSfxChannel + static_cast<int>(slot);
     lastChannel_ = channel;
 
@@ -210,7 +218,7 @@ void AudioSystem::playSample(const Sample& sample) {
         channel,
         SOUND_ONE_SHOT | SOUND_FORMAT_16BIT | SOUND_LINEAR_INTERP,
         static_cast<u32>(kSampleRate),
-        1.0F,
+        0.82F,
         0.0F,
         sample.data,
         nullptr,
@@ -221,11 +229,17 @@ void AudioSystem::playMask(std::uint32_t cueMask) {
     if (backend_ == AudioBackend::Ndsp && musicWaveBuffer_.data_vaddr == nullptr) {
         startMissionMusic();
     }
-    for (std::uint8_t value = 0; value < static_cast<std::uint8_t>(AudioCue::Count); ++value) {
-        const AudioCue cue = static_cast<AudioCue>(value);
-        if ((cueMask & audioCueMask(cue)) != 0U) {
-            play(cue);
-        }
+    constexpr std::array<AudioCue, 7U> order{
+        AudioCue::Victory,
+        AudioCue::Defeat,
+        AudioCue::WaveStart,
+        AudioCue::BuildSuccess,
+        AudioCue::BuildFailure,
+        AudioCue::Hit,
+        AudioCue::Shot,
+    };
+    for (AudioCue cue : order) {
+        if ((cueMask & audioCueMask(cue)) != 0U) play(cue);
     }
 }
 
@@ -283,7 +297,7 @@ void AudioSystem::shutdown() {
     }
 
     backend_ = AudioBackend::None;
-    nextChannel_ = 0;
+    poolCursors_.fill(0U);
     lastChannel_ = -1;
     ndspResult_ = static_cast<Result>(kAudioResultNotAttempted);
     ndspInitialResult_ = static_cast<Result>(kAudioResultNotAttempted);
