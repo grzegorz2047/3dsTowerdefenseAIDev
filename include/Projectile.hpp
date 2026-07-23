@@ -12,6 +12,12 @@ enum class ProjectileEffect : std::uint8_t {
     Frost,
 };
 
+enum class ProjectileUpdateResult : std::uint8_t {
+    None,
+    Impact,
+    Cancelled,
+};
+
 struct ProjectilePayload {
     ProjectileEffect effect = ProjectileEffect::Direct;
     int damage = 1;
@@ -29,7 +35,7 @@ public:
         std::size_t targetIndex,
         const ProjectilePayload& payload);
     void launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage);
-    void update(float deltaSeconds, Wave& wave);
+    [[nodiscard]] ProjectileUpdateResult update(float deltaSeconds, Wave& wave);
     void reset();
 
     [[nodiscard]] bool active() const;
@@ -65,8 +71,12 @@ public:
     void reset();
 
     [[nodiscard]] std::size_t activeCount() const;
+    [[nodiscard]] std::uint32_t shotEventCount() const;
+    [[nodiscard]] std::uint32_t impactEventCount() const;
     [[nodiscard]] const Projectile& projectileAt(std::size_t index) const;
 
 private:
     std::array<Projectile, kCapacity> projectiles_{};
+    std::uint32_t shotEventCount_ = 0U;
+    std::uint32_t impactEventCount_ = 0U;
 };
