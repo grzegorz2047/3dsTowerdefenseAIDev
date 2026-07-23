@@ -14,7 +14,7 @@ constexpr std::size_t kMinimumLinearMemoryReserveBytes = 512U * 1024U;
 constexpr std::size_t kMaximumEnemies = 16U;
 constexpr std::size_t kMaximumTowers = 16U;
 constexpr std::size_t kMaximumProjectiles = 32U;
-constexpr std::size_t kMaximumLevelVertices = 4096U;
+constexpr std::size_t kMaximumLevelVertices = 5120U;
 constexpr std::size_t kFrameWindowSize = 120U;
 
 }  // namespace PerformanceBudget
