@@ -1,0 +1,16 @@
+mission.id=iron_ravine
+briefing.1.id=iron_ravine.arrival
+briefing.1.speaker=Arven
+briefing.1.text=Wawoz byl kopalnia, zanim stal sie twierdza. Trzy zakrety dziela go na osobne pola bitwy.
+briefing.2.id=iron_ravine.brutes
+briefing.2.speaker=Mira
+briefing.2.text=Ciezcy Brute ida pomiedzy szybkimi zwiadowcami. Jedna bron nie zatrzyma obu rytmow natarcia.
+mechanic.id=iron_ravine.chokes
+mechanic.speaker=Brom
+mechanic.text=Ustaw kusze przy pierwszym gardle, spowolnienie w srodku i rakiety przy ostatnim podejsciu.
+victory.id=iron_ravine.victory
+victory.speaker=Arven
+victory.text=Kazde gardlo wytrzymalo. Wawoz stal sie lancuchem zamknietych bram.
+defeat.id=iron_ravine.defeat
+defeat.speaker=Brom
+defeat.text=Obrona skupila sie w jednym miejscu. Rozdziel sily pomiedzy trzy gardla.
