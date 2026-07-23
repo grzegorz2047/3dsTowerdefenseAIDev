@@ -11,23 +11,26 @@ enum class TowerType : std::uint8_t {
     Ballista,
     Mortar,
     Frost,
+    Rocket,
 };
 
 [[nodiscard]] constexpr TowerType nextTowerType(TowerType type) {
     switch (type) {
         case TowerType::Ballista: return TowerType::Mortar;
         case TowerType::Mortar: return TowerType::Frost;
-        case TowerType::Frost:
+        case TowerType::Frost: return TowerType::Rocket;
+        case TowerType::Rocket:
         default: return TowerType::Ballista;
     }
 }
 
 [[nodiscard]] constexpr TowerType previousTowerType(TowerType type) {
     switch (type) {
-        case TowerType::Ballista: return TowerType::Frost;
+        case TowerType::Ballista: return TowerType::Rocket;
         case TowerType::Mortar: return TowerType::Ballista;
-        case TowerType::Frost:
-        default: return TowerType::Mortar;
+        case TowerType::Frost: return TowerType::Mortar;
+        case TowerType::Rocket:
+        default: return TowerType::Frost;
     }
 }
 
