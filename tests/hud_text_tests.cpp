@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 
+#include "ExtendedControls.hpp"
 #include "HudText.hpp"
 
 namespace {
@@ -16,9 +17,25 @@ void expectContains(const char* value, const char* needle, const char* message) 
 }  // namespace
 
 int main() {
-    expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "D-PAD", "build phase must mention D-PAD");
+    ExtendedControls::setRuntimeState(false, ExtendedControlScheme::Camera);
+    expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "D-PAD", "Old 3DS build phase must mention D-PAD");
     expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "A:", "build phase must mention A");
     expectContains(tutorialInstruction(TutorialPhase::ReadyToStart), "X:", "ready phase must mention X");
+
+    ExtendedControls::setRuntimeState(true, ExtendedControlScheme::Camera);
+    expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "C:KAMERA",
+        "New 3DS camera scheme must identify C-Stick camera mapping");
+    expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "ZL/ZR:WIEZA",
+        "New 3DS camera scheme must identify tower shortcuts");
+    expectContains(tutorialInstruction(TutorialPhase::ReadyToStart), "SELECT+Y",
+        "New 3DS ready phase must explain scheme toggle");
+
+    ExtendedControls::setRuntimeState(true, ExtendedControlScheme::Build);
+    expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "C:POLE",
+        "New 3DS build scheme must identify C-Stick cursor mapping");
+    expectContains(tutorialInstruction(TutorialPhase::WaveRunning), "C:KURSOR",
+        "New 3DS wave hint must reflect active build scheme");
+
     expectContains(tutorialInstruction(TutorialPhase::Victory), "Y:", "victory phase must mention Y");
     expectContains(tutorialInstruction(TutorialPhase::Defeat), "Y:", "defeat phase must mention Y");
 
