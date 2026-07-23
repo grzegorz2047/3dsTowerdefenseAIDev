@@ -4,6 +4,7 @@
 
 #include "ExtendedControls.hpp"
 #include "HudText.hpp"
+#include "MotionCamera.hpp"
 
 namespace {
 
@@ -18,9 +19,12 @@ void expectContains(const char* value, const char* needle, const char* message) 
 
 int main() {
     ExtendedControls::setRuntimeState(false, ExtendedControlScheme::Camera);
+    MotionCameraRuntime::publish(false, false);
     expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "D-PAD", "Old 3DS build phase must mention D-PAD");
     expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "A:", "build phase must mention A");
     expectContains(tutorialInstruction(TutorialPhase::ReadyToStart), "X:", "ready phase must mention X");
+    expectContains(tutorialInstruction(TutorialPhase::WaveRunning), "SELECT+UP",
+        "disabled motion camera must advertise the opt-in shortcut");
 
     ExtendedControls::setRuntimeState(true, ExtendedControlScheme::Camera);
     expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "C:KAMERA",
@@ -33,8 +37,13 @@ int main() {
     ExtendedControls::setRuntimeState(true, ExtendedControlScheme::Build);
     expectContains(tutorialInstruction(TutorialPhase::BuildFirstTower), "C:POLE",
         "New 3DS build scheme must identify C-Stick cursor mapping");
-    expectContains(tutorialInstruction(TutorialPhase::WaveRunning), "C:KURSOR",
-        "New 3DS wave hint must reflect active build scheme");
+
+    MotionCameraRuntime::publish(true, true);
+    expectContains(tutorialInstruction(TutorialPhase::WaveRunning), "CENTRUJ",
+        "enabled motion camera must show the recenter shortcut");
+    MotionCameraRuntime::publish(true, false);
+    expectContains(tutorialInstruction(TutorialPhase::WaveRunning), "BRAK SENSORA",
+        "failed sensor initialization must be visible");
 
     expectContains(tutorialInstruction(TutorialPhase::Victory), "Y:", "victory phase must mention Y");
     expectContains(tutorialInstruction(TutorialPhase::Defeat), "Y:", "defeat phase must mention Y");
