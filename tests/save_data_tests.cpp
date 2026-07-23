@@ -31,7 +31,7 @@ std::string withChecksum(const std::string& payload) {
     return stream.str();
 }
 
-void testVersionThreeRoundTrip() {
+void testVersionFourRoundTrip() {
     SaveData source{};
     source.campaign.unlockedCount = 3;
     source.campaign.bestStars = {3, 2, 1, 0, 0, 0};
@@ -41,16 +41,35 @@ void testVersionThreeRoundTrip() {
     source.settings.preferredSpeed = 2;
     source.settings.stereoEnabled = false;
     source.settings.maximum3DDepthPercent = 45;
+    source.settings.motionCameraEnabled = true;
 
     const SaveLoadResult result = SaveDataCodec::deserialize(SaveDataCodec::serialize(source));
-    expect(result.status == SaveLoadStatus::Loaded, "v3 save should deserialize");
-    expect(!result.migrated, "v3 save should not report migration");
+    expect(result.status == SaveLoadStatus::Loaded, "v4 save should deserialize");
+    expect(!result.migrated, "v4 save should not report migration");
     expect(result.data.campaign.unlockedCount == 3, "unlocked count should round-trip");
     expect(result.data.campaign.bestStars[1] == 2, "stars should round-trip");
     expect(!result.data.settings.soundEnabled, "sound setting should round-trip");
     expect(result.data.settings.preferredSpeed == 2, "speed setting should round-trip");
     expect(!result.data.settings.stereoEnabled, "stereo setting should round-trip");
     expect(result.data.settings.maximum3DDepthPercent == 45, "3D depth should round-trip");
+    expect(result.data.settings.motionCameraEnabled, "motion camera setting should round-trip");
+}
+
+void testVersionThreeMigrationDefaultsMotionOff() {
+    const std::string payload =
+        "version=3\n"
+        "unlocked=2\n"
+        "stars=3,1,0,0,0,0\n"
+        "base_health=5,2,0,0,0,0\n"
+        "fewest_towers=2,8,0,0,0,0\n"
+        "sound=0\n"
+        "speed=2\n"
+        "stereo=1\n"
+        "stereo_depth=45\n";
+    const SaveLoadResult result = SaveDataCodec::deserialize(withChecksum(payload));
+    expect(result.status == SaveLoadStatus::Loaded, "v3 save should load");
+    expect(result.migrated, "v3 save should report migration");
+    expect(!result.data.settings.motionCameraEnabled, "motion camera must default to off during migration");
 }
 
 void testVersionTwoMigration() {
@@ -70,6 +89,7 @@ void testVersionTwoMigration() {
     expect(result.data.settings.stereoEnabled, "new stereo setting should use safe default");
     expect(result.data.settings.maximum3DDepthPercent == Stereo3D::kDefaultDepthPercent,
         "new depth limit should use safe default");
+    expect(!result.data.settings.motionCameraEnabled, "motion camera should remain off");
 }
 
 void testVersionOneMigration() {
@@ -82,6 +102,7 @@ void testVersionOneMigration() {
     expect(result.migrated, "v1 save should report migration");
     expect(result.data.campaign.bestBaseHealth[0] == 0, "new records should use defaults");
     expect(result.data.settings.stereoEnabled, "new settings should use defaults");
+    expect(!result.data.settings.motionCameraEnabled, "motion camera should use safe default");
 }
 
 void testCorruptionIsRejected() {
@@ -92,9 +113,9 @@ void testCorruptionIsRejected() {
         "checksum mismatch should be corrupt");
 }
 
-void testInvalidStereoSettingsAreRejected() {
+void testInvalidMotionSettingIsRejected() {
     const std::string payload =
-        "version=3\n"
+        "version=4\n"
         "unlocked=1\n"
         "stars=0,0,0,0,0,0\n"
         "base_health=0,0,0,0,0,0\n"
@@ -102,9 +123,10 @@ void testInvalidStereoSettingsAreRejected() {
         "sound=1\n"
         "speed=1\n"
         "stereo=1\n"
-        "stereo_depth=101\n";
+        "stereo_depth=45\n"
+        "motion_camera=2\n";
     expect(SaveDataCodec::deserialize(withChecksum(payload)).status == SaveLoadStatus::Corrupt,
-        "out-of-range stereo depth should be rejected");
+        "out-of-range motion setting should be rejected");
 }
 
 void testAtomicStoreAndReset(const char* root) {
@@ -122,11 +144,12 @@ void testAtomicStoreAndReset(const char* root) {
 
 int main(int argc, char** argv) {
     expect(argc == 2, "repository root argument is required");
-    testVersionThreeRoundTrip();
+    testVersionFourRoundTrip();
+    testVersionThreeMigrationDefaultsMotionOff();
     testVersionTwoMigration();
     testVersionOneMigration();
     testCorruptionIsRejected();
-    testInvalidStereoSettingsAreRejected();
+    testInvalidMotionSettingIsRejected();
     testAtomicStoreAndReset(argv[1]);
     std::cout << "Save data tests passed\n";
     return 0;
