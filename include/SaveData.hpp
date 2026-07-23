@@ -6,7 +6,7 @@
 #include "Campaign.hpp"
 #include "Stereo3D.hpp"
 
-constexpr std::uint32_t kCurrentSaveVersion = 4;
+constexpr std::uint32_t kCurrentSaveVersion = 5;
 
 struct GameSettings {
     bool soundEnabled = true;
