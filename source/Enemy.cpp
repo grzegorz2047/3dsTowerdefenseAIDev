@@ -29,21 +29,18 @@ float worldZ(const LevelData& level, std::int16_t gridZ) {
 
 }  // namespace
 
-Enemy::Enemy(const LevelData& level, EnemyType type) : level_(&level), type_(type) {
+Enemy::Enemy(const LevelData& level, EnemyType type, float laneOffsetZ)
+    : level_(&level), type_(type), laneOffsetZ_(laneOffsetZ) {
     reset();
 }
 
 void Enemy::update(float deltaSeconds) {
-    if (dead() || reachedBase_ || level_ == nullptr || level_->pathLength < 2) {
-        return;
-    }
+    if (dead() || reachedBase_ || level_ == nullptr || level_->pathLength < 2) return;
 
     const float stepSeconds = std::max(deltaSeconds, 0.0F);
     float remainingDistance = stepSeconds * effectiveMovementSpeed();
     slowRemainingSeconds_ = std::max(slowRemainingSeconds_ - stepSeconds, 0.0F);
-    if (slowRemainingSeconds_ <= 0.0F) {
-        slowMovementMultiplier_ = 1.0F;
-    }
+    if (slowRemainingSeconds_ <= 0.0F) slowMovementMultiplier_ = 1.0F;
 
     while (remainingDistance > 0.0F && !reachedBase_) {
         const float available = 1.0F - segmentProgress_;
@@ -54,9 +51,9 @@ void Enemy::update(float deltaSeconds) {
         const GridPoint from = level_->path[segmentIndex_];
         const GridPoint to = level_->path[segmentIndex_ + 1];
         const float fromX = worldX(*level_, from.x);
-        const float fromZ = worldZ(*level_, from.z);
+        const float fromZ = worldZ(*level_, from.z) + laneOffsetZ_;
         const float toX = worldX(*level_, to.x);
-        const float toZ = worldZ(*level_, to.z);
+        const float toZ = worldZ(*level_, to.z) + laneOffsetZ_;
         x_ = fromX + (toX - fromX) * segmentProgress_;
         z_ = fromZ + (toZ - fromZ) * segmentProgress_;
 
@@ -73,7 +70,7 @@ void Enemy::update(float deltaSeconds) {
 }
 
 void Enemy::reset() {
-    segmentIndex_ = 0;
+    segmentIndex_ = 0U;
     segmentProgress_ = 0.0F;
     slowRemainingSeconds_ = 0.0F;
     slowMovementMultiplier_ = 1.0F;
@@ -82,21 +79,18 @@ void Enemy::reset() {
     if (!reachedBase_) {
         const GridPoint start = level_->path[0];
         x_ = worldX(*level_, start.x);
-        z_ = worldZ(*level_, start.z);
+        z_ = worldZ(*level_, start.z) + laneOffsetZ_;
     }
 }
 
 void Enemy::takeDamage(int amount) {
-    if (amount <= 0 || dead() || reachedBase_) {
-        return;
-    }
+    if (amount <= 0 || dead() || reachedBase_) return;
     health_ = std::max(health_ - amount, 0);
 }
 
 void Enemy::applySlow(float durationSeconds, float movementMultiplier) {
-    if (durationSeconds <= 0.0F || movementMultiplier <= 0.0F || movementMultiplier >= 1.0F || dead() || reachedBase_) {
-        return;
-    }
+    if (durationSeconds <= 0.0F || movementMultiplier <= 0.0F || movementMultiplier >= 1.0F ||
+        dead() || reachedBase_) return;
     slowRemainingSeconds_ = std::max(slowRemainingSeconds_, durationSeconds);
     slowMovementMultiplier_ = std::min(slowMovementMultiplier_, movementMultiplier);
 }
@@ -114,9 +108,7 @@ bool Enemy::slowed() const { return slowRemainingSeconds_ > 0.0F; }
 EnemyType Enemy::type() const { return type_; }
 
 float Enemy::pathProgress() const {
-    if (level_ == nullptr || level_->pathLength < 2) {
-        return 1.0F;
-    }
+    if (level_ == nullptr || level_->pathLength < 2) return 1.0F;
     const float completed = static_cast<float>(segmentIndex_) + segmentProgress_;
-    return std::min(completed / static_cast<float>(level_->pathLength - 1), 1.0F);
+    return std::min(completed / static_cast<float>(level_->pathLength - 1U), 1.0F);
 }
