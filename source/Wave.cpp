@@ -23,9 +23,7 @@ Wave::Wave(const LevelData& level) : level_(&level) {
 }
 
 void Wave::update(float deltaSeconds) {
-    if (completed() || lost()) {
-        return;
-    }
+    if (completed() || lost()) return;
 
     const float step = std::max(deltaSeconds, 0.0F);
     if (spawnedCount_ < enemies_.size()) {
@@ -38,13 +36,12 @@ void Wave::update(float deltaSeconds) {
     }
 
     for (std::size_t index = 0; index < spawnedCount_; ++index) {
-        if (resolved_[index]) {
-            continue;
-        }
+        if (resolved_[index]) continue;
 
         Enemy& enemy = enemies_[index];
         if (enemy.dead()) {
             resolved_[index] = true;
+            ++deathEventCount_;
             continue;
         }
 
@@ -52,18 +49,19 @@ void Wave::update(float deltaSeconds) {
         if (enemy.reachedBase()) {
             resolved_[index] = true;
             baseHealth_ = std::max(baseHealth_ - enemy.baseDamage(), 0);
+            ++baseDamageEventCount_;
         }
     }
 }
 
 void Wave::reset() {
-    for (Enemy& enemy : enemies_) {
-        enemy.reset();
-    }
+    for (Enemy& enemy : enemies_) enemy.reset();
     resolved_.fill(false);
     spawnedCount_ = 0U;
     spawnTimer_ = 0.0F;
     baseHealth_ = kInitialBaseHealth;
+    deathEventCount_ = 0U;
+    baseDamageEventCount_ = 0U;
 }
 
 void Wave::applyAreaEffect(
@@ -76,14 +74,10 @@ void Wave::applyAreaEffect(
     const float radiusSquared = std::max(radius, 0.0F) * std::max(radius, 0.0F);
     for (std::size_t index = 0; index < spawnedCount_; ++index) {
         Enemy& enemy = enemies_[index];
-        if (resolved_[index] || enemy.dead() || enemy.reachedBase()) {
-            continue;
-        }
+        if (resolved_[index] || enemy.dead() || enemy.reachedBase()) continue;
         const float dx = enemy.x() - centerX;
         const float dz = enemy.z() - centerZ;
-        if (dx * dx + dz * dz > radiusSquared) {
-            continue;
-        }
+        if (dx * dx + dz * dz > radiusSquared) continue;
         enemy.takeDamage(damage);
         enemy.applySlow(slowDurationSeconds, slowMovementMultiplier);
     }
@@ -98,22 +92,18 @@ std::size_t Wave::defeatedCount() const {
     }
     return count;
 }
+std::uint32_t Wave::deathEventCount() const { return deathEventCount_; }
+std::uint32_t Wave::baseDamageEventCount() const { return baseDamageEventCount_; }
 Enemy& Wave::enemyAt(std::size_t index) { return enemies_.at(index); }
 const Enemy& Wave::enemyAt(std::size_t index) const { return enemies_.at(index); }
 int Wave::baseHealth() const { return baseHealth_; }
 
 bool Wave::completed() const {
-    if (enemies_.empty() || spawnedCount_ < enemies_.size()) {
-        return false;
-    }
+    if (enemies_.empty() || spawnedCount_ < enemies_.size()) return false;
     for (std::size_t index = 0; index < enemies_.size(); ++index) {
-        if (!resolved_[index]) {
-            return false;
-        }
+        if (!resolved_[index]) return false;
     }
     return baseHealth_ > 0;
 }
 
-bool Wave::lost() const {
-    return baseHealth_ <= 0;
-}
+bool Wave::lost() const { return baseHealth_ <= 0; }
