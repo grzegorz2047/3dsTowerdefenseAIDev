@@ -10,6 +10,7 @@ enum class ProjectileEffect : std::uint8_t {
     Direct,
     Splash,
     Frost,
+    GuidedRocket,
 };
 
 enum class ProjectileUpdateResult : std::uint8_t {
@@ -24,6 +25,9 @@ struct ProjectilePayload {
     float radius = 0.0F;
     float slowDurationSeconds = 0.0F;
     float slowMovementMultiplier = 1.0F;
+    float speed = 6.0F;
+    float turnRateRadiansPerSecond = 0.0F;
+    float launchClimb = 0.0F;
 };
 
 class Projectile {
@@ -42,15 +46,22 @@ public:
     [[nodiscard]] float x() const;
     [[nodiscard]] float y() const;
     [[nodiscard]] float z() const;
+    [[nodiscard]] float velocityX() const;
+    [[nodiscard]] float velocityY() const;
+    [[nodiscard]] float velocityZ() const;
     [[nodiscard]] std::size_t targetIndex() const;
     [[nodiscard]] ProjectileEffect effect() const;
 
 private:
     void resolveImpact(Wave& wave, Enemy& target);
+    void updateGuidedVelocity(float deltaSeconds, float targetX, float targetY, float targetZ);
 
     float x_ = 0.0F;
     float y_ = 0.0F;
     float z_ = 0.0F;
+    float velocityX_ = 0.0F;
+    float velocityY_ = 0.0F;
+    float velocityZ_ = 0.0F;
     std::size_t targetIndex_ = 0;
     ProjectilePayload payload_{};
     bool active_ = false;
