@@ -6,7 +6,7 @@
 
 class Enemy {
 public:
-    Enemy(const LevelData& level, EnemyType type = EnemyType::Raider);
+    Enemy(const LevelData& level, EnemyType type = EnemyType::Raider, float laneOffsetZ = 0.0F);
 
     void update(float deltaSeconds);
     void reset();
@@ -29,6 +29,7 @@ public:
 private:
     const LevelData* level_ = nullptr;
     EnemyType type_ = EnemyType::Raider;
+    float laneOffsetZ_ = 0.0F;
     std::size_t segmentIndex_ = 0;
     float segmentProgress_ = 0.0F;
     float x_ = 0.0F;
