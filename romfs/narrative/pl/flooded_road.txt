@@ -1,0 +1,16 @@
+mission.id=flooded_road
+briefing.1.id=flooded_road.arrival
+briefing.1.speaker=Mira
+briefing.1.text=Woda zabrala trakt i zostawila tylko kamienne wyspy. Jedna linia obrony nie pokryje calej przeprawy.
+briefing.2.id=flooded_road.launcher
+briefing.2.speaker=Brom
+briefing.2.text=Z magazynu wydobylismy stara wyrzutnie. Jej rakiety zawracaja do celu i rozrywaja zwarte grupy.
+mechanic.id=flooded_road.coverage
+mechanic.speaker=Brom
+mechanic.text=Buduj w kolejnych sektorach. Po postawieniu obrony kursor sam przejdzie do nastepnego wolnego stanowiska.
+victory.id=flooded_road.victory
+victory.speaker=Arven
+victory.text=Trakt znow nalezy do Asterii. Rakiety otworzyly droge przez mokradla.
+defeat.id=flooded_road.defeat
+defeat.speaker=Mira
+defeat.text=Zbyt wiele sektorow pozostalo bez oslony. Rozloz obrone wzdluz calej trasy.

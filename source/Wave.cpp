@@ -20,10 +20,11 @@ Wave::Wave(const LevelData& level) : level_(&level) {
         }
     }
     reset();
+    if (level.id == "performance_stress") setBenchmarkLoop(true);
 }
 
 void Wave::update(float deltaSeconds) {
-    if (completed() || lost()) return;
+    if (!benchmarkLoop_ && (completed() || lost())) return;
 
     const float step = std::max(deltaSeconds, 0.0F);
     if (spawnedCount_ < enemies_.size()) {
@@ -40,16 +41,20 @@ void Wave::update(float deltaSeconds) {
 
         Enemy& enemy = enemies_[index];
         if (enemy.dead()) {
-            resolved_[index] = true;
             ++deathEventCount_;
+            if (benchmarkLoop_) enemy.reset();
+            else resolved_[index] = true;
             continue;
         }
 
         enemy.update(step);
         if (enemy.reachedBase()) {
-            resolved_[index] = true;
-            baseHealth_ = std::max(baseHealth_ - enemy.baseDamage(), 0);
             ++baseDamageEventCount_;
+            if (benchmarkLoop_) enemy.reset();
+            else {
+                resolved_[index] = true;
+                baseHealth_ = std::max(baseHealth_ - enemy.baseDamage(), 0);
+            }
         }
     }
 }
@@ -62,6 +67,11 @@ void Wave::reset() {
     baseHealth_ = kInitialBaseHealth;
     deathEventCount_ = 0U;
     baseDamageEventCount_ = 0U;
+}
+
+void Wave::setBenchmarkLoop(bool enabled) {
+    benchmarkLoop_ = enabled;
+    if (enabled) baseHealth_ = kInitialBaseHealth;
 }
 
 void Wave::applyAreaEffect(
@@ -84,6 +94,15 @@ void Wave::applyAreaEffect(
 }
 
 std::size_t Wave::spawnedCount() const { return spawnedCount_; }
+
+std::size_t Wave::activeCount() const {
+    std::size_t count = 0U;
+    for (std::size_t index = 0U; index < spawnedCount_; ++index) {
+        if (!resolved_[index] && !enemies_[index].dead() && !enemies_[index].reachedBase()) ++count;
+    }
+    return count;
+}
+
 std::size_t Wave::enemyCount() const { return enemies_.size(); }
 std::size_t Wave::defeatedCount() const {
     std::size_t count = 0U;
@@ -99,6 +118,7 @@ const Enemy& Wave::enemyAt(std::size_t index) const { return enemies_.at(index);
 int Wave::baseHealth() const { return baseHealth_; }
 
 bool Wave::completed() const {
+    if (benchmarkLoop_) return false;
     if (enemies_.empty() || spawnedCount_ < enemies_.size()) return false;
     for (std::size_t index = 0; index < enemies_.size(); ++index) {
         if (!resolved_[index]) return false;
@@ -106,4 +126,4 @@ bool Wave::completed() const {
     return baseHealth_ > 0;
 }
 
-bool Wave::lost() const { return baseHealth_ <= 0; }
+bool Wave::lost() const { return !benchmarkLoop_ && baseHealth_ <= 0; }

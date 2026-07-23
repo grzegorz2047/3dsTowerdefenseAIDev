@@ -48,6 +48,7 @@ struct UiState {
     std::array<std::uint8_t, kCampaignMissionCount> missionStars{};
     std::uint8_t fullHealthThreshold = 0U;
     std::uint8_t efficientTowerLimit = 0U;
+    std::uint8_t difficulty = 1U;
     bool saveProblem = false;
 
     bool soundEnabled = true;
@@ -56,6 +57,8 @@ struct UiState {
     std::uint8_t maximum3DDepthPercent = 0U;
 
     std::size_t towerCount = 0U;
+    std::size_t buildSpotCount = 0U;
+    std::size_t availableBuildSpotCount = 0U;
     int towerCost = 0;
     std::size_t cursorX = 0U;
     std::size_t cursorZ = 0U;

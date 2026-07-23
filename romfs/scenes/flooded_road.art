@@ -1,0 +1,24 @@
+; Citadel Defense 3D scene art v1
+level=flooded_road
+theme=VhalPass
+; broken causeway and drowned village
+prop=Cliff,1.0,1.0,1.4,8
+prop=Ruin,4.6,1.2,1.1,-18
+prop=Wagon,6.2,2.7,0.9,14
+prop=Barricade,8.8,3.8,0.8,-12
+prop=Rock,11.4,2.2,1.0,0
+prop=Rock,12.7,4.2,0.8,0
+; marsh islands and navigation landmarks
+prop=Pine,2.0,6.8,1.2,0
+prop=Watchtower,3.8,9.8,1.0,0
+prop=Banner,4.6,10.1,0.8,0
+prop=Ruin,7.2,8.4,1.0,26
+prop=Cliff,6.0,12.3,1.2,-8
+prop=Rock,9.4,11.9,0.9,0
+; citadel approach
+prop=Watchtower,10.5,13.8,1.1,0
+prop=Watchtower,13.7,12.8,1.0,0
+prop=Banner,11.7,13.7,0.9,0
+prop=Banner,13.1,13.7,0.9,0
+prop=Barricade,12.0,12.4,0.9,0
+prop=Cliff,14.5,14.2,1.5,0

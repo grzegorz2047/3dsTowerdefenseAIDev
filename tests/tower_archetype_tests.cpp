@@ -28,13 +28,12 @@ LevelData makeLevel() {
         }
     }
     level.tiles[2 * kMaximumMapWidth] = TileType::Spawn;
-    for (std::size_t x = 1; x < 7; ++x) {
-        level.tiles[2 * kMaximumMapWidth + x] = TileType::Road;
-    }
+    for (std::size_t x = 1; x < 7; ++x) level.tiles[2 * kMaximumMapWidth + x] = TileType::Road;
     level.tiles[2 * kMaximumMapWidth + 7] = TileType::Base;
     level.tiles[1 * kMaximumMapWidth + 2] = TileType::BuildSpot;
     level.tiles[1 * kMaximumMapWidth + 3] = TileType::BuildSpot;
     level.tiles[1 * kMaximumMapWidth + 4] = TileType::BuildSpot;
+    level.tiles[3 * kMaximumMapWidth + 3] = TileType::BuildSpot;
     level.pathLength = 8;
     for (std::size_t x = 0; x < level.pathLength; ++x) {
         level.path[x] = {static_cast<std::int16_t>(x), 2};
@@ -52,10 +51,13 @@ void spawnFirstEnemy(Wave& wave) {
 
 void testTowerCatalog() {
     expect(towerCost(TowerType::Ballista) < towerCost(TowerType::Frost), "ballista should be cheapest");
-    expect(towerCost(TowerType::Frost) < towerCost(TowerType::Mortar), "mortar should be most expensive");
-    expect(nextTowerType(TowerType::Ballista) == TowerType::Mortar, "tower selection should advance to mortar");
-    expect(nextTowerType(TowerType::Mortar) == TowerType::Frost, "tower selection should advance to frost");
-    expect(previousTowerType(TowerType::Ballista) == TowerType::Frost, "tower selection should wrap backwards");
+    expect(towerCost(TowerType::Frost) < towerCost(TowerType::Mortar), "frost should cost less than mortar");
+    expect(towerCost(TowerType::Mortar) < towerCost(TowerType::Rocket), "rocket launcher should be premium defense");
+    expect(nextTowerType(TowerType::Ballista) == TowerType::Mortar, "selection should advance to mortar");
+    expect(nextTowerType(TowerType::Mortar) == TowerType::Frost, "selection should advance to frost");
+    expect(nextTowerType(TowerType::Frost) == TowerType::Rocket, "selection should advance to rockets");
+    expect(nextTowerType(TowerType::Rocket) == TowerType::Ballista, "selection should wrap after rockets");
+    expect(previousTowerType(TowerType::Ballista) == TowerType::Rocket, "backward selection should wrap to rockets");
 }
 
 void testTowersLaunchDistinctPayloads() {
@@ -63,14 +65,17 @@ void testTowersLaunchDistinctPayloads() {
     Wave wave(level);
     wave.update(0.2F);
 
-    const TowerType types[] = {TowerType::Ballista, TowerType::Mortar, TowerType::Frost};
-    const ProjectileEffect effects[] = {ProjectileEffect::Direct, ProjectileEffect::Splash, ProjectileEffect::Frost};
-    for (std::size_t index = 0; index < 3; ++index) {
+    const TowerType types[] = {
+        TowerType::Ballista, TowerType::Mortar, TowerType::Frost, TowerType::Rocket};
+    const ProjectileEffect effects[] = {
+        ProjectileEffect::Direct, ProjectileEffect::Splash,
+        ProjectileEffect::Frost, ProjectileEffect::GuidedRocket};
+    for (std::size_t index = 0; index < 4; ++index) {
         Tower tower(level, 2, 1, types[index]);
         ProjectilePool projectiles;
         tower.update(1.0F, wave, projectiles);
-        expect(projectiles.activeCount() == 1, "each tower should launch one pooled projectile");
-        expect(projectiles.projectileAt(0).effect() == effects[index], "tower should launch its own projectile effect");
+        expect(projectiles.activeCount() == 1, "each defense should launch one pooled projectile");
+        expect(projectiles.projectileAt(0).effect() == effects[index], "defense should launch its own projectile effect");
     }
 }
 
@@ -85,7 +90,7 @@ void testTowerAimsAtSelectedTarget() {
     expect(tower.hasTarget(), "tower should expose an in-range target");
     Enemy& target = wave.enemyAt(0);
     const float expected = std::atan2(target.x() - tower.x(), target.z() - tower.z());
-    expect(std::fabs(tower.aimAngleRadians() - expected) < 0.0001F, "tower aim should point at the selected enemy");
+    expect(std::fabs(tower.aimAngleRadians() - expected) < 0.0001F, "tower aim should point at selected enemy");
 
     target.takeDamage(99);
     tower.update(1.0F / 60.0F, wave, projectiles);
@@ -105,7 +110,40 @@ void testSplashDamagesNearbyEnemies() {
     projectiles.update(1.0F / 60.0F, wave);
 
     expect(wave.enemyAt(0).health() == firstHealth - 2, "splash should damage its target");
-    expect(wave.enemyAt(1).health() == secondHealth - 2, "splash should damage a nearby enemy");
+    expect(wave.enemyAt(1).health() == secondHealth - 2, "splash should damage nearby enemy");
+}
+
+void testGuidedRocketCurvesAndImpacts() {
+    const LevelData level = makeLevel();
+    Wave wave(level);
+    wave.update(0.2F);
+    const int firstHealth = wave.enemyAt(0).health();
+    const int secondHealth = wave.enemyAt(1).health();
+
+    ProjectilePool projectiles;
+    const ProjectilePayload rocket{
+        ProjectileEffect::GuidedRocket, 2, 1.4F, 0.0F, 1.0F, 4.5F, 4.5F, 0.45F};
+    expect(projectiles.launch(-1.5F, 1.05F, -1.5F, 0, rocket), "guided rocket should launch");
+    const Projectile& launched = projectiles.projectileAt(0);
+    const float initialX = launched.velocityX();
+    const float initialY = launched.velocityY();
+    const float initialZ = launched.velocityZ();
+    expect(initialY > 0.0F, "rocket should initially climb");
+
+    projectiles.update(0.05F, wave);
+    const Projectile& turning = projectiles.projectileAt(0);
+    const float directionDelta = std::fabs(turning.velocityX() - initialX) +
+        std::fabs(turning.velocityY() - initialY) + std::fabs(turning.velocityZ() - initialZ);
+    expect(directionDelta > 0.01F, "rocket guidance should bend the velocity vector");
+    expect(turning.active(), "rocket should not teleport into the target on first update");
+
+    for (int step = 0; step < 300 && projectiles.activeCount() > 0; ++step) {
+        projectiles.update(1.0F / 60.0F, wave);
+    }
+    expect(projectiles.activeCount() == 0, "rocket should finish its bounded flight");
+    expect(projectiles.impactEventCount() == 1U, "guided rocket should register one impact");
+    expect(wave.enemyAt(0).health() < firstHealth, "rocket should damage target");
+    expect(wave.enemyAt(1).health() < secondHealth, "rocket explosion should damage nearby enemy");
 }
 
 void testFrostSlowsAndExpires() {
@@ -130,6 +168,7 @@ int main() {
     testTowersLaunchDistinctPayloads();
     testTowerAimsAtSelectedTarget();
     testSplashDamagesNearbyEnemies();
+    testGuidedRocketCurvesAndImpacts();
     testFrostSlowsAndExpires();
     std::cout << "Tower archetype tests passed\n";
     return 0;

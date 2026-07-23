@@ -4,7 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 
-constexpr std::size_t kCampaignMissionCount = 6;
+constexpr std::size_t kLegacyCampaignMissionCount = 6;
+constexpr std::size_t kCampaignMissionCount = 9;
 
 struct CampaignMission {
     const char* id = "";
@@ -16,6 +17,7 @@ struct CampaignMission {
     const char* reward = "";
     std::uint8_t fullHealthThreshold = 3;
     std::uint8_t efficientTowerLimit = 4;
+    std::uint8_t difficulty = 1;
 };
 
 struct MissionResult {

@@ -27,6 +27,10 @@ Każdy asset wizualny, dźwiękowy lub font używany przez grę musi mieć wpis 
 | `tutorial_citadel` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | warownia, blanki, wieżyczki i sztandar | runtime static level VBO |
 | `tutorial_invasion_gate` | mesh / vertex colors | grzegorz2047 | Project | zaprojektowane od zera w `source/Renderer.cpp` | kamienna brama i świecący portal | runtime static level VBO |
 | `tutorial_scene_layout` | scene transforms | grzegorz2047 | Project | `assets/scenes/tutorial.scene.json` | deterministyczna konwersja osi i transformacji | `romfs/scenes/tutorial.art` |
+| `flooded_road_layout` | level / scene transforms | grzegorz2047 | Project | projektowane od zera w repo | trasa S, wyspy obronne, mokradła i ruiny | `romfs/levels/flooded_road.lvl`, `romfs/scenes/flooded_road.art` |
+| `iron_ravine_layout` | level / scene transforms | grzegorz2047 | Project | projektowane od zera w repo | trzy gardła, kopalniane ruiny i wieże strażnicze | `romfs/levels/iron_ravine.lvl`, `romfs/scenes/iron_ravine.art` |
+| `storm_ring_layout` | level / scene transforms | grzegorz2047 | Project | projektowane od zera w repo | trasa pierścieniowa i centralne obserwatorium | `romfs/levels/storm_ring.lvl`, `romfs/scenes/storm_ring.art` |
+| `guided_rocket_defense` | procedural gameplay mesh / motion | grzegorz2047 | Project | `source/Tower.cpp`, `source/Projectile.cpp` | wyrzutnia i ograniczone skrętem naprowadzanie proceduralne | runtime tower/projectile VBO |
 | `tutorial_phase_music` | procedural audio | grzegorz2047 | Project | generowane w `source/AudioSystem.cpp` | spokojna pętla przygotowania, pętla walki i ambient | runtime PCM16 buffers |
 | `release_icon_banner` | image/audio | grzegorz2047 | Project | `scripts/generate_release_assets.py` | generowane deterministycznie | `build/release-assets/*` |
 

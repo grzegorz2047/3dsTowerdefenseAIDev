@@ -1,0 +1,16 @@
+mission.id=storm_ring
+briefing.1.id=storm_ring.arrival
+briefing.1.speaker=Mira
+briefing.1.text=Ruiny obserwatorium zamykaja droge w pierscieniu. Wrog obejdzie je prawie dookola, zanim dotrze do bramy.
+briefing.2.id=storm_ring.crossfire
+briefing.2.speaker=Arven
+briefing.2.text=To dluga trasa, ale stanowiska sa rozrzucone. Wykorzystaj zasieg rakiet i ogien obszarowy mozdzierzy.
+mechanic.id=storm_ring.guidance
+mechanic.speaker=Brom
+mechanic.text=Rakieta startuje lukiem i skreca z ograniczona predkoscia. Najlepiej dziala z otwartego stanowiska przy srodku mapy.
+victory.id=storm_ring.victory
+victory.speaker=Arven
+victory.text=Krag zostal zamkniety. Ostatnia Cytadela jest teraz w naszym zasiegu.
+defeat.id=storm_ring.defeat
+defeat.speaker=Mira
+defeat.text=Zewnetrzny pierscien pozostal bez pokrycia. Rozstaw obrone szerzej i wykorzystaj dlugi zasieg.

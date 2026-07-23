@@ -16,9 +16,7 @@ constexpr TouchRect kStart{240, 184, 72, 48};
 }  // namespace
 
 TouchUiAction TouchUiLayout::actionAt(std::int16_t x, std::int16_t y) {
-    if (x < 0 || y < 0 || x >= kScreenWidth || y >= kScreenHeight) {
-        return TouchUiAction::None;
-    }
+    if (x < 0 || y < 0 || x >= kScreenWidth || y >= kScreenHeight) return TouchUiAction::None;
     if (kBallista.contains(x, y)) return TouchUiAction::SelectBallista;
     if (kMortar.contains(x, y)) return TouchUiAction::SelectMortar;
     if (kFrost.contains(x, y)) return TouchUiAction::SelectFrost;

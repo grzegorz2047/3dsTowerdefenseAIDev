@@ -29,6 +29,7 @@ public:
     void handleInput(const InputSnapshot& input);
     void update(float deltaSeconds, Wave& wave);
     void reset();
+    void prepareBenchmarkLayout();
     void selectTowerType(TowerType type);
     void buildOrSelectCursor();
     void cancelAction();
@@ -44,6 +45,8 @@ public:
     [[nodiscard]] const char* selectedTowerName() const;
     [[nodiscard]] std::size_t cursorX() const;
     [[nodiscard]] std::size_t cursorZ() const;
+    [[nodiscard]] std::size_t buildSpotCount() const;
+    [[nodiscard]] std::size_t availableBuildSpotCount() const;
     [[nodiscard]] bool cursorOccupied() const;
     [[nodiscard]] const Tower* cursorTower() const;
     [[nodiscard]] bool hasEnoughGold() const;
@@ -57,6 +60,7 @@ private:
     [[nodiscard]] std::size_t towerIndexAt(std::size_t x, std::size_t z) const;
     [[nodiscard]] bool occupied(std::size_t x, std::size_t z) const;
     void moveCursor(int delta);
+    void moveCursorToAvailable(int delta);
     void tryBuild();
 
     const LevelData* level_ = nullptr;

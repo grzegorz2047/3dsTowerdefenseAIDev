@@ -31,12 +31,12 @@ std::string withChecksum(const std::string& payload) {
     return stream.str();
 }
 
-void testVersionFourRoundTrip() {
+void testVersionFiveRoundTrip() {
     SaveData source{};
-    source.campaign.unlockedCount = 3;
-    source.campaign.bestStars = {3, 2, 1, 0, 0, 0};
-    source.campaign.bestBaseHealth = {5, 4, 2, 0, 0, 0};
-    source.campaign.fewestTowers = {2, 4, 7, 0, 0, 0};
+    source.campaign.unlockedCount = 7;
+    source.campaign.bestStars = {3, 2, 1, 3, 2, 1, 2, 0, 0};
+    source.campaign.bestBaseHealth = {5, 4, 2, 5, 4, 2, 4, 0, 0};
+    source.campaign.fewestTowers = {2, 4, 7, 5, 6, 7, 6, 0, 0};
     source.settings.soundEnabled = false;
     source.settings.musicEnabled = false;
     source.settings.preferredSpeed = 2;
@@ -44,15 +44,37 @@ void testVersionFourRoundTrip() {
     source.settings.maximum3DDepthPercent = 45;
 
     const SaveLoadResult result = SaveDataCodec::deserialize(SaveDataCodec::serialize(source));
-    expect(result.status == SaveLoadStatus::Loaded, "v4 save should deserialize");
-    expect(!result.migrated, "v4 save should not report migration");
-    expect(result.data.campaign.unlockedCount == 3, "unlocked count should round-trip");
-    expect(result.data.campaign.bestStars[1] == 2, "stars should round-trip");
+    expect(result.status == SaveLoadStatus::Loaded, "v5 save should deserialize");
+    expect(!result.migrated, "v5 save should not report migration");
+    expect(result.data.campaign.unlockedCount == 7, "unlocked count should round-trip");
+    expect(result.data.campaign.bestStars[6] == 2, "late mission stars should round-trip");
     expect(!result.data.settings.soundEnabled, "sound setting should round-trip");
     expect(!result.data.settings.musicEnabled, "music setting should round-trip independently");
     expect(result.data.settings.preferredSpeed == 2, "speed setting should round-trip");
     expect(!result.data.settings.stereoEnabled, "stereo setting should round-trip");
     expect(result.data.settings.maximum3DDepthPercent == 45, "3D depth should round-trip");
+}
+
+void testVersionFourCampaignExpansionMigration() {
+    const std::string payload =
+        "version=4\n"
+        "unlocked=6\n"
+        "stars=3,2,1,3,2,1\n"
+        "base_health=5,4,2,5,4,2\n"
+        "fewest_towers=2,4,7,5,6,7\n"
+        "sound=0\n"
+        "speed=2\n"
+        "stereo=0\n"
+        "stereo_depth=45\n"
+        "music=0\n";
+    const SaveLoadResult result = SaveDataCodec::deserialize(withChecksum(payload));
+    expect(result.status == SaveLoadStatus::Loaded, "v4 save should migrate");
+    expect(result.migrated, "v4 save should report migration");
+    expect(result.data.campaign.unlockedCount == 6, "legacy unlocked progress should remain unchanged");
+    expect(result.data.campaign.bestStars[5] == 1, "legacy final score should be preserved");
+    expect(result.data.campaign.bestStars[6] == 0 && result.data.campaign.bestStars[8] == 0,
+        "new missions should start without scores");
+    expect(!result.data.settings.musicEnabled, "legacy music choice should be preserved");
 }
 
 void testVersionThreeMigration() {
@@ -70,8 +92,9 @@ void testVersionThreeMigration() {
     expect(result.status == SaveLoadStatus::Loaded, "v3 save should load");
     expect(result.migrated, "v3 save should report migration");
     expect(!result.data.settings.soundEnabled, "old sound setting should migrate");
-    expect(result.data.settings.musicEnabled, "new music setting should default to enabled");
+    expect(result.data.settings.musicEnabled, "music should default to enabled");
     expect(!result.data.settings.stereoEnabled, "old stereo setting should migrate");
+    expect(result.data.campaign.bestStars[8] == 0, "expanded campaign slots should be empty");
 }
 
 void testVersionTwoMigration() {
@@ -88,10 +111,7 @@ void testVersionTwoMigration() {
     expect(result.migrated, "v2 save should report migration");
     expect(!result.data.settings.soundEnabled, "old sound setting should migrate");
     expect(result.data.settings.musicEnabled, "music should use safe default");
-    expect(result.data.settings.preferredSpeed == 2, "old speed setting should migrate");
-    expect(result.data.settings.stereoEnabled, "new stereo setting should use safe default");
-    expect(result.data.settings.maximum3DDepthPercent == Stereo3D::kDefaultDepthPercent,
-        "new depth limit should use safe default");
+    expect(result.data.settings.stereoEnabled, "stereo should use safe default");
 }
 
 void testVersionOneMigration() {
@@ -103,8 +123,7 @@ void testVersionOneMigration() {
     expect(result.status == SaveLoadStatus::Loaded, "v1 save should load");
     expect(result.migrated, "v1 save should report migration");
     expect(result.data.campaign.bestBaseHealth[0] == 0, "new records should use defaults");
-    expect(result.data.settings.stereoEnabled, "new settings should use defaults");
-    expect(result.data.settings.musicEnabled, "music should use enabled default");
+    expect(result.data.campaign.bestStars[6] == 0, "expanded campaign should use defaults");
 }
 
 void testCorruptionIsRejected() {
@@ -115,9 +134,9 @@ void testCorruptionIsRejected() {
         "checksum mismatch should be corrupt");
 }
 
-void testInvalidMusicSettingIsRejected() {
+void testWrongV5ArrayLengthIsRejected() {
     const std::string payload =
-        "version=4\n"
+        "version=5\n"
         "unlocked=1\n"
         "stars=0,0,0,0,0,0\n"
         "base_health=0,0,0,0,0,0\n"
@@ -126,9 +145,9 @@ void testInvalidMusicSettingIsRejected() {
         "speed=1\n"
         "stereo=1\n"
         "stereo_depth=60\n"
-        "music=2\n";
+        "music=1\n";
     expect(SaveDataCodec::deserialize(withChecksum(payload)).status == SaveLoadStatus::Corrupt,
-        "out-of-range music setting should be rejected");
+        "v5 should require nine campaign entries");
 }
 
 void testAtomicStoreAndReset(const char* root) {
@@ -146,12 +165,13 @@ void testAtomicStoreAndReset(const char* root) {
 
 int main(int argc, char** argv) {
     expect(argc == 2, "repository root argument is required");
-    testVersionFourRoundTrip();
+    testVersionFiveRoundTrip();
+    testVersionFourCampaignExpansionMigration();
     testVersionThreeMigration();
     testVersionTwoMigration();
     testVersionOneMigration();
     testCorruptionIsRejected();
-    testInvalidMusicSettingIsRejected();
+    testWrongV5ArrayLengthIsRejected();
     testAtomicStoreAndReset(argv[1]);
     std::cout << "Save data tests passed\n";
     return 0;

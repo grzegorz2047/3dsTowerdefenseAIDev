@@ -1,5 +1,7 @@
 #include <cstdlib>
 #include <iostream>
+#include <set>
+#include <string>
 
 #include "Campaign.hpp"
 
@@ -12,18 +14,27 @@ void expect(bool condition, const char* message) {
     }
 }
 
-void testCatalogHasTutorialAndFiveRegionMissions() {
+void testCatalogHasNineDistinctMissions() {
     const auto& missions = CampaignCatalog::missions();
-    expect(missions.size() == 6, "campaign should contain tutorial and five region missions");
-    expect(missions.front().id[0] != '\0', "tutorial should have an id");
-    expect(missions.back().levelPath[0] != '\0', "final mission should have a level path");
+    expect(missions.size() == 9, "campaign should contain nine missions");
+    std::set<std::string> ids;
+    std::set<std::string> paths;
+    std::uint8_t previousDifficulty = 0U;
     for (const CampaignMission& mission : missions) {
+        expect(mission.id[0] != '\0', "mission should have an id");
+        expect(mission.levelPath[0] != '\0', "mission should have a level path");
         expect(mission.title[0] != '\0', "mission card should have a title");
         expect(mission.objective[0] != '\0', "mission card should show its objective");
-        expect(mission.availableTowers[0] != '\0', "mission card should show available towers");
+        expect(mission.availableTowers[0] != '\0', "mission card should show available defenses");
         expect(mission.threats[0] != '\0', "mission card should show threats");
         expect(mission.reward[0] != '\0', "mission card should show a reward");
+        expect(ids.insert(mission.id).second, "mission ids should be unique");
+        expect(paths.insert(mission.levelPath).second, "mission level paths should be unique");
+        expect(mission.difficulty > previousDifficulty, "difficulty should increase every mission");
+        previousDifficulty = mission.difficulty;
     }
+    expect(std::string(missions[5].id) == "flooded_road", "sixth mission should introduce the larger map arc");
+    expect(std::string(missions[7].id) == "storm_ring", "eighth mission should be the storm ring");
 }
 
 void testProgressUnlocksSequentially() {
@@ -35,6 +46,18 @@ void testProgressUnlocksSequentially() {
     expect(result.newlyUnlockedNext, "first completion should unlock next mission");
     expect(progress.unlocked(1), "second mission should be unlocked");
     expect(!progress.unlocked(2), "missions should unlock sequentially");
+}
+
+void testAllNineMissionsCanUnlock() {
+    CampaignProgress progress;
+    for (std::size_t index = 0U; index + 1U < kCampaignMissionCount; ++index) {
+        expect(progress.unlocked(index), "current mission should be unlocked");
+        const MissionResult result = progress.complete(index, 5, 4);
+        expect(result.newlyUnlockedNext, "first victory should unlock the following mission");
+    }
+    expect(progress.unlocked(kCampaignMissionCount - 1U), "final mission should become unlocked");
+    const MissionResult finalResult = progress.complete(kCampaignMissionCount - 1U, 5, 8);
+    expect(!finalResult.newlyUnlockedNext, "final mission should not unlock beyond the catalog");
 }
 
 void testOptionalGoalsDoNotBlockProgress() {
@@ -63,8 +86,9 @@ void testLockedOrFailedMissionDoesNotAdvance() {
 }  // namespace
 
 int main() {
-    testCatalogHasTutorialAndFiveRegionMissions();
+    testCatalogHasNineDistinctMissions();
     testProgressUnlocksSequentially();
+    testAllNineMissionsCanUnlock();
     testOptionalGoalsDoNotBlockProgress();
     testReplayKeepsBestScore();
     testLockedOrFailedMissionDoesNotAdvance();
