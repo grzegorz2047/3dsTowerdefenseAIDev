@@ -222,9 +222,10 @@ float worldZ(const LevelData& level, std::size_t gridZ) {
 
 Renderer::~Renderer() { shutdown(); }
 
-bool Renderer::initialize(const LevelData& level) {
+bool Renderer::initialize(const LevelData& level, std::size_t benchmarkDecorations) {
     shutdown();
     level_ = &level;
+    benchmarkDecorations_ = benchmarkDecorations;
     gfxSet3D(true);
 
     topLeftTarget_ = C3D_RenderTargetCreate(240, 400, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
@@ -299,9 +300,9 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
 
 void Renderer::render(const Camera& camera, const Wave& wave,
     const BuildSystem& buildSystem, const TutorialFlow&,
-    bool stereoEnabled, std::uint8_t maximum3DDepthPercent,
+    std::uint8_t maximum3DDepthPercent,
     UiRenderer& uiRenderer, const UiState& uiState) {
-    lastStereoPlan_ = Stereo3D::plan(osGet3DSliderState(), stereoEnabled, maximum3DDepthPercent);
+    lastStereoPlan_ = Stereo3D::plan(osGet3DSliderState(), maximum3DDepthPercent);
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
     drawScene(topLeftTarget_, camera, wave, buildSystem, lastStereoPlan_.leftEyeIod);
     uiRenderer.renderTopOverlay(topLeftTarget_, uiState);
@@ -392,4 +393,5 @@ void Renderer::shutdown() {
     levelVertexCount_ = enemyVertexOffset_ = enemyVertexCount_ = 0U;
     towerVertexOffset_ = towerVertexCount_ = projectileVertexOffset_ = projectileVertexCount_ = 0U;
     lastStereoPlan_ = {};
+    benchmarkDecorations_ = 0U;
 }

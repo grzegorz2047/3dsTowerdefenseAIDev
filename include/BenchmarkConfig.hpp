@@ -1,8 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
+
+#include "Level.hpp"
+#include "PerformanceBudget.hpp"
 
 enum class BenchmarkSetting : std::uint8_t {
     MapSize,
@@ -15,12 +19,18 @@ enum class BenchmarkSetting : std::uint8_t {
     Count,
 };
 
+enum class BenchmarkVerdict : std::uint8_t {
+    Pass,
+    Warn,
+    Fail,
+};
+
 struct BenchmarkConfig {
-    std::uint8_t mapSize = 16U;
-    std::uint8_t enemies = 16U;
-    std::uint8_t towers = 16U;
-    std::uint8_t projectiles = 32U;
-    std::uint8_t decorations = 24U;
+    std::uint8_t mapSize = 12U;
+    std::uint8_t enemies = 12U;
+    std::uint8_t towers = 12U;
+    std::uint8_t projectiles = 24U;
+    std::uint8_t decorations = 16U;
     std::uint8_t rocketSharePercent = 25U;
     bool automaticRamp = false;
 
@@ -31,6 +41,7 @@ struct BenchmarkConfig {
             rocketSharePercent == other.rocketSharePercent &&
             automaticRamp == other.automaticRamp;
     }
+    [[nodiscard]] bool operator!=(const BenchmarkConfig& other) const { return !(*this == other); }
 };
 
 namespace BenchmarkProfiles {
@@ -91,6 +102,72 @@ template <std::size_t N>
     else if (config.rocketSharePercent < 100U) config.rocketSharePercent = steppedValue(kRocketShares, config.rocketSharePercent, 1);
     else if (config.mapSize < 16U) config.mapSize = steppedValue(kMapSizes, config.mapSize, 1);
     return config;
+}
+
+[[nodiscard]] constexpr bool maximumReached(const BenchmarkConfig& config) {
+    return config.mapSize == 16U && config.enemies == 16U && config.towers == 16U &&
+        config.projectiles == 32U && config.decorations == 24U &&
+        config.rocketSharePercent == 100U;
+}
+
+[[nodiscard]] inline LevelData makeLevel(const BenchmarkConfig& config) {
+    LevelData level{};
+    level.id = "performance_stress";
+    level.name = "Konfigurowalne laboratorium";
+    level.width = std::min<std::uint8_t>(config.mapSize, static_cast<std::uint8_t>(kMaximumMapWidth));
+    level.height = std::min<std::uint8_t>(config.mapSize, static_cast<std::uint8_t>(kMaximumMapHeight));
+    level.tiles.fill(TileType::Ground);
+
+    const std::size_t roadZ = static_cast<std::size_t>(level.height / 2U);
+    for (std::size_t x = 0U; x < level.width; ++x) {
+        level.path[level.pathLength++] = {
+            static_cast<std::int16_t>(x), static_cast<std::int16_t>(roadZ)};
+        level.tiles[roadZ * kMaximumMapWidth + x] = TileType::Road;
+    }
+    level.tiles[roadZ * kMaximumMapWidth] = TileType::Spawn;
+    level.tiles[roadZ * kMaximumMapWidth + level.width - 1U] = TileType::Base;
+
+    std::size_t spots = 0U;
+    for (std::size_t distance = 1U; distance < level.height && spots < config.towers; ++distance) {
+        const std::array<int, 2U> rows{
+            static_cast<int>(roadZ) - static_cast<int>(distance),
+            static_cast<int>(roadZ) + static_cast<int>(distance)};
+        for (const int row : rows) {
+            if (row < 0 || row >= static_cast<int>(level.height)) continue;
+            for (std::size_t x = 1U; x + 1U < level.width && spots < config.towers; x += 2U) {
+                level.tiles[static_cast<std::size_t>(row) * kMaximumMapWidth + x] = TileType::BuildSpot;
+                ++spots;
+            }
+        }
+    }
+
+    level.waveEntries[0] = {
+        EnemyType::Raider,
+        std::min<std::uint8_t>(config.enemies, static_cast<std::uint8_t>(kMaximumWaveEnemies)),
+        0.12F};
+    level.waveEntryCount = 1U;
+    level.totalEnemyCount = level.waveEntries[0].count;
+    return level;
+}
+
+[[nodiscard]] inline BenchmarkVerdict verdict(const PerformanceSnapshot& snapshot) {
+    if (snapshot.memoryReserveLow() || snapshot.worstFrameMilliseconds > 50.0F) {
+        return BenchmarkVerdict::Fail;
+    }
+    if (snapshot.frameBudgetExceeded() || snapshot.lastRenderMilliseconds >
+        PerformanceBudget::kStereoRenderBudgetMilliseconds) {
+        return BenchmarkVerdict::Warn;
+    }
+    return BenchmarkVerdict::Pass;
+}
+
+[[nodiscard]] constexpr const char* verdictName(BenchmarkVerdict value) {
+    switch (value) {
+        case BenchmarkVerdict::Pass: return "PASS";
+        case BenchmarkVerdict::Warn: return "WARN";
+        case BenchmarkVerdict::Fail: return "FAIL";
+        default: return "WARN";
+    }
 }
 
 }  // namespace BenchmarkProfiles

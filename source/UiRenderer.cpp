@@ -168,7 +168,11 @@ void UiRenderer::drawStandaloneTop(const UiState& state) {
     C2D_DrawRectSolid(16.0F, 14.0F, 0.1F, 368.0F, 212.0F, kPanel);
     C2D_DrawRectSolid(16.0F, 14.0F, 0.2F, 368.0F, 42.0F, kPanelStrong);
     drawText("CITADEL DEFENSE 3D", 42.0F, 25.0F, 0.78F, kAccent);
-    if (state.screen == UiScreen::Loading) {
+    if (state.screen == UiScreen::BenchmarkConfig) {
+        drawText("LABORATORIUM WYDAJNOSCI", 60.0F, 82.0F, 0.68F, kGold);
+        drawWrappedText(state.objective, 52.0F, 126.0F, 0.48F, kText, 32U, 3U);
+        drawText("Dotyk: -/+  A start  B powrot", 63.0F, 194.0F, 0.42F, kMuted);
+    } else if (state.screen == UiScreen::Loading) {
         drawText("LADOWANIE MISJI", 112.0F, 88.0F, 0.62F, kGold);
         drawWrappedText(state.title, 65.0F, 124.0F, 0.58F, kText, 24U, 2U);
         drawText("Przygotowywanie pola bitwy...", 82.0F, 178.0F, 0.44F, kMuted);
@@ -187,6 +191,7 @@ void UiRenderer::renderBottom(const UiState& state) {
     C2D_TargetClear(bottomTarget_, kBackground);
     C2D_SceneBegin(bottomTarget_);
     if (state.screen == UiScreen::Campaign) drawCampaign(state);
+    else if (state.screen == UiScreen::BenchmarkConfig) drawBenchmarkConfig(state);
     else if (state.screen == UiScreen::Loading) {
         C2D_DrawRectSolid(8.0F, 70.0F, 0.1F, 304.0F, 100.0F, kPanel);
         drawText("CITADEL DEFENSE 3D", 35.0F, 91.0F, 0.72F, kAccent);
@@ -239,12 +244,38 @@ void UiRenderer::drawCampaign(const UiState& state) {
     if (state.saveProblem && state.statusMessage != nullptr && state.statusMessage[0] != '\0') {
         drawWrappedText(state.statusMessage, 164.0F, 180.0F, 0.40F, kDanger, 19U, 1U);
     }
-    drawButton(6.0F, 201.0F, 72.0F, 33.0F, "A GRAJ", false);
-    drawButton(82.0F, 201.0F, 72.0F, 33.0F,
-        state.soundEnabled ? "X SFX ON" : "X SFX OFF", false);
-    drawButton(158.0F, 201.0F, 72.0F, 33.0F,
-        state.musicEnabled ? "B MUZ ON" : "B MUZ OFF", false);
-    drawButton(234.0F, 201.0F, 80.0F, 33.0F, "START WYJ", false);
+    drawButton(6.0F, 201.0F, 58.0F, 33.0F, "GRAJ", false);
+    drawButton(68.0F, 201.0F, 58.0F, 33.0F, "LAB", false);
+    drawButton(130.0F, 201.0F, 58.0F, 33.0F, state.soundEnabled ? "SFX ON" : "SFX OFF", false);
+    drawButton(192.0F, 201.0F, 58.0F, 33.0F, state.musicEnabled ? "MUZ ON" : "MUZ OFF", false);
+    drawButton(254.0F, 201.0F, 60.0F, 33.0F, "WYJ", false);
+}
+
+void UiRenderer::drawBenchmarkConfig(const UiState& state) {
+    C2D_DrawRectSolid(0.0F, 0.0F, 0.1F, 320.0F, 28.0F, kPanelStrong);
+    drawText("KONFIGURATOR BENCHMARKU", 18.0F, 6.0F, 0.52F, kAccent);
+    const std::array<const char*, 6U> labels{
+        "MAPA", "WROGOWIE", "OBRONY", "POCISKI", "DEKORACJE", "RAKIETY"};
+    const std::array<unsigned int, 6U> values{
+        state.benchmark.mapSize, state.benchmark.enemies, state.benchmark.towers,
+        state.benchmark.projectiles, state.benchmark.decorations,
+        state.benchmark.rocketSharePercent};
+    for (std::size_t row = 0U; row < labels.size(); ++row) {
+        const float y = 34.0F + static_cast<float>(row) * 27.0F;
+        char value[40]{};
+        if (row == 0U) std::snprintf(value, sizeof(value), "%ux%u", values[row], values[row]);
+        else if (row == 5U) std::snprintf(value, sizeof(value), "%u%%", values[row]);
+        else std::snprintf(value, sizeof(value), "%u", values[row]);
+        drawText(labels[row], 12.0F, y + 4.0F, 0.44F, kText);
+        drawText(value, 126.0F, y + 4.0F, 0.44F, kGold);
+        drawButton(202.0F, y, 44.0F, 24.0F, "-", false);
+        drawButton(252.0F, y, 60.0F, 24.0F, "+", false);
+    }
+    drawButton(8.0F, 199.0F, 144.0F, 34.0F,
+        state.benchmark.automaticRamp ? "AUTO ON" : "AUTO OFF",
+        state.benchmark.automaticRamp);
+    drawButton(160.0F, 199.0F, 72.0F, 34.0F, "START", true);
+    drawButton(240.0F, 199.0F, 72.0F, 34.0F, "WSTECZ", false);
 }
 
 void UiRenderer::drawMission(const UiState& state) {
@@ -273,10 +304,32 @@ void UiRenderer::drawMission(const UiState& state) {
     drawText(selection, 14.0F, 85.0F, 0.43F, kText);
     drawWrappedText(state.instruction, 14.0F, 104.0F, 0.40F, kMuted, 38U, 1U);
 
-    if (state.diagnosticsVisible) { drawDiagnostics(state); return; }
+    if (state.diagnosticsVisible && !state.missionFinished) { drawDiagnostics(state); return; }
     if (state.missionFinished) {
-        drawButton(8.0F, 128.0F, 144.0F, 40.0F, "X KAMPANIA", true);
-        drawButton(160.0F, 128.0F, 152.0F, 40.0F, "Y POWTORZ", false);
+        if (state.benchmarkMode) {
+            C2D_DrawRectSolid(8.0F, 124.0F, 0.2F, 304.0F, 62.0F, kPanelStrong);
+            char result[96]{};
+            const float fps = state.performance.averageFrameMilliseconds > 0.0F
+                ? 1000.0F / state.performance.averageFrameMilliseconds : 0.0F;
+            std::snprintf(result, sizeof(result), "%s FPS %.1f AVG %.1f MAX %.1f",
+                BenchmarkProfiles::verdictName(state.benchmarkVerdict), fps,
+                state.performance.averageFrameMilliseconds, state.performance.worstFrameMilliseconds);
+            drawText(result, 12.0F, 130.0F, 0.40F,
+                state.benchmarkVerdict == BenchmarkVerdict::Fail ? kDanger : kGold);
+            std::snprintf(result, sizeof(result), "R %.1f MEM %luK E%zu T%zu P%zu D%u O%u",
+                state.performance.lastRenderMilliseconds,
+                static_cast<unsigned long>(state.performance.freeLinearMemoryBytes / 1024U),
+                state.activeEnemies, state.towerCount, state.activeProjectiles,
+                static_cast<unsigned int>(state.benchmark.decorations),
+                static_cast<unsigned int>(state.stereoEyeCount));
+            drawText(result, 12.0F, 151.0F, 0.40F, kText);
+            std::snprintf(result, sizeof(result), "MAP %ux%u RAK %u%% SEP %.3f",
+                state.benchmark.mapSize, state.benchmark.mapSize,
+                state.benchmark.rocketSharePercent, state.stereoSeparation);
+            drawText(result, 12.0F, 171.0F, 0.40F, kMuted);
+        }
+        drawButton(8.0F, 190.0F, 144.0F, 42.0F, "KAMPANIA", true);
+        drawButton(160.0F, 190.0F, 152.0F, 42.0F, "POWTORZ", false);
     } else {
         const TouchRect pause = TouchUiLayout::rectFor(TouchUiAction::TogglePause);
         const TouchRect speed = TouchUiLayout::rectFor(TouchUiAction::ToggleSpeed);
@@ -317,10 +370,10 @@ void UiRenderer::drawDiagnostics(const UiState& state) {
         static_cast<unsigned long>(state.performance.freeLinearMemoryBytes / 1024U));
     drawText(line, 13.0F, 158.0F, 0.40F,
         state.performance.memoryReserveLow() ? kDanger : kText);
-    std::snprintf(line, sizeof(line), "3D SUWAK %.2f LIMIT %u%% OCZY %u",
-        state.stereoSlider,
-        static_cast<unsigned int>(state.maximum3DDepthPercent),
-        static_cast<unsigned int>(state.stereoEyeCount));
+    std::snprintf(line, sizeof(line), "3D %.2f SEP %.3f OCZY %u LIM %u%%",
+        state.stereoSlider, state.stereoSeparation,
+        static_cast<unsigned int>(state.stereoEyeCount),
+        static_cast<unsigned int>(state.maximum3DDepthPercent));
     drawText(line, 13.0F, 179.0F, 0.40F, kText);
     std::snprintf(line, sizeof(line), "AUDIO %s CH %d", state.audioBackend, state.audioChannel);
     drawText(line, 13.0F, 200.0F, 0.40F, kMuted);

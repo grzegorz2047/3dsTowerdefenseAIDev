@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-StereoFramePlan Stereo3D::plan(float sliderState, bool, std::uint8_t maximumDepthPercent) {
+StereoFramePlan Stereo3D::plan(float sliderState, std::uint8_t maximumDepthPercent) {
     StereoFramePlan result{};
     result.slider = std::clamp(sliderState, 0.0F, 1.0F);
     const float depthLimit =
@@ -18,9 +18,8 @@ StereoFramePlan Stereo3D::plan(float sliderState, bool, std::uint8_t maximumDept
 }
 
 std::uint8_t Stereo3D::nextDepthLimit(std::uint8_t currentDepthPercent) {
-    if (currentDepthPercent < 25U) return 25U;
     if (currentDepthPercent < 50U) return 50U;
-    if (currentDepthPercent < 75U) return 75U;
+    if (currentDepthPercent < 70U) return 70U;
     if (currentDepthPercent < 100U) return 100U;
-    return 25U;
+    return 0U;
 }

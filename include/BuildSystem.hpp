@@ -29,7 +29,9 @@ public:
     void handleInput(const InputSnapshot& input);
     void update(float deltaSeconds, Wave& wave);
     void reset();
-    void prepareBenchmarkLayout();
+    void prepareBenchmarkLayout(std::size_t requestedTowers = kMaximumTowers,
+        std::uint8_t rocketSharePercent = 25U);
+    void setProjectileLimit(std::size_t limit);
     void selectTowerType(TowerType type);
     void buildOrSelectCursor();
     void cancelAction();

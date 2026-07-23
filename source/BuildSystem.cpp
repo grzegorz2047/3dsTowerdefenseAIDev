@@ -54,23 +54,29 @@ void BuildSystem::reset() {
     cancelAction();
 }
 
-void BuildSystem::prepareBenchmarkLayout() {
+void BuildSystem::prepareBenchmarkLayout(std::size_t requestedTowers,
+    std::uint8_t rocketSharePercent) {
     reset();
     if (level_ == nullptr) return;
-    const std::array<TowerType, 4U> pattern{
-        TowerType::Ballista, TowerType::Mortar, TowerType::Frost, TowerType::Rocket};
-    for (std::size_t index = 0U; index < buildSpotCount_ && towerCount_ < kMaximumTowers; ++index) {
+    const std::size_t target = std::min({requestedTowers, buildSpotCount_, kMaximumTowers});
+    const std::size_t rocketCount = (target * std::min<std::uint8_t>(rocketSharePercent, 100U) + 99U) / 100U;
+    const std::array<TowerType, 3U> conventional{
+        TowerType::Ballista, TowerType::Mortar, TowerType::Frost};
+    for (std::size_t index = 0U; index < target; ++index) {
         const GridPoint spot = buildSpots_[index];
-        Tower tower(*level_, static_cast<std::size_t>(spot.x), static_cast<std::size_t>(spot.z),
-            pattern[index % pattern.size()]);
+        const TowerType type = index < rocketCount ? TowerType::Rocket :
+            conventional[(index - rocketCount) % conventional.size()];
+        Tower tower(*level_, static_cast<std::size_t>(spot.x), static_cast<std::size_t>(spot.z), type);
         if (!tower.valid()) continue;
         while (tower.canUpgrade()) (void)tower.upgrade();
         towers_[towerCount_++] = tower;
     }
     cursorIndex_ = 0U;
-    selectedTowerType_ = TowerType::Rocket;
+    selectedTowerType_ = rocketSharePercent > 0U ? TowerType::Rocket : TowerType::Ballista;
     cancelAction();
 }
+
+void BuildSystem::setProjectileLimit(std::size_t limit) { projectiles_.setActiveLimit(limit); }
 
 void BuildSystem::selectTowerType(TowerType type) { selectedTowerType_ = type; cancelAction(); }
 void BuildSystem::buildOrSelectCursor() { tryBuild(); }

@@ -80,14 +80,17 @@ public:
     [[nodiscard]] bool launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage);
     void update(float deltaSeconds, Wave& wave);
     void reset();
+    void setActiveLimit(std::size_t limit);
 
     [[nodiscard]] std::size_t activeCount() const;
+    [[nodiscard]] std::size_t activeLimit() const;
     [[nodiscard]] std::uint32_t shotEventCount() const;
     [[nodiscard]] std::uint32_t impactEventCount() const;
     [[nodiscard]] const Projectile& projectileAt(std::size_t index) const;
 
 private:
     std::array<Projectile, kCapacity> projectiles_{};
+    std::size_t activeLimit_ = kCapacity;
     std::uint32_t shotEventCount_ = 0U;
     std::uint32_t impactEventCount_ = 0U;
 };

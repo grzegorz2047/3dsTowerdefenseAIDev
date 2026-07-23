@@ -40,6 +40,7 @@ COMMON_FLAGS=(
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/hud_text_tests.cpp" "$ROOT/source/HudText.cpp" -o "$BUILD_DIR/hud-text-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/performance_budget_tests.cpp" -o "$BUILD_DIR/performance-budget-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/performance_stress_level_tests.cpp" "$ROOT/source/Level.cpp" -o "$BUILD_DIR/performance-stress-level-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/benchmark_config_tests.cpp" "$ROOT/source/Level.cpp" -o "$BUILD_DIR/benchmark-config-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/orbit_camera_tests.cpp" "$ROOT/source/OrbitCamera.cpp" -o "$BUILD_DIR/orbit-camera-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/seven_segment_digits_tests.cpp" -o "$BUILD_DIR/seven-segment-digits-tests"
 
@@ -63,6 +64,7 @@ COMMON_FLAGS=(
 "$BUILD_DIR/hud-text-tests"
 "$BUILD_DIR/performance-budget-tests"
 "$BUILD_DIR/performance-stress-level-tests" "$ROOT"
+"$BUILD_DIR/benchmark-config-tests"
 "$BUILD_DIR/orbit-camera-tests"
 "$BUILD_DIR/seven-segment-digits-tests"
 
@@ -135,6 +137,12 @@ grep -q "Mtx_PerspStereoTilt" "$ROOT/source/Camera.cpp"
 grep -q "lastStereoPlan_.stereo" "$ROOT/source/Renderer.cpp"
 grep -q "drawScene(topRightTarget_" "$ROOT/source/Renderer.cpp"
 grep -q "Stereo3D::nextDepthLimit" "$ROOT/source/main.cpp"
+if grep -q "settings.stereoEnabled" "$ROOT/source/main.cpp"; then
+  echo "Physical 3D slider must be the only stereo switch" >&2
+  exit 1
+fi
+grep -q "BenchmarkProfiles::makeLevel" "$ROOT/source/main.cpp"
+grep -q "configureBenchmark" "$ROOT/source/main.cpp"
 
 # Physical-device regression and runtime diagnostics contracts.
 grep -q "int speedMultiplier = 1;" "$ROOT/source/main.cpp"
