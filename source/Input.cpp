@@ -143,6 +143,7 @@ InputSnapshot InputSystem::poll() {
     snapshot.extendedRaw.zrDown = keyDown(irrstDown, KEY_ZR);
 
     snapshot.motionRecalibrate = motionEnabled_ && selectHeld && keyDown(snapshot.down, KEY_B);
+    if (snapshot.motionRecalibrate) snapshot.down &= ~KEY_B;
     if (motionEnabled_ && gyroscopeInitialized_) {
         angularRate rate{};
         hidGyroRead(&rate);
