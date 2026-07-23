@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #include "Enemy.hpp"
@@ -24,6 +25,8 @@ public:
     [[nodiscard]] std::size_t spawnedCount() const;
     [[nodiscard]] std::size_t enemyCount() const;
     [[nodiscard]] std::size_t defeatedCount() const;
+    [[nodiscard]] std::uint32_t deathEventCount() const;
+    [[nodiscard]] std::uint32_t baseDamageEventCount() const;
     [[nodiscard]] Enemy& enemyAt(std::size_t index);
     [[nodiscard]] const Enemy& enemyAt(std::size_t index) const;
     [[nodiscard]] int baseHealth() const;
@@ -40,4 +43,6 @@ private:
     std::size_t spawnedCount_ = 0;
     float spawnTimer_ = 0.0F;
     int baseHealth_ = kInitialBaseHealth;
+    std::uint32_t deathEventCount_ = 0U;
+    std::uint32_t baseDamageEventCount_ = 0U;
 };
