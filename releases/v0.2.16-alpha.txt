@@ -1,0 +1,8 @@
+Release v0.2.16-alpha
+
+Includes:
+- nine-map campaign with three handcrafted 16x16 maps;
+- guided rocket launcher and curved trajectories;
+- automatic build-spot navigation;
+- deterministic Old Nintendo 3DS XL benchmark with 16 level-3 defenses and looping enemies;
+- save migration to v5.
