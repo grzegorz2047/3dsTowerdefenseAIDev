@@ -6,13 +6,13 @@
 #include <cstring>
 
 #include "AudioChannelPool.hpp"
-#include "AudioNdspShim.hpp"
 
 namespace {
 
 constexpr float kPi = 3.14159265358979323846F;
 
-alignas(0x80) constexpr std::array<std::uint8_t, 0x400> kSyntheticHleComponent{};
+// Removed physical-runtime workaround: kSyntheticHleComponent,
+// ndspUseComponent and std::array<std::uint8_t, 0x400> must never be restored.
 
 struct CueShape {
     float durationSeconds;
@@ -44,52 +44,27 @@ float noteFrequency(int semitoneFromA4) {
 
 }  // namespace
 
-AudioSystem::~AudioSystem() {
-    shutdown();
-}
+AudioSystem::~AudioSystem() { shutdown(); }
 
 bool AudioSystem::initialize() {
-    if (backend_ != AudioBackend::None) {
-        return true;
-    }
+    if (backend_ != AudioBackend::None) return true;
 
     ndspInitialResult_ = ndspInit();
     ndspResult_ = ndspInitialResult_;
-    const std::uint32_t initialRaw = static_cast<std::uint32_t>(ndspInitialResult_);
-
-    if (shouldAttemptNdspHleShim(initialRaw)) {
-        ndspShimAttempted_ = true;
-        ndspUseComponent(
-            kSyntheticHleComponent.data(),
-            static_cast<u32>(kSyntheticHleComponent.size()),
-            0x00FFU,
-            0x00FFU);
-        ndspShimResult_ = ndspInit();
-        ndspResult_ = ndspShimResult_;
-        ndspShimActive_ = ndspShimIsActive(
-            ndspShimAttempted_,
-            static_cast<std::uint32_t>(ndspShimResult_));
-    }
-
-    if (ndspBackendReady(
-            initialRaw,
-            ndspShimAttempted_,
-            static_cast<std::uint32_t>(ndspShimResult_))) {
+    if (R_SUCCEEDED(ndspInitialResult_)) {
         backend_ = AudioBackend::Ndsp;
         ndspSetOutputMode(NDSP_OUTPUT_STEREO);
         ndspSetMasterVol(1.0F);
         initializeNdspChannels();
     } else {
+        ndspShimAttempted_ = false;
+        ndspShimActive_ = false;
+        ndspShimResult_ = static_cast<Result>(kAudioResultNotAttempted);
         csndResult_ = csndInit();
-        if (audioResultSucceeded(static_cast<std::uint32_t>(csndResult_))) {
-            backend_ = AudioBackend::Csnd;
-        }
+        if (R_SUCCEEDED(csndResult_)) backend_ = AudioBackend::Csnd;
     }
 
-    if (backend_ == AudioBackend::None) {
-        return false;
-    }
-
+    if (backend_ == AudioBackend::None) return false;
     if (!generateSamples() || !generateDiagnosticTone() || !generateMissionMusic()) {
         shutdown();
         return false;
@@ -130,19 +105,13 @@ void AudioSystem::initializeNdspChannels() {
 }
 
 void AudioSystem::play(AudioCue cue) {
-    if (backend_ == AudioBackend::None || cue == AudioCue::Count) {
-        return;
-    }
-
-    const Sample& sample = samples_[static_cast<std::size_t>(cue)];
-    playSample(cue, sample);
+    if (backend_ == AudioBackend::None || cue == AudioCue::Count) return;
+    playSample(cue, samples_[static_cast<std::size_t>(cue)]);
 }
 
 void AudioSystem::playDiagnosticTone() {
     if (backend_ == AudioBackend::Ndsp) {
-        if (diagnosticTone_.data == nullptr || diagnosticTone_.count == 0U) {
-            return;
-        }
+        if (diagnosticTone_.data == nullptr || diagnosticTone_.count == 0U) return;
         ndspChnWaveBufClear(kDiagnosticChannel);
         std::memset(&diagnosticWaveBuffer_, 0, sizeof(diagnosticWaveBuffer_));
         diagnosticWaveBuffer_.data_vaddr = diagnosticTone_.data;
@@ -156,22 +125,18 @@ void AudioSystem::playDiagnosticTone() {
         lastPlayResult_ = 0;
         return;
     }
-
-    if (backend_ == AudioBackend::Csnd) {
-        play(AudioCue::BuildSuccess);
-    }
+    if (backend_ == AudioBackend::Csnd) play(AudioCue::BuildSuccess);
 }
 
 void AudioSystem::startMissionMusic() {
-    if (backend_ != AudioBackend::Ndsp || missionMusic_.data == nullptr || missionMusic_.count == 0U) {
-        return;
+    if (backend_ == AudioBackend::Ndsp && missionMusic_.data != nullptr && missionMusic_.count != 0U) {
+        ndspChnWaveBufClear(kMusicChannel);
+        std::memset(&musicWaveBuffer_, 0, sizeof(musicWaveBuffer_));
+        musicWaveBuffer_.data_vaddr = missionMusic_.data;
+        musicWaveBuffer_.nsamples = static_cast<u32>(missionMusic_.count);
+        musicWaveBuffer_.looping = true;
+        ndspChnWaveBufAdd(kMusicChannel, &musicWaveBuffer_);
     }
-    ndspChnWaveBufClear(kMusicChannel);
-    std::memset(&musicWaveBuffer_, 0, sizeof(musicWaveBuffer_));
-    musicWaveBuffer_.data_vaddr = missionMusic_.data;
-    musicWaveBuffer_.nsamples = static_cast<u32>(missionMusic_.count);
-    musicWaveBuffer_.looping = true;
-    ndspChnWaveBufAdd(kMusicChannel, &musicWaveBuffer_);
 }
 
 void AudioSystem::stopMusic() {
@@ -189,9 +154,7 @@ std::size_t AudioSystem::channelSlotFor(AudioCue cue) {
 }
 
 void AudioSystem::playSample(AudioCue cue, const Sample& sample) {
-    if (backend_ == AudioBackend::None || sample.data == nullptr || sample.count == 0U) {
-        return;
-    }
+    if (backend_ == AudioBackend::None || sample.data == nullptr || sample.count == 0U) return;
 
     const std::size_t slot = channelSlotFor(cue);
     const int channel = kFirstSfxChannel + static_cast<int>(slot);
@@ -218,19 +181,18 @@ void AudioSystem::playSample(AudioCue cue, const Sample& sample) {
 
     lastPlayResult_ = csndPlaySound(
         channel,
-        SOUND_ONE_SHOT | SOUND_FORMAT_16BIT | SOUND_LINEAR_INTERP,
+        SOUND_ENABLE | SOUND_ONE_SHOT | SOUND_FORMAT_16BIT | SOUND_LINEAR_INTERP,
         static_cast<u32>(kSampleRate),
         0.82F,
         0.0F,
         sample.data,
         nullptr,
         byteCount);
+    if (R_SUCCEEDED(lastPlayResult_)) lastPlayResult_ = csndExecCmds(true);
 }
 
 void AudioSystem::playMask(std::uint32_t cueMask) {
-    if (backend_ == AudioBackend::Ndsp && musicWaveBuffer_.data_vaddr == nullptr) {
-        startMissionMusic();
-    }
+    if (backend_ == AudioBackend::Ndsp && musicWaveBuffer_.data_vaddr == nullptr) startMissionMusic();
     constexpr std::array<AudioCue, 9U> order{
         AudioCue::Victory,
         AudioCue::Defeat,
@@ -252,21 +214,15 @@ void AudioSystem::updateProbe() {
         const AudioWaveStatus status = diagnosticWaveStatus();
         diagnosticSamplePosition_ = ndspChnGetSamplePos(kDiagnosticChannel);
         probeResult_ = 0;
-        probeState_ = updateAudioProbeState(
-            probeState_,
-            true,
-            audioWaveStatusActive(status));
+        probeState_ = updateAudioProbeState(probeState_, true, audioWaveStatusActive(status));
         return;
     }
 
-    if (backend_ != AudioBackend::Csnd || lastChannel_ < 0) {
-        return;
-    }
-
+    if (backend_ != AudioBackend::Csnd || lastChannel_ < 0) return;
     CSND_ChnInfo info{};
     probeResult_ = csndGetState(static_cast<u32>(lastChannel_), &info);
-    const bool querySucceeded = R_SUCCEEDED(probeResult_);
-    probeState_ = updateAudioProbeState(probeState_, querySucceeded, querySucceeded && info.active != 0U);
+    const bool ok = R_SUCCEEDED(probeResult_);
+    probeState_ = updateAudioProbeState(probeState_, ok, ok && info.active != 0U);
 }
 
 void AudioSystem::stopAll() {
@@ -293,12 +249,8 @@ void AudioSystem::stopAll() {
 void AudioSystem::shutdown() {
     stopAll();
     freeSamples();
-
-    if (backend_ == AudioBackend::Ndsp) {
-        ndspExit();
-    } else if (backend_ == AudioBackend::Csnd) {
-        csndExit();
-    }
+    if (backend_ == AudioBackend::Ndsp) ndspExit();
+    else if (backend_ == AudioBackend::Csnd) csndExit();
 
     backend_ = AudioBackend::None;
     poolCursors_.fill(0U);
@@ -340,40 +292,36 @@ std::uint32_t AudioSystem::diagnosticSampleCount() const {
 
 bool AudioSystem::generateSamples() {
     for (std::uint8_t value = 0; value < static_cast<std::uint8_t>(AudioCue::Count); ++value) {
-        if (!generateSample(static_cast<AudioCue>(value))) {
-            return false;
-        }
+        if (!generateSample(static_cast<AudioCue>(value))) return false;
     }
     return true;
 }
 
 bool AudioSystem::generateSample(AudioCue cue) {
     const CueShape shape = shapeFor(cue);
-    const std::size_t sampleCount = std::max<std::size_t>(
+    const std::size_t count = std::max<std::size_t>(
         1U,
         static_cast<std::size_t>(shape.durationSeconds * static_cast<float>(kSampleRate)));
-    auto* data = static_cast<std::int16_t*>(linearAlloc(sampleCount * sizeof(std::int16_t)));
-    if (data == nullptr) {
-        return false;
-    }
+    auto* data = static_cast<std::int16_t*>(linearAlloc(count * sizeof(std::int16_t)));
+    if (data == nullptr) return false;
 
     float phase = 0.0F;
-    for (std::size_t index = 0; index < sampleCount; ++index) {
-        const float progress = static_cast<float>(index) / static_cast<float>(sampleCount);
-        const float frequency = shape.startFrequency + (shape.endFrequency - shape.startFrequency) * progress;
+    for (std::size_t index = 0; index < count; ++index) {
+        const float progress = static_cast<float>(index) / static_cast<float>(count);
+        const float frequency = shape.startFrequency +
+            (shape.endFrequency - shape.startFrequency) * progress;
         phase += 2.0F * kPi * frequency / static_cast<float>(kSampleRate);
-        const float attack = std::min(1.0F, progress * 18.0F);
         const float release = std::max(0.0F, 1.0F - progress);
-        const float envelope = attack * release * release;
+        const float envelope = std::min(1.0F, progress * 18.0F) * release * release;
         const float oscillator = shape.squareWave
             ? (std::sin(phase) >= 0.0F ? 1.0F : -1.0F)
             : std::sin(phase);
-        const float sample = std::clamp(oscillator * envelope * shape.amplitude, -1.0F, 1.0F);
-        data[index] = static_cast<std::int16_t>(sample * 32767.0F);
+        data[index] = static_cast<std::int16_t>(
+            std::clamp(oscillator * envelope * shape.amplitude, -1.0F, 1.0F) * 32767.0F);
     }
 
-    DSP_FlushDataCache(data, sampleCount * sizeof(std::int16_t));
-    samples_[static_cast<std::size_t>(cue)] = {data, sampleCount};
+    DSP_FlushDataCache(data, count * sizeof(std::int16_t));
+    samples_[static_cast<std::size_t>(cue)] = {data, count};
     return true;
 }
 
@@ -381,18 +329,18 @@ bool AudioSystem::generateDiagnosticTone() {
     constexpr float kDurationSeconds = 2.0F;
     constexpr float kFrequency = 880.0F;
     constexpr float kAmplitude = 0.75F;
-    const std::size_t frameCount = static_cast<std::size_t>(kDurationSeconds * static_cast<float>(kSampleRate));
-    auto* data = static_cast<std::int16_t*>(linearAlloc(frameCount * 2U * sizeof(std::int16_t)));
-    if (data == nullptr) {
-        return false;
-    }
+    const std::size_t frameCount = static_cast<std::size_t>(
+        kDurationSeconds * static_cast<float>(kSampleRate));
+    auto* data = static_cast<std::int16_t*>(linearAlloc(
+        frameCount * 2U * sizeof(std::int16_t)));
+    if (data == nullptr) return false;
 
     for (std::size_t frame = 0; frame < frameCount; ++frame) {
         const float progress = static_cast<float>(frame) / static_cast<float>(frameCount);
-        const float attack = std::min(1.0F, progress * 100.0F);
-        const float release = std::min(1.0F, (1.0F - progress) * 100.0F);
-        const float envelope = attack * release;
-        const float phase = 2.0F * kPi * kFrequency * static_cast<float>(frame) / static_cast<float>(kSampleRate);
+        const float envelope = std::min(1.0F, progress * 100.0F) *
+            std::min(1.0F, (1.0F - progress) * 100.0F);
+        const float phase = 2.0F * kPi * kFrequency * static_cast<float>(frame) /
+            static_cast<float>(kSampleRate);
         const std::int16_t sample = static_cast<std::int16_t>(
             std::sin(phase) * envelope * kAmplitude * 32767.0F);
         data[frame * 2U] = sample;
@@ -412,31 +360,35 @@ bool AudioSystem::generateMissionMusic() {
         -10, -5, -3, -5, -12, -7, -5, -3,
     };
     constexpr std::array<int, 4U> bass{-24, -22, -20, -19};
-    const std::size_t samplesPerBeat = static_cast<std::size_t>(kSecondsPerBeat * static_cast<float>(kSampleRate));
-    const std::size_t sampleCount = samplesPerBeat * kBeatCount;
-    auto* data = static_cast<std::int16_t*>(linearAlloc(sampleCount * sizeof(std::int16_t)));
+    const std::size_t samplesPerBeat = static_cast<std::size_t>(
+        kSecondsPerBeat * static_cast<float>(kSampleRate));
+    const std::size_t count = samplesPerBeat * kBeatCount;
+    auto* data = static_cast<std::int16_t*>(linearAlloc(count * sizeof(std::int16_t)));
     if (data == nullptr) return false;
 
     float melodyPhase = 0.0F;
     float bassPhase = 0.0F;
-    for (std::size_t index = 0; index < sampleCount; ++index) {
+    for (std::size_t index = 0; index < count; ++index) {
         const std::size_t beat = index / samplesPerBeat;
-        const float beatProgress = static_cast<float>(index % samplesPerBeat) / static_cast<float>(samplesPerBeat);
-        const float melodyFrequency = noteFrequency(melody[beat]);
-        const float bassFrequency = noteFrequency(bass[beat / 4U]);
-        melodyPhase += 2.0F * kPi * melodyFrequency / static_cast<float>(kSampleRate);
-        bassPhase += 2.0F * kPi * bassFrequency / static_cast<float>(kSampleRate);
-        const float noteEnvelope = std::min(1.0F, beatProgress * 18.0F) *
-            std::min(1.0F, (1.0F - beatProgress) * 5.0F);
-        const float pulse = std::sin(melodyPhase) * 0.23F * noteEnvelope;
-        const float bassTone = std::sin(bassPhase) * 0.15F;
-        const float shimmer = std::sin(melodyPhase * 2.0F) * 0.04F * noteEnvelope;
-        const float sample = std::clamp(pulse + bassTone + shimmer, -0.55F, 0.55F);
+        const float progress = static_cast<float>(index % samplesPerBeat) /
+            static_cast<float>(samplesPerBeat);
+        melodyPhase += 2.0F * kPi * noteFrequency(melody[beat]) /
+            static_cast<float>(kSampleRate);
+        bassPhase += 2.0F * kPi * noteFrequency(bass[beat / 4U]) /
+            static_cast<float>(kSampleRate);
+        const float envelope = std::min(1.0F, progress * 18.0F) *
+            std::min(1.0F, (1.0F - progress) * 5.0F);
+        const float sample = std::clamp(
+            std::sin(melodyPhase) * 0.23F * envelope +
+            std::sin(bassPhase) * 0.15F +
+            std::sin(melodyPhase * 2.0F) * 0.04F * envelope,
+            -0.55F,
+            0.55F);
         data[index] = static_cast<std::int16_t>(sample * 32767.0F);
     }
 
-    DSP_FlushDataCache(data, sampleCount * sizeof(std::int16_t));
-    missionMusic_ = {data, sampleCount};
+    DSP_FlushDataCache(data, count * sizeof(std::int16_t));
+    missionMusic_ = {data, count};
     return true;
 }
 
