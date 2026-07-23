@@ -139,6 +139,7 @@ UiState campaignUiState(const CampaignProgress& progress, const SaveData& saveDa
     state.saveProblem = saveProblem;
     state.statusMessage = saveMessage.c_str();
     state.soundEnabled = saveData.settings.soundEnabled;
+    state.musicEnabled = saveData.settings.musicEnabled;
     state.stereoEnabled = saveData.settings.stereoEnabled;
     state.maximum3DDepthPercent = saveData.settings.maximum3DDepthPercent;
 
@@ -177,6 +178,9 @@ std::size_t selectCampaignMission(UiRenderer& uiRenderer, CampaignProgress& prog
             return kPerformanceStressSelection;
         } else if (input.pressed(KEY_X)) {
             saveData.settings.soundEnabled = !saveData.settings.soundEnabled;
+            saveProblem = !persistSave(progress, saveData, saveMessage);
+        } else if (input.pressed(KEY_B)) {
+            saveData.settings.musicEnabled = !saveData.settings.musicEnabled;
             saveProblem = !persistSave(progress, saveData, saveMessage);
         } else if (input.pressed(KEY_L)) {
             saveData.settings.stereoEnabled = !saveData.settings.stereoEnabled;
@@ -264,6 +268,7 @@ UiState missionUiState(const CampaignMission& mission, const Wave& wave,
     state.recordsCampaignProgress = recordsCampaignProgress;
     state.resultStars = missionResult.stars;
     state.soundEnabled = settings.soundEnabled;
+    state.musicEnabled = settings.musicEnabled;
     state.stereoEnabled = settings.stereoEnabled;
     state.maximum3DDepthPercent = settings.maximum3DDepthPercent;
     state.performance = performance;
@@ -422,6 +427,7 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
             wave.deathEventCount(),
             wave.baseDamageEventCount(),
         };
+        audioSystem.updateMusic(tutorialFlow.phase(), saveData.settings.musicEnabled, frameSeconds);
         if (saveData.settings.soundEnabled) audioSystem.playMask(audioRouter.update(audioState, frameSeconds));
         audioSystem.updateProbe();
 
@@ -499,7 +505,7 @@ int main() {
     const SaveLoadResult loaded = SaveDataStore::load(kSavePath);
     if (loaded.status == SaveLoadStatus::Loaded && progress.restore(loaded.data.campaign)) {
         saveData = loaded.data;
-        saveMessage = loaded.migrated ? "Zapis zmigrowany do v3." : "Wczytano zapis.";
+        saveMessage = loaded.migrated ? "Zapis zmigrowany do v4." : "Wczytano zapis.";
         if (loaded.migrated) saveProblem = !persistSave(progress, saveData, saveMessage);
     } else if (loaded.status == SaveLoadStatus::Corrupt || loaded.status == SaveLoadStatus::UnsupportedVersion) {
         saveProblem = true;
