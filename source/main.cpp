@@ -266,7 +266,8 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
     AudioSystem audioSystem;
     (void)audioSystem.initialize();
     AudioEventRouter audioRouter;
-    audioRouter.reset({tutorialFlow.phase(), buildSystem.projectiles().activeCount()});
+    audioRouter.reset({tutorialFlow.phase(), buildSystem.projectiles().activeCount(),
+        wave.defeatedCount(), wave.baseHealth()});
     PerformanceSampler performanceSampler;
     PerformanceSnapshot performanceSnapshot{};
 
@@ -337,8 +338,13 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
             resultRecorded = true;
         }
 
-        const AudioFrameState audioState{tutorialFlow.phase(), buildSystem.projectiles().activeCount()};
-        if (saveData.settings.soundEnabled) audioSystem.playMask(audioRouter.update(audioState));
+        const AudioFrameState audioState{
+            tutorialFlow.phase(),
+            buildSystem.projectiles().activeCount(),
+            wave.defeatedCount(),
+            wave.baseHealth(),
+        };
+        if (saveData.settings.soundEnabled) audioSystem.playMask(audioRouter.update(audioState, frameSeconds));
         audioSystem.updateProbe();
 
         UiState uiState = missionUiState(mission, wave, buildSystem, tutorialFlow, audioSystem,

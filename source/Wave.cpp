@@ -91,6 +91,13 @@ void Wave::applyAreaEffect(
 
 std::size_t Wave::spawnedCount() const { return spawnedCount_; }
 std::size_t Wave::enemyCount() const { return enemies_.size(); }
+std::size_t Wave::defeatedCount() const {
+    std::size_t count = 0U;
+    for (std::size_t index = 0; index < spawnedCount_; ++index) {
+        if (resolved_[index] && enemies_[index].dead()) ++count;
+    }
+    return count;
+}
 Enemy& Wave::enemyAt(std::size_t index) { return enemies_.at(index); }
 const Enemy& Wave::enemyAt(std::size_t index) const { return enemies_.at(index); }
 int Wave::baseHealth() const { return baseHealth_; }
