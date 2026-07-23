@@ -44,14 +44,54 @@ InputSystem::InputSystem() {
     }
     extendedAvailable_ = irrstInitialized_;
     publishRuntimeState(extendedAvailable_, extendedScheme_);
+    MotionCameraRuntime::publish(false, false);
 }
 
 InputSystem::~InputSystem() {
+    (void)configureMotion(false);
     if (irrstInitialized_) {
         irrstExit();
         irrstInitialized_ = false;
     }
     publishRuntimeState(false, ExtendedControlScheme::Camera);
+    MotionCameraRuntime::publish(false, false);
+}
+
+bool InputSystem::configureMotion(bool enabled) {
+    if (!enabled) {
+        if (gyroscopeInitialized_) {
+            (void)HIDUSER_DisableGyroscope();
+            gyroscopeInitialized_ = false;
+        }
+        motionEnabled_ = false;
+        gyroscopeRawToDps_ = 0.0F;
+        MotionCameraRuntime::publish(false, false);
+        return true;
+    }
+
+    if (gyroscopeInitialized_) {
+        motionEnabled_ = true;
+        MotionCameraRuntime::publish(true, true);
+        return true;
+    }
+
+    if (R_FAILED(HIDUSER_EnableGyroscope())) {
+        motionEnabled_ = false;
+        MotionCameraRuntime::publish(true, false);
+        return false;
+    }
+    float coefficient = 0.0F;
+    if (R_FAILED(HIDUSER_GetGyroscopeRawToDpsCoefficient(&coefficient)) || coefficient <= 0.0F) {
+        (void)HIDUSER_DisableGyroscope();
+        motionEnabled_ = false;
+        MotionCameraRuntime::publish(true, false);
+        return false;
+    }
+    gyroscopeInitialized_ = true;
+    motionEnabled_ = true;
+    gyroscopeRawToDps_ = coefficient;
+    MotionCameraRuntime::publish(true, true);
+    return true;
 }
 
 InputSnapshot InputSystem::poll() {
@@ -62,6 +102,12 @@ InputSnapshot InputSystem::poll() {
     snapshot.held = hidKeysHeld();
     hidCircleRead(&snapshot.circle);
     hidTouchRead(&snapshot.touch);
+
+    const bool selectHeld = keyHeld(snapshot.held, KEY_SELECT);
+    if (selectHeld && keyDown(snapshot.down, KEY_DUP)) {
+        (void)configureMotion(!motionEnabled_);
+        snapshot.down &= ~KEY_DUP;
+    }
 
     u32 irrstHeld = 0U;
     u32 irrstDown = 0U;
@@ -78,7 +124,7 @@ InputSnapshot InputSystem::poll() {
         previousCStickDirections_ = directions;
     }
 
-    if (extendedAvailable_ && keyHeld(snapshot.held, KEY_SELECT) && keyDown(snapshot.down, KEY_Y)) {
+    if (extendedAvailable_ && selectHeld && keyDown(snapshot.down, KEY_Y)) {
         extendedScheme_ = ExtendedControls::nextScheme(extendedScheme_);
         publishRuntimeState(extendedAvailable_, extendedScheme_);
     }
@@ -95,6 +141,16 @@ InputSnapshot InputSystem::poll() {
     snapshot.extendedRaw.zrHeld = keyHeld(irrstHeld, KEY_ZR);
     snapshot.extendedRaw.zlDown = keyDown(irrstDown, KEY_ZL);
     snapshot.extendedRaw.zrDown = keyDown(irrstDown, KEY_ZR);
+
+    snapshot.motionRecalibrate = motionEnabled_ && selectHeld && keyDown(snapshot.down, KEY_B);
+    if (snapshot.motionRecalibrate) snapshot.down &= ~KEY_B;
+    if (motionEnabled_ && gyroscopeInitialized_) {
+        angularRate rate{};
+        hidGyroRead(&rate);
+        snapshot.motionRaw.available = true;
+        snapshot.motionRaw.yawDegreesPerSecond = static_cast<float>(rate.z) * gyroscopeRawToDps_;
+        snapshot.motionRaw.pitchDegreesPerSecond = static_cast<float>(rate.y) * gyroscopeRawToDps_;
+    }
     return snapshot;
 }
 
@@ -104,6 +160,10 @@ bool InputSystem::extendedAvailable() const {
 
 ExtendedControlScheme InputSystem::extendedScheme() const {
     return extendedScheme_;
+}
+
+bool InputSystem::motionAvailable() const {
+    return motionEnabled_ && gyroscopeInitialized_;
 }
 
 bool new3dsExtendedControlsAvailable() {

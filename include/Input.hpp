@@ -3,6 +3,7 @@
 #include <3ds.h>
 
 #include "ExtendedControls.hpp"
+#include "MotionCamera.hpp"
 
 struct InputSnapshot {
     u32 down = 0;
@@ -11,6 +12,8 @@ struct InputSnapshot {
     touchPosition touch{};
     ExtendedRawInput extendedRaw{};
     ExtendedControlScheme extendedScheme = ExtendedControlScheme::Camera;
+    MotionRawInput motionRaw{};
+    bool motionRecalibrate = false;
 
     [[nodiscard]] bool pressed(u32 key) const {
         return (down & key) != 0U;
@@ -44,6 +47,8 @@ public:
     [[nodiscard]] InputSnapshot poll();
     [[nodiscard]] bool extendedAvailable() const;
     [[nodiscard]] ExtendedControlScheme extendedScheme() const;
+    [[nodiscard]] bool configureMotion(bool enabled);
+    [[nodiscard]] bool motionAvailable() const;
 
 private:
     bool irrstInitialized_ = false;
@@ -51,6 +56,9 @@ private:
     ExtendedControlScheme extendedScheme_ = ExtendedControlScheme::Camera;
     u32 previousIrrstHeld_ = 0U;
     u32 previousCStickDirections_ = 0U;
+    bool motionEnabled_ = false;
+    bool gyroscopeInitialized_ = false;
+    float gyroscopeRawToDps_ = 0.0F;
 };
 
 [[nodiscard]] bool new3dsExtendedControlsAvailable();

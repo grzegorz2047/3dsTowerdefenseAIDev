@@ -1,8 +1,13 @@
 #include "HudText.hpp"
 
 #include "ExtendedControls.hpp"
+#include "MotionCamera.hpp"
 
 const char* tutorialInstruction(TutorialPhase phase) {
+    if (phase == TutorialPhase::WaveRunning) {
+        return MotionCameraRuntime::hint();
+    }
+
     if (phase != TutorialPhase::Victory && phase != TutorialPhase::Defeat &&
         ExtendedControls::runtimeAvailable) {
         switch (phase) {
@@ -11,9 +16,8 @@ const char* tutorialInstruction(TutorialPhase phase) {
                     ? "N3DS C:KAMERA ZL/ZR:WIEZA A:BUDUJ"
                     : "N3DS C:POLE ZL/ZR:KAMERA A:BUDUJ";
             case TutorialPhase::ReadyToStart:
-                return "X:START  SELECT+Y:TRYB N3DS";
+                return "X:START SELECT+Y:TRYB N3DS";
             case TutorialPhase::WaveRunning:
-                return ExtendedControls::runtimeHint();
             case TutorialPhase::Victory:
             case TutorialPhase::Defeat:
                 break;
@@ -26,7 +30,7 @@ const char* tutorialInstruction(TutorialPhase phase) {
         case TutorialPhase::ReadyToStart:
             return "Wieza gotowa\nX: uruchom fale";
         case TutorialPhase::WaveRunning:
-            return "Bron cytadeli\nWieze strzelaja automatycznie";
+            return MotionCameraRuntime::hint();
         case TutorialPhase::Victory:
             return "ZWYCIESTWO\nY: zagraj ponownie";
         case TutorialPhase::Defeat:
