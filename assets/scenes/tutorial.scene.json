@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "level": "tutorial",
+  "theme": "VhalPass",
+  "coordinate_system": "blender_z_up_minus_y_forward",
+  "objects": [
+    {"name":"spawn_cliff","type":"Cliff","group":"spawn ridge and broken gate","order":10,"location":[-0.8,-1.2,0.0],"scale":[1.3,1.3,1.3],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"spawn_ruin","type":"Ruin","group":"spawn ridge and broken gate","order":20,"location":[0.2,-1.0,0.0],"scale":[1.0,1.0,1.0],"rotation_euler_deg":[0.0,0.0,-18.0]},
+    {"name":"spawn_banner","type":"Banner","group":"spawn ridge and broken gate","order":30,"location":[1.0,-2.0,0.0],"scale":[0.8,0.8,0.8],"rotation_euler_deg":[0.0,0.0,12.0]},
+    {"name":"spawn_rock_a","type":"Rock","group":"spawn ridge and broken gate","order":40,"location":[0.2,-4.9,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"spawn_rock_b","type":"Rock","group":"spawn ridge and broken gate","order":50,"location":[1.1,-5.5,0.0],"scale":[0.7,0.7,0.7],"rotation_euler_deg":[0.0,0.0,0.0]},
+
+    {"name":"village_ruin","type":"Ruin","group":"ruined village landmark","order":100,"location":[4.1,-1.3,0.0],"scale":[1.1,1.1,1.1],"rotation_euler_deg":[0.0,0.0,20.0]},
+    {"name":"village_wagon","type":"Wagon","group":"ruined village landmark","order":110,"location":[4.9,-2.0,0.0],"scale":[0.8,0.8,0.8],"rotation_euler_deg":[0.0,0.0,-24.0]},
+    {"name":"village_barricade","type":"Barricade","group":"ruined village landmark","order":120,"location":[5.8,-2.0,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,8.0]},
+    {"name":"village_banner","type":"Banner","group":"ruined village landmark","order":130,"location":[4.4,-3.0,0.0],"scale":[0.7,0.7,0.7],"rotation_euler_deg":[0.0,0.0,-10.0]},
+    {"name":"village_rock","type":"Rock","group":"ruined village landmark","order":140,"location":[5.1,-4.2,0.0],"scale":[0.8,0.8,0.8],"rotation_euler_deg":[0.0,0.0,0.0]},
+
+    {"name":"forest_pine_a","type":"Pine","group":"forested valley edges","order":200,"location":[2.0,-8.9,0.0],"scale":[1.0,1.0,1.0],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"forest_pine_b","type":"Pine","group":"forested valley edges","order":210,"location":[3.0,-9.7,0.0],"scale":[1.2,1.2,1.2],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"forest_pine_c","type":"Pine","group":"forested valley edges","order":220,"location":[4.2,-9.2,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"forest_pine_d","type":"Pine","group":"forested valley edges","order":230,"location":[9.5,-1.4,0.0],"scale":[1.0,1.0,1.0],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"forest_pine_e","type":"Pine","group":"forested valley edges","order":240,"location":[10.1,-2.7,0.0],"scale":[1.2,1.2,1.2],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"forest_pine_f","type":"Pine","group":"forested valley edges","order":250,"location":[10.0,-5.0,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"forest_rock","type":"Rock","group":"forested valley edges","order":260,"location":[9.7,-7.0,0.0],"scale":[1.0,1.0,1.0],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"forest_cliff","type":"Cliff","group":"forested valley edges","order":270,"location":[10.3,-9.5,0.0],"scale":[1.4,1.4,1.4],"rotation_euler_deg":[0.0,0.0,0.0]},
+
+    {"name":"citadel_watchtower_a","type":"Watchtower","group":"citadel approach landmark","order":300,"location":[6.0,-9.3,0.0],"scale":[1.0,1.0,1.0],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"citadel_watchtower_b","type":"Watchtower","group":"citadel approach landmark","order":310,"location":[9.7,-9.2,0.0],"scale":[1.0,1.0,1.0],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"citadel_banner_a","type":"Banner","group":"citadel approach landmark","order":320,"location":[7.1,-9.7,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"citadel_banner_b","type":"Banner","group":"citadel approach landmark","order":330,"location":[8.9,-9.7,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"citadel_barricade_a","type":"Barricade","group":"citadel approach landmark","order":340,"location":[7.0,-8.6,0.0],"scale":[0.8,0.8,0.8],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"citadel_barricade_b","type":"Barricade","group":"citadel approach landmark","order":350,"location":[9.0,-8.6,0.0],"scale":[0.8,0.8,0.8],"rotation_euler_deg":[0.0,0.0,0.0]}
+  ]
+}
