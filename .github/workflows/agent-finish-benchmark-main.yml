@@ -1,0 +1,125 @@
+name: Temporary benchmark patch runner
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    if: github.event.pull_request.head.ref == 'agent/finish-hardware-benchmark-contract'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/finish-hardware-benchmark-contract
+          fetch-depth: 0
+
+      - name: Apply focused benchmark patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_one(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}: {old!r}")
+              file.write_text(text.replace(old, new, 1))
+
+          replace_one(
+              "source/main.cpp",
+              "constexpr float kMaximumAccumulatorSeconds = kFixedStepSeconds * 5.0F;\n",
+              "constexpr float kMaximumAccumulatorSeconds = kFixedStepSeconds * 5.0F;\n"
+              "constexpr float kBenchmarkDurationSeconds = 30.0F;\n",
+          )
+          replace_one(
+              "source/main.cpp",
+              'state.objective = "Ustaw obciazenie, potem uruchom deterministyczny pomiar 12 s.";',
+              'state.objective = "Ustaw obciazenie, potem uruchom deterministyczny pomiar 30 s.";',
+          )
+          replace_one(
+              "source/main.cpp",
+              "        if (input.pressed(KEY_START)) { action = MissionSessionAction::ExitApplication; break; }",
+              "        if (input.pressed(KEY_START)) {\n"
+              "            action = benchmarkConfig != nullptr ? MissionSessionAction::ReturnToCampaign :\n"
+              "                MissionSessionAction::ExitApplication;\n"
+              "            break;\n"
+              "        }",
+          )
+          replace_one(
+              "source/main.cpp",
+              "        const bool benchmarkFinished = benchmarkConfig != nullptr && benchmarkElapsed >= 12.0F;",
+              "        const bool benchmarkFinished = benchmarkConfig != nullptr &&\n"
+              "            benchmarkElapsed >= kBenchmarkDurationSeconds;",
+          )
+
+          ui = Path("source/UiRenderer.cpp")
+          text = ui.read_text()
+          start_marker = "        if (state.benchmarkMode) {\n"
+          end_marker = "        drawButton(8.0F, 190.0F, 144.0F, 42.0F, \"X KAMPANIA\", true);"
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit("source/UiRenderer.cpp: benchmark result block not found")
+          block = '''        if (state.benchmarkMode) {
+            C2D_DrawRectSolid(8.0F, 124.0F, 0.2F, 304.0F, 62.0F, kPanelStrong);
+            const float currentFps = state.performance.lastFrameMilliseconds > 0.0F
+                ? 1000.0F / state.performance.lastFrameMilliseconds : 0.0F;
+            const float averageFps = state.performance.averageFrameMilliseconds > 0.0F
+                ? 1000.0F / state.performance.averageFrameMilliseconds : 0.0F;
+            const float worstFps = state.performance.worstFrameMilliseconds > 0.0F
+                ? 1000.0F / state.performance.worstFrameMilliseconds : 0.0F;
+            char result[112]{};
+            std::snprintf(result, sizeof(result), "%s T30s FPS %.1f/%.1f/%.1f",
+                BenchmarkProfiles::verdictName(state.benchmarkVerdict),
+                currentFps, averageFps, worstFps);
+            drawText(result, 12.0F, 130.0F, 0.40F,
+                state.benchmarkVerdict == BenchmarkVerdict::Fail ? kDanger : kGold);
+            std::snprintf(result, sizeof(result), "MS %.1f/%.1f/%.1f R %.1f MEM %luK",
+                state.performance.lastFrameMilliseconds,
+                state.performance.averageFrameMilliseconds,
+                state.performance.worstFrameMilliseconds,
+                state.performance.lastRenderMilliseconds,
+                static_cast<unsigned long>(state.performance.freeLinearMemoryBytes / 1024U));
+            drawText(result, 12.0F, 151.0F, 0.40F, kText);
+            std::snprintf(result, sizeof(result), "E%zu T%zu P%zu D%u O%u MAP%u",
+                state.activeEnemies, state.towerCount, state.activeProjectiles,
+                static_cast<unsigned int>(state.benchmark.decorations),
+                static_cast<unsigned int>(state.stereoEyeCount),
+                static_cast<unsigned int>(state.benchmark.mapSize));
+            drawText(result, 12.0F, 171.0F, 0.40F, kMuted);
+        }
+'''
+          ui.write_text(text[:start] + block + text[end:])
+
+          tests = Path("scripts/run_host_tests.sh")
+          text = tests.read_text()
+          marker = 'grep -q "configureBenchmark" "$ROOT/source/main.cpp"\n'
+          addition = '''grep -q "kBenchmarkDurationSeconds = 30.0F" "$ROOT/source/main.cpp"
+grep -q "benchmarkConfig != nullptr ? MissionSessionAction::ReturnToCampaign" "$ROOT/source/main.cpp"
+grep -q '"%s T30s FPS %.1f/%.1f/%.1f"' "$ROOT/source/UiRenderer.cpp"
+grep -q '"MS %.1f/%.1f/%.1f R %.1f MEM %luK"' "$ROOT/source/UiRenderer.cpp"
+'''
+          if text.count(marker) != 1:
+              raise SystemExit("scripts/run_host_tests.sh: benchmark marker missing")
+          tests.write_text(text.replace(marker, marker + addition, 1))
+          PY
+
+      - name: Run host tests
+        run: bash scripts/run_host_tests.sh
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          rm -f .github/workflows/agent-finish-benchmark.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add source/main.cpp source/UiRenderer.cpp scripts/run_host_tests.sh .github/workflows/agent-finish-benchmark.yml
+          git commit -m "benchmark: finish physical-device result contract"
+          git push origin HEAD:agent/finish-hardware-benchmark-contract
