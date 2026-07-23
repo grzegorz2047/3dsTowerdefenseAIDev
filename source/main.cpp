@@ -34,6 +34,7 @@ namespace {
 constexpr float kFixedStepSeconds = 1.0F / 60.0F;
 constexpr float kMaximumFrameSeconds = 1.0F / 15.0F;
 constexpr float kMaximumAccumulatorSeconds = kFixedStepSeconds * 5.0F;
+constexpr float kBenchmarkDurationSeconds = 30.0F;
 constexpr const char* kSaveDirectory = "sdmc:/3ds/CitadelDefense3D";
 constexpr const char* kSavePath = "sdmc:/3ds/CitadelDefense3D/campaign.sav";
 constexpr std::size_t kExitCampaignSelection = kCampaignMissionCount;
@@ -301,7 +302,7 @@ bool configureBenchmark(UiRenderer& uiRenderer, BenchmarkConfig& config) {
         UiState state{};
         state.screen = UiScreen::BenchmarkConfig;
         state.title = "LABORATORIUM WYDAJNOSCI";
-        state.objective = "Ustaw obciazenie, potem uruchom deterministyczny pomiar 12 s.";
+        state.objective = "Ustaw obciazenie, potem uruchom deterministyczny pomiar 30 s.";
         state.benchmark = config;
         state.selectedMission = selected;
         uiRenderer.renderStandalone(state);
@@ -333,7 +334,7 @@ UiState missionUiState(const CampaignMission& mission, const Wave& wave,
     state.cursorZ = buildSystem.cursorZ();
     state.cursorOccupied = buildSystem.cursorOccupied();
     state.tutorialPhase = tutorialFlow.phase();
-    state.instruction = benchmarkConfig != nullptr ? "Pomiar automatyczny: SELECT pokazuje diagnostyke" :
+    state.instruction = benchmarkConfig != nullptr ? "Pomiar automatyczny: START wraca, SELECT pokazuje diagnostyke" :
         tutorialInstruction(tutorialFlow.phase());
     state.paused = paused;
     state.speedMultiplier = speedMultiplier;
@@ -447,8 +448,13 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
     while (aptMainLoop()) {
         const u64 frameStartMilliseconds = osGetTime();
         const InputSnapshot input = inputSystem.poll();
-        if (input.pressed(KEY_START)) { action = MissionSessionAction::ExitApplication; break; }
-        const bool benchmarkFinished = benchmarkConfig != nullptr && benchmarkElapsed >= 12.0F;
+        if (input.pressed(KEY_START)) {
+            action = benchmarkConfig != nullptr ? MissionSessionAction::ReturnToCampaign :
+                MissionSessionAction::ExitApplication;
+            break;
+        }
+        const bool benchmarkFinished = benchmarkConfig != nullptr &&
+            benchmarkElapsed >= kBenchmarkDurationSeconds;
         const bool sessionFinished = benchmarkFinished || tutorialFlow.finished();
 
         const TouchGestureResult gesture = touchGesture.update(input.touching(),
