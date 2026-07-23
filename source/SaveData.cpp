@@ -37,17 +37,20 @@ bool parseUnsigned(const std::string& text, unsigned long& value) {
     return errno != ERANGE && end != text.c_str() && *end == '\0';
 }
 
-bool parseArray(const std::string& text, std::array<std::uint8_t, kCampaignMissionCount>& output) {
+bool parseCampaignArray(const std::string& text, std::size_t expectedCount,
+    std::array<std::uint8_t, kCampaignMissionCount>& output) {
+    if (expectedCount > output.size()) return false;
+    output.fill(0U);
     std::stringstream stream(text);
     std::string token;
-    std::size_t index = 0;
+    std::size_t index = 0U;
     while (std::getline(stream, token, ',')) {
-        if (index >= output.size()) return false;
+        if (index >= expectedCount) return false;
         unsigned long value = 0;
         if (!parseUnsigned(token, value) || value > 255UL) return false;
         output[index++] = static_cast<std::uint8_t>(value);
     }
-    return index == output.size();
+    return index == expectedCount;
 }
 
 std::string payloadFor(const SaveData& data, std::uint32_t version) {
@@ -65,9 +68,7 @@ std::string payloadFor(const SaveData& data, std::uint32_t version) {
         stream << "stereo=" << (data.settings.stereoEnabled ? 1 : 0) << '\n';
         stream << "stereo_depth=" << static_cast<unsigned int>(data.settings.maximum3DDepthPercent) << '\n';
     }
-    if (version >= 4) {
-        stream << "music=" << (data.settings.musicEnabled ? 1 : 0) << '\n';
-    }
+    if (version >= 4) stream << "music=" << (data.settings.musicEnabled ? 1 : 0) << '\n';
     return stream.str();
 }
 
@@ -126,14 +127,17 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
         return result;
     }
 
+    const std::size_t missionCount = version >= 5 ? kCampaignMissionCount : kLegacyCampaignMissionCount;
     SaveData data{};
     data.campaign.unlockedCount = static_cast<std::size_t>(unlocked);
-    if (!parseArray(values["stars"], data.campaign.bestStars)) return corrupt("Nieprawidlowe gwiazdki");
+    if (!parseCampaignArray(values["stars"], missionCount, data.campaign.bestStars)) {
+        return corrupt("Nieprawidlowe gwiazdki");
+    }
 
     const bool migrated = version < kCurrentSaveVersion;
     if (version >= 2) {
-        if (!parseArray(values["base_health"], data.campaign.bestBaseHealth) ||
-            !parseArray(values["fewest_towers"], data.campaign.fewestTowers)) {
+        if (!parseCampaignArray(values["base_health"], missionCount, data.campaign.bestBaseHealth) ||
+            !parseCampaignArray(values["fewest_towers"], missionCount, data.campaign.fewestTowers)) {
             return corrupt("Nieprawidlowe rekordy misji");
         }
         unsigned long sound = 0;
@@ -161,8 +165,6 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
             return corrupt("Nieprawidlowe ustawienie muzyki");
         }
         data.settings.musicEnabled = music == 1;
-    } else {
-        data.settings.musicEnabled = true;
     }
 
     CampaignProgress validator;
@@ -192,10 +194,7 @@ bool SaveDataStore::saveAtomically(const char* path, const SaveData& data, std::
     const std::string backupPath = std::string(path) + ".bak";
     {
         std::ofstream output(temporaryPath, std::ios::binary | std::ios::trunc);
-        if (!output.is_open()) {
-            error = "Nie mozna otworzyc pliku tymczasowego";
-            return false;
-        }
+        if (!output.is_open()) { error = "Nie mozna otworzyc pliku tymczasowego"; return false; }
         const std::string serialized = SaveDataCodec::serialize(data);
         output.write(serialized.data(), static_cast<std::streamsize>(serialized.size()));
         output.flush();
