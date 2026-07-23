@@ -251,13 +251,15 @@ void UiRenderer::drawMission(const UiState& state) {
     const TouchRect ballista = TouchUiLayout::rectFor(TouchUiAction::SelectBallista);
     const TouchRect mortar = TouchUiLayout::rectFor(TouchUiAction::SelectMortar);
     const TouchRect frost = TouchUiLayout::rectFor(TouchUiAction::SelectFrost);
+    const TouchRect rocket = TouchUiLayout::rectFor(TouchUiAction::SelectRocket);
     drawButton(ballista.x, ballista.y, ballista.width, ballista.height, "KUSZA",
         state.selectedTower == TowerType::Ballista);
     drawButton(mortar.x, mortar.y, mortar.width, mortar.height, "MOZDZIERZ",
         state.selectedTower == TowerType::Mortar);
-    drawButton(frost.x, frost.y, frost.width, frost.height,
-        state.selectedTower == TowerType::Rocket ? "L/R RAKIETY" : "MROZ",
-        state.selectedTower == TowerType::Frost || state.selectedTower == TowerType::Rocket);
+    drawButton(frost.x, frost.y, frost.width, frost.height, "MROZ",
+        state.selectedTower == TowerType::Frost);
+    drawButton(rocket.x, rocket.y, rocket.width, rocket.height, "RAKIETY",
+        state.selectedTower == TowerType::Rocket);
 
     C2D_DrawRectSolid(8.0F, 58.0F, 0.1F, 304.0F, 62.0F, kPanel);
     char resources[64]{};
@@ -315,8 +317,8 @@ void UiRenderer::drawDiagnostics(const UiState& state) {
         static_cast<unsigned long>(state.performance.freeLinearMemoryBytes / 1024U));
     drawText(line, 13.0F, 158.0F, 0.40F,
         state.performance.memoryReserveLow() ? kDanger : kText);
-    std::snprintf(line, sizeof(line), "3D %s %u%% OCZY %u",
-        state.stereoEnabled ? "ON" : "OFF",
+    std::snprintf(line, sizeof(line), "3D SUWAK %.2f LIMIT %u%% OCZY %u",
+        state.stereoSlider,
         static_cast<unsigned int>(state.maximum3DDepthPercent),
         static_cast<unsigned int>(state.stereoEyeCount));
     drawText(line, 13.0F, 179.0F, 0.40F, kText);
