@@ -1,6 +1,6 @@
 # Test wydajności na oryginalnym Nintendo 3DS XL
 
-Ten dokument opisuje powtarzalny pomiar wydajności gry na docelowym sprzęcie projektu. Wynik z emulatora nie zastępuje tego testu.
+Ten dokument opisuje powtarzalny pomiar wydajności gry na docelowym sprzęcie. Wynik z emulatora nie zastępuje tego testu.
 
 ## Wymagane środowisko
 
@@ -17,19 +17,21 @@ Ten dokument opisuje powtarzalny pomiar wydajności gry na docelowym sprzęcie p
 1. Uruchom grę i zaczekaj na menu kampanii.
 2. Naciśnij jednocześnie `SELECT+X`.
 3. Potwierdź, że tytuł misji to `TEST WYDAJNOSCI`.
-4. Zbuduj co najmniej jedną wieżę i rozpocznij falę przyciskiem `X`.
-5. Przytrzymaj `SELECT`, aby wyświetlić diagnostykę.
-6. Nie zmieniaj kamery ani prędkości podczas właściwego okna pomiarowego.
+4. Skonfiguruj profil oraz poziom obciążenia w laboratorium benchmarkowym.
+5. Zbuduj co najmniej jedną wieżę i rozpocznij falę przyciskiem `X`.
+6. Przytrzymaj `SELECT`, aby wyświetlić diagnostykę.
+7. Nie zmieniaj kamery ani prędkości podczas właściwego okna pomiarowego.
 
 Test nie zapisuje gwiazdek, wyników ani odblokowań kampanii.
 
 ## Pomiar mono
 
-1. W menu wyłącz 3D przyciskiem `L` albo ustaw fizyczny suwak 3D na zero.
-2. Uruchom scenariusz stresowy.
-3. Zaczekaj, aż wszyscy przeciwnicy zostaną utworzeni.
-4. Przytrzymaj `SELECT` przez co najmniej 10 sekund.
-5. Zapisz wartości:
+1. Ustaw fizyczny suwak 3D konsoli na zero.
+2. Potwierdź w diagnostyce, że aktywne jest jedno oko renderowania.
+3. Uruchom scenariusz stresowy.
+4. Zaczekaj, aż wszyscy przeciwnicy zostaną utworzeni.
+5. Przytrzymaj `SELECT` przez co najmniej 10 sekund.
+6. Zapisz wartości:
    - `FPS`;
    - `AVG` — średni czas klatki;
    - `MAX` — najgorszy czas klatki;
@@ -38,11 +40,13 @@ Test nie zapisuje gwiazdek, wyników ani odblokowań kampanii.
 
 ## Pomiar stereo
 
-1. W menu włącz 3D przyciskiem `L`.
-2. Ustaw limit głębi na 100% przyciskiem `R`.
-3. Ustaw fizyczny suwak 3D na maksimum.
+1. Ustaw limit głębi na 100% przyciskiem `R`.
+2. Ustaw fizyczny suwak 3D na maksimum.
+3. Potwierdź w diagnostyce, że aktywne są dwa oka renderowania i suwak ma wartość większą od zera.
 4. Powtórz ten sam przebieg i zapisz te same wartości.
 5. Dodatkowo oceń komfort obrazu, podwójne krawędzie i stabilność paralaksy.
+
+Gra nie udostępnia programowego przełącznika stereo. Fizyczny suwak 3D jest jedynym źródłem decyzji o renderowaniu drugiego oka; zapisane ustawienie ogranicza wyłącznie maksymalną głębię efektu.
 
 ## Progi
 
@@ -73,15 +77,17 @@ Commit/tag:
 Model konsoli:
 Wersja systemu/CFW:
 Format: CIA / 3DSX
+Profil benchmarku:
+Poziom obciążenia:
 
-MONO
+MONO (fizyczny suwak 0%)
 FPS:
 AVG:
 MAX:
 RENDER:
 MEM:
 
-STEREO 100%
+STEREO (fizyczny suwak 100%)
 FPS:
 AVG:
 MAX:
