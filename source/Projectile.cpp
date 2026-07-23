@@ -9,7 +9,6 @@ constexpr float kDefaultProjectileSpeed = 6.0F;
 constexpr float kImpactRadius = 0.18F;
 constexpr float kImpactRadiusSquared = kImpactRadius * kImpactRadius;
 constexpr float kTargetHeight = 0.48F;
-constexpr float kPi = 3.14159265358979323846F;
 
 float length3(float x, float y, float z) {
     return std::sqrt(x * x + y * y + z * z);
@@ -35,7 +34,6 @@ void Projectile::launch(
 
     if (payload_.effect == ProjectileEffect::GuidedRocket) {
         const float speed = payload_.speed > 0.0F ? payload_.speed : kDefaultProjectileSpeed;
-        // The initial yaw offset creates a visible hook before guidance converges.
         constexpr float kLaunchYaw = -0.62F;
         velocityX_ = std::sin(kLaunchYaw) * speed * 0.72F;
         velocityY_ = std::max(payload_.launchClimb, 0.0F) * speed;
@@ -118,7 +116,6 @@ ProjectileUpdateResult Projectile::update(float deltaSeconds, Wave& wave) {
         x_ += velocityX_ * deltaSeconds;
         y_ += velocityY_ * deltaSeconds;
         z_ += velocityZ_ * deltaSeconds;
-        // Keep the rocket inside a bounded gameplay volume if a target becomes unreachable.
         if (y_ < -1.0F || y_ > 8.0F || std::abs(x_) > 20.0F || std::abs(z_) > 20.0F) {
             active_ = false;
             return ProjectileUpdateResult::Cancelled;
