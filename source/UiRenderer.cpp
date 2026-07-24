@@ -31,6 +31,15 @@ const char* towerLabel(TowerType type) {
     }
 }
 
+TowerType towerTypeForPreview(const UiState& state) {
+    const std::string name = state.statusMessage == nullptr ? "" : state.statusMessage;
+    if (name == "MOZDZIERZ") return TowerType::Mortar;
+    if (name == "MROZ") return TowerType::Frost;
+    if (name == "RAKIETY") return TowerType::Rocket;
+    if (name == "KUSZA") return TowerType::Ballista;
+    return state.selectedTower;
+}
+
 std::size_t campaignWindowStart(std::size_t selected) {
     if (selected < kVisibleCampaignRows) return 0U;
     return std::min(selected - kVisibleCampaignRows + 1U,
@@ -387,14 +396,51 @@ void UiRenderer::drawMission(const UiState& state) {
     drawButton(speed.x, speed.y, speed.width, speed.height, speedLabel,
         state.speedMultiplier == 2);
     drawButton(cancel.x, cancel.y, cancel.width, cancel.height, "ANULUJ", false);
-    drawWrappedText(state.statusMessage, 168.0F, 133.0F, 0.40F, kGold, 12U, 2U);
+
+    const bool towerSelected = state.cursorTowerLevel > 0U;
+    if (towerSelected) {
+        const TowerType type = towerTypeForPreview(state);
+        const TowerCombatProfile current = towerCombatProfile(type, state.cursorTowerLevel);
+        const std::uint8_t nextLevel = state.cursorTowerLevel < Tower::kMaximumLevel
+            ? static_cast<std::uint8_t>(state.cursorTowerLevel + 1U)
+            : state.cursorTowerLevel;
+        const TowerCombatProfile next = towerCombatProfile(type, nextLevel);
+        drawText(next.role, 168.0F, 130.0F, 0.40F, kGold);
+        char preview[64]{};
+        if (state.cursorTowerUpgradeCost > 0) {
+            std::snprintf(preview, sizeof(preview), "L%u>%u %dG D%d>%d",
+                static_cast<unsigned int>(state.cursorTowerLevel),
+                static_cast<unsigned int>(nextLevel), state.cursorTowerUpgradeCost,
+                current.damage, next.damage);
+        } else {
+            std::snprintf(preview, sizeof(preview), "L%u MAX D%d",
+                static_cast<unsigned int>(state.cursorTowerLevel), current.damage);
+        }
+        drawText(preview, 168.0F, 145.0F, 0.40F, kText);
+        std::snprintf(preview, sizeof(preview), "T%.2f>%.2f R%.1f>%.1f",
+            current.attackIntervalSeconds, next.attackIntervalSeconds,
+            current.range, next.range);
+        drawText(preview, 168.0F, 160.0F, 0.40F, kMuted);
+    } else {
+        drawWrappedText(state.statusMessage, 168.0F, 133.0F, 0.40F, kGold, 12U, 2U);
+    }
 
     const TouchRect build = TouchUiLayout::rectFor(TouchUiAction::BuildOrSelect);
     const TouchRect upgrade = TouchUiLayout::rectFor(TouchUiAction::Upgrade);
     const TouchRect sell = TouchUiLayout::rectFor(TouchUiAction::Sell);
     const TouchRect start = TouchUiLayout::rectFor(TouchUiAction::StartWave);
     drawButton(build.x, build.y, build.width, build.height, "BUDUJ", false);
-    drawButton(upgrade.x, upgrade.y, upgrade.width, upgrade.height, "ULEPSZ", false);
+    char upgradeLabel[20]{};
+    if (towerSelected && state.cursorTowerUpgradeCost > 0) {
+        std::snprintf(upgradeLabel, sizeof(upgradeLabel), "L%u %dG",
+            static_cast<unsigned int>(state.cursorTowerLevel + 1U),
+            state.cursorTowerUpgradeCost);
+    } else if (towerSelected) {
+        std::snprintf(upgradeLabel, sizeof(upgradeLabel), "MAX");
+    } else {
+        std::snprintf(upgradeLabel, sizeof(upgradeLabel), "ULEPSZ");
+    }
+    drawButton(upgrade.x, upgrade.y, upgrade.width, upgrade.height, upgradeLabel, false);
     drawButton(sell.x, sell.y, sell.width, sell.height, "SPRZEDAJ", false);
     const char* startLabel = state.waveRunning ? "FALA" :
         (state.completedWaves > 0U ? "NASTEPNA" : "START");
