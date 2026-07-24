@@ -13,10 +13,13 @@ struct StereoFramePlan {
 
 class Stereo3D {
 public:
-    static constexpr float kMaximumIod = 0.34F;
+    static constexpr float kMaximumIod = 0.44F;
     static constexpr std::uint8_t kDefaultDepthPercent = 70;
+    static constexpr float kMinimumConvergenceDistance = 8.0F;
+    static constexpr float kMaximumConvergenceDistance = 22.0F;
 
     [[nodiscard]] static StereoFramePlan plan(
         float sliderState, std::uint8_t maximumDepthPercent);
+    [[nodiscard]] static float convergenceDistance(float cameraDistance, float cameraHeight);
     [[nodiscard]] static std::uint8_t nextDepthLimit(std::uint8_t currentDepthPercent);
 };
