@@ -15,15 +15,22 @@ struct TowerStats {
 TowerStats baseStatsFor(TowerType type) {
     switch (type) {
         case TowerType::Mortar:
-            return {2.85F, 1.25F, {ProjectileEffect::Splash, 2, 1.15F, 0.0F, 1.0F}};
+            return {2.85F, 1.25F,
+                {ProjectileEffect::Splash, 2, 1.15F, 0.0F, 1.0F,
+                    6.0F, 0.0F, 0.0F, DamageType::Explosive}};
         case TowerType::Frost:
-            return {3.05F, 0.90F, {ProjectileEffect::Frost, 1, 0.85F, 2.20F, 0.55F}};
+            return {3.05F, 0.90F,
+                {ProjectileEffect::Frost, 1, 0.85F, 2.20F, 0.55F,
+                    6.0F, 0.0F, 0.0F, DamageType::Arcane}};
         case TowerType::Rocket:
             return {4.45F, 2.35F,
-                {ProjectileEffect::GuidedRocket, 3, 1.35F, 0.0F, 1.0F, 4.5F, 4.5F, 0.45F}};
+                {ProjectileEffect::GuidedRocket, 3, 1.35F, 0.0F, 1.0F,
+                    4.5F, 4.5F, 0.45F, DamageType::Explosive}};
         case TowerType::Ballista:
         default:
-            return {3.40F, 0.55F, {ProjectileEffect::Direct, 1, 0.0F, 0.0F, 1.0F}};
+            return {3.40F, 0.55F,
+                {ProjectileEffect::Direct, 1, 0.0F, 0.0F, 1.0F,
+                    6.0F, 0.0F, 0.0F, DamageType::Physical}};
     }
 }
 
