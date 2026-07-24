@@ -1,0 +1,25 @@
+; Citadel Defense 3D scene art v1
+level=stone_bridge
+theme=VhalPass
+; northern ravine entrance
+prop=Cliff,0.5,0.5,1.6,8
+prop=Cliff,4.2,0.4,1.4,-10
+prop=Ruin,5.5,1.0,1.0,18
+prop=Banner,6.5,0.8,0.8,0
+; massive stone bridge
+prop=Watchtower,4.5,3.0,1.2,0
+prop=Watchtower,4.5,6.0,1.2,0
+prop=Ruin,6.0,4.2,1.2,26
+prop=Ruin,7.5,5.2,1.1,-24
+prop=Banner,5.2,4.5,0.9,0
+prop=Banner,5.2,6.5,0.9,0
+; ravine walls
+prop=Rock,9.8,2.0,1.2,0
+prop=Rock,10.0,4.8,0.9,0
+prop=Cliff,10.1,7.0,1.5,12
+prop=Pine,9.8,9.8,1.0,0
+; southern bridgehead
+prop=Watchtower,1.0,10.0,1.1,0
+prop=Wagon,4.5,9.8,0.9,-20
+prop=Barricade,6.0,10.0,1.0,8
+prop=Banner,8.0,10.1,0.9,0
