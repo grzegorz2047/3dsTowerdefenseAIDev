@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "Damage.hpp"
 #include "Wave.hpp"
 
 enum class ProjectileEffect : std::uint8_t {
@@ -28,6 +29,7 @@ struct ProjectilePayload {
     float speed = 6.0F;
     float turnRateRadiansPerSecond = 0.0F;
     float launchClimb = 0.0F;
+    DamageType damageType = DamageType::Physical;
 };
 
 class Projectile {
@@ -51,6 +53,7 @@ public:
     [[nodiscard]] float velocityZ() const;
     [[nodiscard]] std::size_t targetIndex() const;
     [[nodiscard]] ProjectileEffect effect() const;
+    [[nodiscard]] DamageType damageType() const;
 
 private:
     void resolveImpact(Wave& wave, Enemy& target);
