@@ -5,13 +5,14 @@
 
 #include "Campaign.hpp"
 #include "Stereo3D.hpp"
+#include "WaveSpeed.hpp"
 
 constexpr std::uint32_t kCurrentSaveVersion = 5;
 
 struct GameSettings {
     bool soundEnabled = true;
     bool musicEnabled = true;
-    std::uint8_t preferredSpeed = 1;
+    std::uint8_t preferredSpeed = static_cast<std::uint8_t>(WaveSpeed::initial());
     bool stereoEnabled = true;
     std::uint8_t maximum3DDepthPercent = Stereo3D::kDefaultDepthPercent;
 };
