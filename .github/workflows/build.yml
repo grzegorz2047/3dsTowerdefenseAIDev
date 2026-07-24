@@ -129,3 +129,58 @@ jobs:
           name: CitadelDefense3D-Azahar-logs
           path: azahar-*.log
           if-no-files-found: warn
+
+  publish-release:
+    name: Publish immutable alpha release
+    if: github.event_name == 'push' && startsWith(github.ref_name, 'publish-v')
+    needs:
+      - tower-balance
+      - campaign-balance
+      - build-release
+      - azahar-smoke
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: CitadelDefense3D-playable
+          path: dist
+      - name: Resolve and validate version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#publish-}"
+          test "$version" != "$GITHUB_REF_NAME"
+          test -f "releases/$version.txt"
+          if git ls-remote --exit-code --tags origin "refs/tags/$version" >/dev/null 2>&1; then
+            echo "Tag $version already exists; releases are immutable." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Verify release payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/CitadelDefense3D.cia
+          test -s dist/CitadelDefense3D.3dsx
+          test -s dist/SHA256SUMS.txt
+          (cd dist && sha256sum -c SHA256SUMS.txt)
+          test -s docs/INSTALLATION.md
+      - name: Publish GitHub pre-release
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          gh release create "$version" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$version" \
+            --notes-file "releases/$version.txt" \
+            --prerelease \
+            dist/CitadelDefense3D.cia \
+            dist/CitadelDefense3D.3dsx \
+            dist/SHA256SUMS.txt \
+            docs/INSTALLATION.md
