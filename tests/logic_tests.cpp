@@ -191,7 +191,7 @@ void testTowerCanWinWave() {
     const LevelData level = makeLevel();
     Wave wave(level);
     require(wave.startNextWave(), "tower test wave should start explicitly");
-    Tower tower(level, 3, 1);
+    Tower tower(level, 3, 1, TowerType::Mortar);
     ProjectilePool projectiles;
     require(tower.valid(), "test tower should be placed on BuildSpot");
     for (int step = 0; step < 60 * 35 && !wave.completed() && !wave.lost(); ++step) {
@@ -199,7 +199,7 @@ void testTowerCanWinWave() {
         projectiles.update(1.0F / 60.0F, wave);
         wave.update(1.0F / 60.0F);
     }
-    require(wave.completed(), "tower should defeat the complete test wave");
+    require(wave.completed(), "matched tower should defeat the complete test wave");
     require(!wave.lost(), "winning wave must preserve base health");
     require(wave.baseHealth() > 0, "winning wave should leave the base alive");
     require(tower.shotsFired() > 0, "tower should fire during the test");
