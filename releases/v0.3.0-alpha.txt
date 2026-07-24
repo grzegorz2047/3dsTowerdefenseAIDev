@@ -1,0 +1,10 @@
+Release v0.3.0-alpha
+
+Includes:
+- redesigned nine-mission campaign with 5-8 manual waves and 18-52 enemies;
+- distinct Scout, Raider and Brute silhouettes, health bars and hit feedback;
+- armor, resistances and enemy-specific gold rewards;
+- specialized Ballista, Mortar, Frost and Rocket upgrade paths with previewed stats;
+- safe 1x session start with explicit temporary 2x mode;
+- renderer resource cleanup confirmed on physical Nintendo 3DS XL;
+- green host tests, balance contracts, Nintendo 3DS builds and Azahar smoke tests.
