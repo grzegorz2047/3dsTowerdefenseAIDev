@@ -23,7 +23,9 @@ constexpr std::array<CampaignMission, kCampaignMissionCount> kMissions{{
     {"storm_ring", "romfs:/levels/storm_ring.lvl", "Krag Burz", "Kontroluj droge okrazajaca ruiny obserwatorium.",
         "Kusza, Mozdzierz, Mroz, Rakiety", "Geste mieszane natarcie", "Dostep do Ostatniej Cytadeli", 5, 8, 8},
     {"last_citadel", "romfs:/levels/last_citadel.lvl", "Ostatnia Cytadela", "Pokonaj finalne natarcie regionu.",
-        "Kusza, Mozdzierz, Mroz, Rakiety", "Najsilniejsze fale i Brute", "Pieczec obroncy Asterii", 5, 8, 9},
+        "Kusza, Mozdzierz, Mroz, Rakiety", "Najsilniejsze fale i Brute", "Dostep do Wezla Portali", 5, 8, 9},
+    {"portal_nexus", "romfs:/levels/portal_nexus.lvl", "Wezel Portali", "Bron trzech wejsc zbiegajacych sie przy jednej cytadeli.",
+        "Kusza, Mozdzierz, Mroz, Rakiety", "Trzy portale i rozdzielone trasy", "Zakonczenie kampanii", 5, 9, 10},
 }};
 
 }  // namespace
