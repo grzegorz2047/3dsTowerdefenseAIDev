@@ -74,12 +74,15 @@ void UiRenderer::drawText(const char* text, float x, float y, float scale, u32 c
     C2D_TextParse(&parsed, textBuffer_, text);
     C2D_TextOptimize(&parsed);
     const float readableScale = std::max(scale, kMinimumReadableScale);
-    C2D_DrawText(&parsed, C2D_WithColor, x, y, 0.5F, readableScale, readableScale, color);
+    C2D_DrawText(&parsed, C2D_WithColor, x, y, 0.5F,
+        readableScale, readableScale, color);
 }
 
 void UiRenderer::drawWrappedText(const char* text, float x, float y, float scale, u32 color,
     std::size_t charactersPerLine, std::size_t maximumLines) {
-    if (text == nullptr || text[0] == '\0' || charactersPerLine == 0U || maximumLines == 0U) return;
+    if (text == nullptr || text[0] == '\0' || charactersPerLine == 0U || maximumLines == 0U) {
+        return;
+    }
     const float readableScale = std::max(scale, kMinimumReadableScale);
     const std::string source(text);
     std::size_t cursor = 0U;
@@ -91,7 +94,8 @@ void UiRenderer::drawWrappedText(const char* text, float x, float y, float scale
         while (cursor < source.size() && source[cursor] == ' ') ++cursor;
         if (cursor >= source.size()) break;
         const std::size_t separator = source.find_first_of(" \n", cursor);
-        const std::size_t wordEnd = separator == std::string::npos ? source.size() : separator;
+        const std::size_t wordEnd = separator == std::string::npos
+            ? source.size() : separator;
         const std::string word = source.substr(cursor, wordEnd - cursor);
         const bool explicitBreak = separator != std::string::npos && source[separator] == '\n';
         if (!line.empty() && line.size() + 1U + word.size() > charactersPerLine) {
@@ -131,13 +135,27 @@ void UiRenderer::drawSegmentDigit(unsigned int digit, float x, float y, float sc
     const float right = x + horizontal - thickness;
     const float middleY = y + vertical;
     const float bottomY = y + vertical * 2.0F;
-    if ((mask & SevenSegmentDigits::Top) != 0U) C2D_DrawRectSolid(x, y, 0.95F, horizontal, thickness, color);
-    if ((mask & SevenSegmentDigits::UpperRight) != 0U) C2D_DrawRectSolid(right, y, 0.95F, thickness, vertical, color);
-    if ((mask & SevenSegmentDigits::LowerRight) != 0U) C2D_DrawRectSolid(right, middleY, 0.95F, thickness, vertical, color);
-    if ((mask & SevenSegmentDigits::Bottom) != 0U) C2D_DrawRectSolid(x, bottomY, 0.95F, horizontal, thickness, color);
-    if ((mask & SevenSegmentDigits::LowerLeft) != 0U) C2D_DrawRectSolid(x, middleY, 0.95F, thickness, vertical, color);
-    if ((mask & SevenSegmentDigits::UpperLeft) != 0U) C2D_DrawRectSolid(x, y, 0.95F, thickness, vertical, color);
-    if ((mask & SevenSegmentDigits::Middle) != 0U) C2D_DrawRectSolid(x, middleY, 0.95F, horizontal, thickness, color);
+    if ((mask & SevenSegmentDigits::Top) != 0U) {
+        C2D_DrawRectSolid(x, y, 0.95F, horizontal, thickness, color);
+    }
+    if ((mask & SevenSegmentDigits::UpperRight) != 0U) {
+        C2D_DrawRectSolid(right, y, 0.95F, thickness, vertical, color);
+    }
+    if ((mask & SevenSegmentDigits::LowerRight) != 0U) {
+        C2D_DrawRectSolid(right, middleY, 0.95F, thickness, vertical, color);
+    }
+    if ((mask & SevenSegmentDigits::Bottom) != 0U) {
+        C2D_DrawRectSolid(x, bottomY, 0.95F, horizontal, thickness, color);
+    }
+    if ((mask & SevenSegmentDigits::LowerLeft) != 0U) {
+        C2D_DrawRectSolid(x, middleY, 0.95F, thickness, vertical, color);
+    }
+    if ((mask & SevenSegmentDigits::UpperLeft) != 0U) {
+        C2D_DrawRectSolid(x, y, 0.95F, thickness, vertical, color);
+    }
+    if ((mask & SevenSegmentDigits::Middle) != 0U) {
+        C2D_DrawRectSolid(x, middleY, 0.95F, horizontal, thickness, color);
+    }
 }
 
 void UiRenderer::drawSegmentNumber(int value, float x, float y, float scale, u32 color) {
@@ -197,7 +215,9 @@ void UiRenderer::renderBottom(const UiState& state) {
         drawText("CITADEL DEFENSE 3D", 35.0F, 91.0F, 0.72F, kAccent);
         drawText("Ladowanie poziomu...", 62.0F, 126.0F, 0.58F, kText);
         drawWrappedText(state.title, 45.0F, 151.0F, 0.46F, kMuted, 25U, 2U);
-    } else drawMission(state);
+    } else {
+        drawMission(state);
+    }
     C2D_Flush();
     composedFrameActive_ = false;
 }
@@ -220,7 +240,8 @@ void UiRenderer::drawCampaign(const UiState& state) {
         std::snprintf(line, sizeof(line), "%zu. %.13s %u/3", index + 1U,
             state.missionUnlocked[index] ? state.campaignTitles[index] : "ZABLOKOWANE",
             static_cast<unsigned int>(state.missionStars[index]));
-        drawText(line, 13.0F, itemY, 0.42F, index == state.selectedMission ? kGold : kText);
+        drawText(line, 13.0F, itemY, 0.42F,
+            index == state.selectedMission ? kGold : kText);
     }
     if (first > 0U) drawText("^", 137.0F, 39.0F, 0.40F, kAccent);
     if (first + kVisibleCampaignRows < kCampaignMissionCount) {
@@ -246,8 +267,10 @@ void UiRenderer::drawCampaign(const UiState& state) {
     }
     drawButton(6.0F, 201.0F, 58.0F, 33.0F, "GRAJ", false);
     drawButton(68.0F, 201.0F, 58.0F, 33.0F, "LAB", false);
-    drawButton(130.0F, 201.0F, 58.0F, 33.0F, state.soundEnabled ? "SFX ON" : "SFX OFF", false);
-    drawButton(192.0F, 201.0F, 58.0F, 33.0F, state.musicEnabled ? "MUZ ON" : "MUZ OFF", false);
+    drawButton(130.0F, 201.0F, 58.0F, 33.0F,
+        state.soundEnabled ? "SFX ON" : "SFX OFF", false);
+    drawButton(192.0F, 201.0F, 58.0F, 33.0F,
+        state.musicEnabled ? "MUZ ON" : "MUZ OFF", false);
     drawButton(254.0F, 201.0F, 60.0F, 33.0F, "WYJ", false);
 }
 
@@ -293,21 +316,33 @@ void UiRenderer::drawMission(const UiState& state) {
         state.selectedTower == TowerType::Rocket);
 
     C2D_DrawRectSolid(8.0F, 58.0F, 0.1F, 304.0F, 62.0F, kPanel);
-    char resources[64]{};
-    std::snprintf(resources, sizeof(resources), "ZLOTO %d  BAZA %d  WROG %zu/%zu",
-        state.gold, state.baseHealth, state.spawnedEnemies, state.totalEnemies);
-    drawText(resources, 14.0F, 64.0F, 0.47F, kGold);
+    char resources[80]{};
+    std::snprintf(resources, sizeof(resources),
+        "ZLOTO %d BAZA %d FALA %zu/%zu WROG %zu/%zu",
+        state.gold, state.baseHealth, state.waveNumber, state.waveCount,
+        state.spawnedEnemies, state.totalEnemies);
+    drawText(resources, 14.0F, 64.0F, 0.43F, kGold);
     char selection[72]{};
-    std::snprintf(selection, sizeof(selection), "%s %dG  POLE %zu,%zu  %s",
+    std::snprintf(selection, sizeof(selection), "%s %dG POLE %zu,%zu %s",
         towerLabel(state.selectedTower), state.towerCost, state.cursorX, state.cursorZ,
         state.cursorOccupied ? "ZAJETE" : "WOLNE");
     drawText(selection, 14.0F, 85.0F, 0.43F, kText);
-    const char* instruction = state.benchmarkMode
-        ? "START: kampania  SELECT: diagnostyka"
-        : state.instruction;
+    char preparation[96]{};
+    const char* instruction = state.instruction;
+    if (state.benchmarkMode) {
+        instruction = "START: kampania  SELECT: diagnostyka";
+    } else if (state.awaitingNextWave && state.completedWaves > 0U) {
+        std::snprintf(preparation, sizeof(preparation),
+            "Premia +%dG. Rozbuduj obrone, X uruchamia fale %zu.",
+            state.waveCompletionReward, state.waveNumber);
+        instruction = preparation;
+    }
     drawWrappedText(instruction, 14.0F, 104.0F, 0.40F, kMuted, 38U, 1U);
 
-    if (state.diagnosticsVisible && !state.missionFinished) { drawDiagnostics(state); return; }
+    if (state.diagnosticsVisible && !state.missionFinished) {
+        drawDiagnostics(state);
+        return;
+    }
     if (state.missionFinished) {
         if (state.benchmarkMode) {
             C2D_DrawRectSolid(8.0F, 124.0F, 0.2F, 304.0F, 62.0F, kPanelStrong);
@@ -361,8 +396,9 @@ void UiRenderer::drawMission(const UiState& state) {
     drawButton(build.x, build.y, build.width, build.height, "BUDUJ", false);
     drawButton(upgrade.x, upgrade.y, upgrade.width, upgrade.height, "ULEPSZ", false);
     drawButton(sell.x, sell.y, sell.width, sell.height, "SPRZEDAJ", false);
-    drawButton(start.x, start.y, start.width, start.height,
-        state.tutorialPhase == TutorialPhase::WaveRunning ? "FALA" : "START", false);
+    const char* startLabel = state.waveRunning ? "FALA" :
+        (state.completedWaves > 0U ? "NASTEPNA" : "START");
+    drawButton(start.x, start.y, start.width, start.height, startLabel, false);
 }
 
 void UiRenderer::drawDiagnostics(const UiState& state) {
@@ -371,7 +407,8 @@ void UiRenderer::drawDiagnostics(const UiState& state) {
         ? 1000.0F / state.performance.averageFrameMilliseconds : 0.0F;
     char line[96]{};
     std::snprintf(line, sizeof(line), "FPS %.1f AVG %.1fms MAX %.1fms", fps,
-        state.performance.averageFrameMilliseconds, state.performance.worstFrameMilliseconds);
+        state.performance.averageFrameMilliseconds,
+        state.performance.worstFrameMilliseconds);
     drawText(line, 13.0F, 137.0F, 0.40F,
         state.performance.frameBudgetExceeded() ? kDanger : kText);
     std::snprintf(line, sizeof(line), "RENDER %.1fms MEM %luKB",
@@ -404,9 +441,10 @@ void UiRenderer::renderTopOverlay(C3D_RenderTarget* target, const UiState& state
     C2D_DrawCircleSolid(18.5F, 21.0F, 0.92F, 3.0F,
         C2D_Color32(255, 232, 136, 255));
     drawSegmentNumber(state.gold, 36.0F, 13.0F, 1.05F, kGold);
-    char status[48]{};
-    std::snprintf(status, sizeof(status), "HP %d   WROG %zu/%zu", state.baseHealth,
+    char status[64]{};
+    std::snprintf(status, sizeof(status), "HP %d F%zu/%zu W%zu/%zu",
+        state.baseHealth, state.waveNumber, state.waveCount,
         state.spawnedEnemies, state.totalEnemies);
-    drawText(status, 94.0F, 16.0F, 0.48F, kText);
+    drawText(status, 94.0F, 16.0F, 0.44F, kText);
     C2D_Flush();
 }
