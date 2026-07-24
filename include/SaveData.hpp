@@ -7,7 +7,7 @@
 #include "Stereo3D.hpp"
 #include "WaveSpeed.hpp"
 
-constexpr std::uint32_t kCurrentSaveVersion = 5;
+constexpr std::uint32_t kCurrentSaveVersion = 6;
 
 struct GameSettings {
     bool soundEnabled = true;
