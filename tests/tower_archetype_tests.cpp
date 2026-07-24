@@ -97,6 +97,57 @@ void testTowerCatalog() {
     expect(previousTowerType(TowerType::Ballista) == TowerType::Rocket, "backward selection should wrap to rockets");
 }
 
+void testTowerSpecializationProfiles() {
+    const TowerCombatProfile ballista1 = towerCombatProfile(TowerType::Ballista, 1);
+    const TowerCombatProfile ballista2 = towerCombatProfile(TowerType::Ballista, 2);
+    const TowerCombatProfile ballista3 = towerCombatProfile(TowerType::Ballista, 3);
+    const float ballistaEfficiency1 = towerSingleTargetDps(TowerType::Ballista, 1) /
+        static_cast<float>(towerCost(TowerType::Ballista));
+    const float ballistaEfficiency2 = towerSingleTargetDps(TowerType::Ballista, 2) /
+        static_cast<float>(towerCost(TowerType::Ballista) * 2);
+    const float ballistaEfficiency3 = towerSingleTargetDps(TowerType::Ballista, 3) / 210.0F;
+    expect(ballista1.damage < ballista2.damage && ballista2.damage < ballista3.damage,
+        "ballista should specialize in single-target damage");
+    expect(ballistaEfficiency2 <= ballistaEfficiency1 + 0.0001F,
+        "ballista level two must not improve gold-to-DPS efficiency");
+    expect(ballistaEfficiency3 <= ballistaEfficiency1 + 0.0001F,
+        "ballista level three must not dominate base efficiency");
+
+    const TowerCombatProfile mortar1 = towerCombatProfile(TowerType::Mortar, 1);
+    const TowerCombatProfile mortar3 = towerCombatProfile(TowerType::Mortar, 3);
+    expect(mortar3.radius >= mortar1.radius + 0.40F,
+        "mortar specialization should substantially increase area");
+    expect(mortar3.attackIntervalSeconds > mortar1.attackIntervalSeconds,
+        "larger mortar impacts should trade away firing speed");
+
+    const TowerCombatProfile frost1 = towerCombatProfile(TowerType::Frost, 1);
+    const TowerCombatProfile frost3 = towerCombatProfile(TowerType::Frost, 3);
+    expect(frost3.damage == frost1.damage,
+        "frost upgrades should not scale direct damage");
+    expect(frost3.slowDurationSeconds > frost1.slowDurationSeconds,
+        "frost upgrades should extend control duration");
+    expect(frost3.slowMovementMultiplier < frost1.slowMovementMultiplier,
+        "frost upgrades should deepen the slow");
+
+    const TowerCombatProfile rocket1 = towerCombatProfile(TowerType::Rocket, 1);
+    const TowerCombatProfile rocket3 = towerCombatProfile(TowerType::Rocket, 3);
+    expect(rocket3.damage >= rocket1.damage * 2,
+        "rocket specialization should deliver heavy burst damage");
+    expect(rocket3.range > rocket1.range,
+        "rocket specialization should extend premium range");
+    expect(rocket3.attackIntervalSeconds > rocket1.attackIntervalSeconds,
+        "rocket burst should retain a slow firing cycle");
+
+    expect(ballista1.damageType == DamageType::Physical,
+        "ballista role should remain physical single target");
+    expect(mortar1.damageType == DamageType::Explosive,
+        "mortar role should bypass physical armor");
+    expect(frost1.damageType == DamageType::Arcane,
+        "frost role should remain control and support");
+    expect(rocket1.damageType == DamageType::Explosive,
+        "rocket role should remain explosive heavy target");
+}
+
 void testTowersLaunchDistinctPayloads() {
     const LevelData level = makeLevel();
     Wave wave(level);
@@ -208,6 +259,7 @@ void testFrostSlowsAndExpires() {
 int main() {
     testEnemyVisualProfilesAndHitReaction();
     testTowerCatalog();
+    testTowerSpecializationProfiles();
     testTowersLaunchDistinctPayloads();
     testTowerAimsAtSelectedTarget();
     testSplashDamagesNearbyEnemies();
