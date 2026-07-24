@@ -1,6 +1,7 @@
 #include "Enemy.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 
@@ -17,6 +18,18 @@ EnemyStats statsFor(EnemyType type) {
         case EnemyType::Raider:
         default: return {3, 1, 1.35F};
     }
+}
+
+float durabilityMultiplierFor(const LevelData& level) {
+    if (level.id == "ash_gate") return 1.15F;
+    if (level.id == "ruined_village") return 1.30F;
+    if (level.id == "stone_bridge") return 1.50F;
+    if (level.id == "echo_valley") return 1.70F;
+    if (level.id == "flooded_road") return 1.90F;
+    if (level.id == "iron_ravine") return 2.10F;
+    if (level.id == "storm_ring") return 2.30F;
+    if (level.id == "last_citadel") return 2.50F;
+    return 1.0F;
 }
 
 float worldX(const LevelData& level, std::int16_t gridX) {
@@ -106,7 +119,12 @@ float Enemy::z() const { return z_; }
 bool Enemy::reachedBase() const { return reachedBase_; }
 bool Enemy::dead() const { return health_ <= 0; }
 int Enemy::health() const { return health_; }
-int Enemy::maxHealth() const { return statsFor(type_).health; }
+int Enemy::maxHealth() const {
+    const EnemyStats stats = statsFor(type_);
+    if (level_ == nullptr) return stats.health;
+    return std::max(1, static_cast<int>(std::ceil(
+        static_cast<float>(stats.health) * durabilityMultiplierFor(*level_))));
+}
 int Enemy::baseDamage() const { return statsFor(type_).baseDamage; }
 float Enemy::movementSpeed() const { return statsFor(type_).movementSpeed; }
 float Enemy::effectiveMovementSpeed() const { return movementSpeed() * slowMovementMultiplier_; }
