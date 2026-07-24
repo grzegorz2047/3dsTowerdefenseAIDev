@@ -32,8 +32,8 @@ BANNER_IMAGE  := $(ASSET_DIR)/banner.png
 BANNER_AUDIO  := $(ASSET_DIR)/banner.wav
 BANNER_FILE   := $(ASSET_DIR)/banner.bnr
 CIA_ICON      := $(ASSET_DIR)/icon.icn
-SCENE_SOURCE  := $(TOPDIR)/assets/scenes/tutorial.scene.json
-SCENE_OUTPUT  := $(TOPDIR)/romfs/scenes/tutorial.art
+SCENE_IDS      := tutorial portal_nexus
+SCENE_OUTPUTS  := $(addprefix $(TOPDIR)/romfs/scenes/,$(addsuffix .art,$(SCENE_IDS)))
 SCENE_EXPORTER := $(TOPDIR)/scripts/export_scene_art.py
 
 ARCH        := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
@@ -80,7 +80,10 @@ test:
 	@bash scripts/run_host_tests.sh
 	@$(PYTHON) scripts/validate_assets.py
 	@$(PYTHON) -m unittest tests/test_scene_export.py
-	@$(PYTHON) $(SCENE_EXPORTER) $(SCENE_SOURCE) --output $(SCENE_OUTPUT) --check
+	@for id in $(SCENE_IDS); do \
+		$(PYTHON) $(SCENE_EXPORTER) $(TOPDIR)/assets/scenes/$$id.scene.json \
+			--output $(TOPDIR)/romfs/scenes/$$id.art --check || exit $$?; \
+	done
 
 3dsx: tools assets $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile 3dsx
@@ -98,10 +101,10 @@ tools:
 
 assets: scene-assets $(ICON_FILE) $(BANNER_IMAGE) $(BANNER_AUDIO) $(RSF_FILE)
 
-scene-assets: $(SCENE_OUTPUT)
+scene-assets: $(SCENE_OUTPUTS)
 
-$(SCENE_OUTPUT): $(SCENE_SOURCE) $(SCENE_EXPORTER)
-	@$(PYTHON) $(SCENE_EXPORTER) $(SCENE_SOURCE) --output $(SCENE_OUTPUT)
+$(TOPDIR)/romfs/scenes/%.art: $(TOPDIR)/assets/scenes/%.scene.json $(SCENE_EXPORTER)
+	@$(PYTHON) $(SCENE_EXPORTER) $< --output $@
 
 $(ICON_FILE) $(BANNER_IMAGE) $(BANNER_AUDIO): scripts/generate_release_assets.py
 	@$(PYTHON) scripts/generate_release_assets.py
