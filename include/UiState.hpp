@@ -26,6 +26,12 @@ struct UiState {
     std::size_t spawnedEnemies = 0U;
     std::size_t activeEnemies = 0U;
     std::size_t totalEnemies = 0U;
+    std::size_t waveNumber = 0U;
+    std::size_t waveCount = 0U;
+    std::size_t completedWaves = 0U;
+    bool waveRunning = false;
+    bool awaitingNextWave = false;
+    int waveCompletionReward = 0;
     TowerType selectedTower = TowerType::Ballista;
     TutorialPhase tutorialPhase = TutorialPhase::BuildFirstTower;
     bool paused = false;
