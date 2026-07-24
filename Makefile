@@ -32,7 +32,7 @@ BANNER_IMAGE  := $(ASSET_DIR)/banner.png
 BANNER_AUDIO  := $(ASSET_DIR)/banner.wav
 BANNER_FILE   := $(ASSET_DIR)/banner.bnr
 CIA_ICON      := $(ASSET_DIR)/icon.icn
-SCENE_IDS      := tutorial portal_nexus
+SCENE_IDS      := tutorial ash_gate ruined_village stone_bridge echo_valley last_citadel portal_nexus
 SCENE_OUTPUTS  := $(addprefix $(TOPDIR)/romfs/scenes/,$(addsuffix .art,$(SCENE_IDS)))
 SCENE_EXPORTER := $(TOPDIR)/scripts/export_scene_art.py
 
@@ -79,7 +79,7 @@ all: 3dsx
 test:
 	@bash scripts/run_host_tests.sh
 	@$(PYTHON) scripts/validate_assets.py
-	@$(PYTHON) -m unittest tests/test_scene_export.py
+	@$(PYTHON) -m unittest tests/test_scene_export.py tests/test_campaign_scene_sources.py
 	@for id in $(SCENE_IDS); do \
 		$(PYTHON) $(SCENE_EXPORTER) $(TOPDIR)/assets/scenes/$$id.scene.json \
 			--output $(TOPDIR)/romfs/scenes/$$id.art --check || exit $$?; \
