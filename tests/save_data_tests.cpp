@@ -43,14 +43,18 @@ void testVersionFiveRoundTrip() {
     source.settings.stereoEnabled = false;
     source.settings.maximum3DDepthPercent = 45;
 
-    const SaveLoadResult result = SaveDataCodec::deserialize(SaveDataCodec::serialize(source));
+    const std::string serialized = SaveDataCodec::serialize(source);
+    expect(serialized.find("speed=1\n") != std::string::npos,
+        "temporary 2x speed must never be persisted");
+    const SaveLoadResult result = SaveDataCodec::deserialize(serialized);
     expect(result.status == SaveLoadStatus::Loaded, "v5 save should deserialize");
     expect(!result.migrated, "v5 save should not report migration");
     expect(result.data.campaign.unlockedCount == 7, "unlocked count should round-trip");
     expect(result.data.campaign.bestStars[6] == 2, "late mission stars should round-trip");
     expect(!result.data.settings.soundEnabled, "sound setting should round-trip");
     expect(!result.data.settings.musicEnabled, "music setting should round-trip independently");
-    expect(result.data.settings.preferredSpeed == 2, "speed setting should round-trip");
+    expect(result.data.settings.preferredSpeed == 1,
+        "every loaded session should return to safe 1x speed");
     expect(!result.data.settings.stereoEnabled, "stereo setting should round-trip");
     expect(result.data.settings.maximum3DDepthPercent == 45, "3D depth should round-trip");
 }
@@ -75,6 +79,8 @@ void testVersionFourCampaignExpansionMigration() {
     expect(result.data.campaign.bestStars[6] == 0 && result.data.campaign.bestStars[8] == 0,
         "new missions should start without scores");
     expect(!result.data.settings.musicEnabled, "legacy music choice should be preserved");
+    expect(result.data.settings.preferredSpeed == 1,
+        "legacy 2x preference should migrate to safe 1x");
 }
 
 void testVersionThreeMigration() {
@@ -95,6 +101,7 @@ void testVersionThreeMigration() {
     expect(result.data.settings.musicEnabled, "music should default to enabled");
     expect(!result.data.settings.stereoEnabled, "old stereo setting should migrate");
     expect(result.data.campaign.bestStars[8] == 0, "expanded campaign slots should be empty");
+    expect(result.data.settings.preferredSpeed == 1, "v3 speed should normalize to 1x");
 }
 
 void testVersionTwoMigration() {
@@ -112,6 +119,7 @@ void testVersionTwoMigration() {
     expect(!result.data.settings.soundEnabled, "old sound setting should migrate");
     expect(result.data.settings.musicEnabled, "music should use safe default");
     expect(result.data.settings.stereoEnabled, "stereo should use safe default");
+    expect(result.data.settings.preferredSpeed == 1, "v2 speed should normalize to 1x");
 }
 
 void testVersionOneMigration() {
@@ -124,6 +132,7 @@ void testVersionOneMigration() {
     expect(result.migrated, "v1 save should report migration");
     expect(result.data.campaign.bestBaseHealth[0] == 0, "new records should use defaults");
     expect(result.data.campaign.bestStars[6] == 0, "expanded campaign should use defaults");
+    expect(result.data.settings.preferredSpeed == 1, "v1 should use safe speed default");
 }
 
 void testCorruptionIsRejected() {
