@@ -302,7 +302,10 @@ void UiRenderer::drawMission(const UiState& state) {
         towerLabel(state.selectedTower), state.towerCost, state.cursorX, state.cursorZ,
         state.cursorOccupied ? "ZAJETE" : "WOLNE");
     drawText(selection, 14.0F, 85.0F, 0.43F, kText);
-    drawWrappedText(state.instruction, 14.0F, 104.0F, 0.40F, kMuted, 38U, 1U);
+    const char* instruction = state.benchmarkMode
+        ? "START: kampania  SELECT: diagnostyka"
+        : state.instruction;
+    drawWrappedText(instruction, 14.0F, 104.0F, 0.40F, kMuted, 38U, 1U);
 
     if (state.diagnosticsVisible && !state.missionFinished) { drawDiagnostics(state); return; }
     if (state.missionFinished) {
@@ -336,19 +339,20 @@ void UiRenderer::drawMission(const UiState& state) {
         }
         drawButton(8.0F, 190.0F, 144.0F, 42.0F, "X KAMPANIA", true);
         drawButton(160.0F, 190.0F, 152.0F, 42.0F, "Y POWTORZ", false);
-    } else {
-        const TouchRect pause = TouchUiLayout::rectFor(TouchUiAction::TogglePause);
-        const TouchRect speed = TouchUiLayout::rectFor(TouchUiAction::ToggleSpeed);
-        const TouchRect cancel = TouchUiLayout::rectFor(TouchUiAction::Cancel);
-        drawButton(pause.x, pause.y, pause.width, pause.height,
-            state.paused ? "WZNOW" : "PAUZA", state.paused);
-        char speedLabel[16]{};
-        std::snprintf(speedLabel, sizeof(speedLabel), "TEMPO %dx", state.speedMultiplier);
-        drawButton(speed.x, speed.y, speed.width, speed.height, speedLabel,
-            state.speedMultiplier == 2);
-        drawButton(cancel.x, cancel.y, cancel.width, cancel.height, "ANULUJ", false);
-        drawWrappedText(state.statusMessage, 168.0F, 133.0F, 0.40F, kGold, 12U, 2U);
+        return;
     }
+
+    const TouchRect pause = TouchUiLayout::rectFor(TouchUiAction::TogglePause);
+    const TouchRect speed = TouchUiLayout::rectFor(TouchUiAction::ToggleSpeed);
+    const TouchRect cancel = TouchUiLayout::rectFor(TouchUiAction::Cancel);
+    drawButton(pause.x, pause.y, pause.width, pause.height,
+        state.paused ? "WZNOW" : "PAUZA", state.paused);
+    char speedLabel[16]{};
+    std::snprintf(speedLabel, sizeof(speedLabel), "TEMPO %dx", state.speedMultiplier);
+    drawButton(speed.x, speed.y, speed.width, speed.height, speedLabel,
+        state.speedMultiplier == 2);
+    drawButton(cancel.x, cancel.y, cancel.width, cancel.height, "ANULUJ", false);
+    drawWrappedText(state.statusMessage, 168.0F, 133.0F, 0.40F, kGold, 12U, 2U);
 
     const TouchRect build = TouchUiLayout::rectFor(TouchUiAction::BuildOrSelect);
     const TouchRect upgrade = TouchUiLayout::rectFor(TouchUiAction::Upgrade);
@@ -358,8 +362,7 @@ void UiRenderer::drawMission(const UiState& state) {
     drawButton(upgrade.x, upgrade.y, upgrade.width, upgrade.height, "ULEPSZ", false);
     drawButton(sell.x, sell.y, sell.width, sell.height, "SPRZEDAJ", false);
     drawButton(start.x, start.y, start.width, start.height,
-        state.missionFinished ? "KONIEC" :
-        (state.tutorialPhase == TutorialPhase::WaveRunning ? "FALA" : "START"), false);
+        state.tutorialPhase == TutorialPhase::WaveRunning ? "FALA" : "START", false);
 }
 
 void UiRenderer::drawDiagnostics(const UiState& state) {
