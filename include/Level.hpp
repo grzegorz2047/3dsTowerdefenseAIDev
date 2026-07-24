@@ -7,6 +7,7 @@
 
 constexpr std::size_t kMaximumMapWidth = 16;
 constexpr std::size_t kMaximumMapHeight = 16;
+constexpr std::size_t kMaximumPaths = 4;
 constexpr std::size_t kMaximumPathPoints = 64;
 constexpr std::size_t kMaximumWaveEntries = 8;
 constexpr std::size_t kMaximumWaveEnemies = 16;
@@ -44,13 +45,21 @@ struct LevelData {
     std::uint8_t width = 0;
     std::uint8_t height = 0;
     std::array<TileType, kMaximumMapWidth * kMaximumMapHeight> tiles{};
+
+    // Legacy route 0 remains directly addressable for existing maps and callers.
     std::array<GridPoint, kMaximumPathPoints> path{};
     std::size_t pathLength = 0;
+    std::array<std::array<GridPoint, kMaximumPathPoints>, kMaximumPaths - 1U> additionalPaths{};
+    std::array<std::size_t, kMaximumPaths - 1U> additionalPathLengths{};
+    std::size_t pathCount = 0;
+
     std::array<WaveEntry, kMaximumWaveEntries> waveEntries{};
     std::size_t waveEntryCount = 0;
     std::size_t totalEnemyCount = 0;
 
     [[nodiscard]] TileType tileAt(std::size_t x, std::size_t z) const;
+    [[nodiscard]] const GridPoint* pathData(std::size_t index) const;
+    [[nodiscard]] std::size_t pathLengthAt(std::size_t index) const;
 };
 
 struct LevelLoadResult {

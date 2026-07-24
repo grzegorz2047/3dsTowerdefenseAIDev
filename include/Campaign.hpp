@@ -4,8 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 
-constexpr std::size_t kLegacyCampaignMissionCount = 6;
-constexpr std::size_t kCampaignMissionCount = 9;
+constexpr std::size_t kOriginalCampaignMissionCount = 6;
+constexpr std::size_t kVersionFiveCampaignMissionCount = 9;
+constexpr std::size_t kCampaignMissionCount = 10;
 
 struct CampaignMission {
     const char* id = "";

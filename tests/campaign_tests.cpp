@@ -14,9 +14,9 @@ void expect(bool condition, const char* message) {
     }
 }
 
-void testCatalogHasNineDistinctMissions() {
+void testCatalogHasTenDistinctMissions() {
     const auto& missions = CampaignCatalog::missions();
-    expect(missions.size() == 9, "campaign should contain nine missions");
+    expect(missions.size() == 10U, "campaign should contain ten missions");
     std::set<std::string> ids;
     std::set<std::string> paths;
     std::uint8_t previousDifficulty = 0U;
@@ -33,8 +33,12 @@ void testCatalogHasNineDistinctMissions() {
         expect(mission.difficulty > previousDifficulty, "difficulty should increase every mission");
         previousDifficulty = mission.difficulty;
     }
-    expect(std::string(missions[5].id) == "flooded_road", "sixth mission should introduce the larger map arc");
-    expect(std::string(missions[7].id) == "storm_ring", "eighth mission should be the storm ring");
+    expect(std::string(missions[5].id) == "flooded_road",
+        "sixth mission should introduce the larger map arc");
+    expect(std::string(missions[7].id) == "storm_ring",
+        "eighth mission should be the storm ring");
+    expect(std::string(missions[9].id) == "portal_nexus",
+        "tenth mission should be the multi-portal finale");
 }
 
 void testProgressUnlocksSequentially() {
@@ -48,14 +52,14 @@ void testProgressUnlocksSequentially() {
     expect(!progress.unlocked(2), "missions should unlock sequentially");
 }
 
-void testAllNineMissionsCanUnlock() {
+void testAllTenMissionsCanUnlock() {
     CampaignProgress progress;
     for (std::size_t index = 0U; index + 1U < kCampaignMissionCount; ++index) {
         expect(progress.unlocked(index), "current mission should be unlocked");
         const MissionResult result = progress.complete(index, 5, 4);
         expect(result.newlyUnlockedNext, "first victory should unlock the following mission");
     }
-    expect(progress.unlocked(kCampaignMissionCount - 1U), "final mission should become unlocked");
+    expect(progress.unlocked(kCampaignMissionCount - 1U), "portal nexus should become unlocked");
     const MissionResult finalResult = progress.complete(kCampaignMissionCount - 1U, 5, 8);
     expect(!finalResult.newlyUnlockedNext, "final mission should not unlock beyond the catalog");
 }
@@ -86,9 +90,9 @@ void testLockedOrFailedMissionDoesNotAdvance() {
 }  // namespace
 
 int main() {
-    testCatalogHasNineDistinctMissions();
+    testCatalogHasTenDistinctMissions();
     testProgressUnlocksSequentially();
-    testAllNineMissionsCanUnlock();
+    testAllTenMissionsCanUnlock();
     testOptionalGoalsDoNotBlockProgress();
     testReplayKeepsBestScore();
     testLockedOrFailedMissionDoesNotAdvance();

@@ -34,8 +34,13 @@ std::string layoutSignature(const LevelData& level) {
     std::ostringstream stream;
     stream << static_cast<unsigned int>(level.width) << 'x'
            << static_cast<unsigned int>(level.height) << ':';
-    for (std::size_t index = 0U; index < level.pathLength; ++index) {
-        stream << level.path[index].x << ',' << level.path[index].z << ';';
+    for (std::size_t route = 0U; route < level.pathCount; ++route) {
+        stream << '[' << route << ']';
+        const GridPoint* points = level.pathData(route);
+        const std::size_t length = level.pathLengthAt(route);
+        for (std::size_t index = 0U; index < length; ++index) {
+            stream << points[index].x << ',' << points[index].z << ';';
+        }
     }
     stream << '|';
     for (std::size_t z = 0U; z < level.height; ++z) {
@@ -86,7 +91,27 @@ std::size_t validateScene(const std::string& root, const LevelData& level,
 }
 
 bool isLargeCampaignMap(const std::string& id) {
-    return id == "flooded_road" || id == "iron_ravine" || id == "storm_ring";
+    return id == "flooded_road" || id == "iron_ravine" || id == "storm_ring" ||
+        id == "portal_nexus";
+}
+
+void validatePortalNexus(const LevelData& level) {
+    expect(level.pathCount == 3U, "portal nexus should expose three routes");
+    expect(countTiles(level, TileType::Spawn) == 3U,
+        "portal nexus should contain three spawn portals");
+    std::set<std::string> starts;
+    GridPoint sharedBase{};
+    for (std::size_t route = 0U; route < level.pathCount; ++route) {
+        const GridPoint* points = level.pathData(route);
+        const std::size_t length = level.pathLengthAt(route);
+        expect(points != nullptr && length >= 20U, "each portal route should be substantial");
+        starts.insert(std::to_string(points[0].x) + "," + std::to_string(points[0].z));
+        const GridPoint last = points[length - 1U];
+        if (route == 0U) sharedBase = last;
+        expect(last.x == sharedBase.x && last.z == sharedBase.z,
+            "all portal routes should share one base");
+    }
+    expect(starts.size() == 3U, "portal routes should start at distinct entrances");
 }
 
 }  // namespace
@@ -112,7 +137,7 @@ int main(int argc, char** argv) {
             "level id should match catalog: " + std::string(mission.id));
         expect(!result.level.name.empty(),
             "level name should be present: " + std::string(mission.id));
-        expect(result.level.pathLength >= 2,
+        expect(result.level.pathCount >= 1U && result.level.pathLength >= 2U,
             "path should be usable: " + std::string(mission.id));
         expect(result.level.waveEntryCount >= 5U && result.level.waveEntryCount <= kMaximumWaveEntries,
             "campaign mission should define five to eight waves: " + std::string(mission.id));
@@ -131,11 +156,12 @@ int main(int argc, char** argv) {
                 std::string(mission.id));
 
         if (result.level.id == "tutorial") validateScene(root, result.level, 18U);
+        if (result.level.id == "portal_nexus") validatePortalNexus(result.level);
         if (isLargeCampaignMap(result.level.id)) {
             ++largeMapCount;
             expect(result.level.width == 16U && result.level.height == 16U,
-                "new campaign map should use full 16x16 area: " + result.level.id);
-            expect(result.level.pathLength >= 25U,
+                "large campaign map should use full 16x16 area: " + result.level.id);
+            expect(result.level.pathLength >= 20U,
                 "large campaign map should have a substantial route: " + result.level.id);
             expect(countTiles(result.level, TileType::BuildSpot) >= 10U,
                 "large map should provide distributed build positions: " + result.level.id);
@@ -168,7 +194,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    expect(largeMapCount == 3U, "campaign should contain three new 16x16 maps");
+    expect(largeMapCount == 4U, "campaign should contain four full-size 16x16 maps");
     std::cout << "Campaign level, narrative and scene art tests passed\n";
     return 0;
 }

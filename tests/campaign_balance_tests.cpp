@@ -44,10 +44,11 @@ int rewardBudget(const LevelData& level) {
 int main(int argc, char** argv) {
     expect(argc == 2, "repository root argument is required");
     const std::string root = argv[1];
-    constexpr std::array<const char*, 9U> ids{{
+    constexpr std::array<const char*, 10U> ids{{
         "tutorial", "ash_gate", "ruined_village", "stone_bridge", "echo_valley",
-        "flooded_road", "iron_ravine", "storm_ring", "last_citadel"}};
-    constexpr std::array<std::size_t, 9U> expectedEnemies{{18U, 24U, 28U, 32U, 36U, 40U, 44U, 48U, 52U}};
+        "flooded_road", "iron_ravine", "storm_ring", "last_citadel", "portal_nexus"}};
+    constexpr std::array<std::size_t, 10U> expectedEnemies{{
+        18U, 24U, 28U, 32U, 36U, 40U, 44U, 48U, 52U, 56U}};
 
     std::size_t previousEnemies = 0U;
     std::size_t previousHeavy = 0U;
