@@ -1,0 +1,30 @@
+name: Apply issue 185 patch
+
+on:
+  push:
+    branches:
+      - agent/issue-185-mission-pause
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/issue-185-mission-pause
+          fetch-depth: 0
+      - name: Apply deterministic transformation
+        run: python3 scripts/apply_issue_185.py
+      - name: Commit product patch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "gameplay: add deterministic mission pause"
+          git push origin HEAD:agent/issue-185-mission-pause
