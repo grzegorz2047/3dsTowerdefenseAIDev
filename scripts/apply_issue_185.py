@@ -1,14 +1,39 @@
 #!/usr/bin/env python3
+import json
+import os
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def report_error(message: str) -> None:
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        return
+    request = urllib.request.Request(
+        "https://api.github.com/repos/grzegorz2047/3dsTowerdefenseAIDev/issues/186/comments",
+        data=json.dumps({"body": "Transformer #185 zatrzymał się: `" + message.replace("`", "'") + "`"}).encode(),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        urllib.request.urlopen(request, timeout=20).read()
+    except Exception:
+        pass
 
 
 def replace_once(path: Path, old: str, new: str) -> None:
     text = path.read_text(encoding="utf-8")
     count = text.count(old)
     if count != 1:
-        raise SystemExit(f"{path}: expected one match, found {count}: {old[:80]!r}")
+        message = f"{path.relative_to(ROOT)}: expected one match, found {count}: {old[:80]!r}"
+        report_error(message)
+        raise SystemExit(message)
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
 
@@ -91,23 +116,15 @@ replace_once(
     '            }\n'
     '        }'
 )
-replace_once(
-    main,
+replace_once(main,
     '        if (!sessionFinished && benchmarkConfig == nullptr && input.pressed(KEY_X)) {',
-    '        if (!sessionFinished && !paused && benchmarkConfig == nullptr && input.pressed(KEY_X)) {'
-)
-replace_once(
-    main,
+    '        if (!sessionFinished && !paused && benchmarkConfig == nullptr && input.pressed(KEY_X)) {')
+replace_once(main,
     '        if (!sessionFinished && input.pressed(KEY_L) && input.pressed(KEY_R)) {',
-    '        if (!sessionFinished && !paused && input.pressed(KEY_L) && input.pressed(KEY_R)) {'
-)
-replace_once(
-    main,
-    '        if (!sessionFinished && benchmarkConfig == nullptr) {\n'
-    '            buildSystem.handleInput(input);',
-    '        if (!sessionFinished && !paused && benchmarkConfig == nullptr) {\n'
-    '            buildSystem.handleInput(input);'
-)
+    '        if (!sessionFinished && !paused && input.pressed(KEY_L) && input.pressed(KEY_R)) {')
+replace_once(main,
+    '        if (!sessionFinished && benchmarkConfig == nullptr) {\n            buildSystem.handleInput(input);',
+    '        if (!sessionFinished && !paused && benchmarkConfig == nullptr) {\n            buildSystem.handleInput(input);')
 replace_once(
     main,
     '        if (!paused && !sessionFinished) {\n'
@@ -142,35 +159,20 @@ replace_once(
     '    const TouchRect pause = TouchUiLayout::rectFor(TouchUiAction::TogglePause);'
 )
 
-header = ROOT / "include/MissionPause.hpp"
-header.write_text('''#pragma once\n\nnamespace MissionPause {\n\nconstexpr bool toggled(bool paused, bool sessionFinished, bool benchmarkMode) {\n    return (!sessionFinished && !benchmarkMode) ? !paused : paused;\n}\n\nconstexpr bool gameplayInputAllowed(bool paused) {\n    return !paused;\n}\n\nconstexpr float simulationSeconds(float frameSeconds, int speedMultiplier, bool paused) {\n    if (paused || frameSeconds <= 0.0F || speedMultiplier <= 0) return 0.0F;\n    return frameSeconds * static_cast<float>(speedMultiplier);\n}\n\n}  // namespace MissionPause\n''', encoding="utf-8")
-
-test = ROOT / "tests/mission_pause_tests.cpp"
-test.write_text('''#include <cassert>\n\n#include "MissionPause.hpp"\n\nint main() {\n    assert(MissionPause::toggled(false, false, false));\n    assert(!MissionPause::toggled(true, false, false));\n    assert(!MissionPause::toggled(false, true, false));\n    assert(!MissionPause::toggled(false, false, true));\n\n    assert(MissionPause::gameplayInputAllowed(false));\n    assert(!MissionPause::gameplayInputAllowed(true));\n\n    assert(MissionPause::simulationSeconds(1.0F / 60.0F, 1, false) == 1.0F / 60.0F);\n    assert(MissionPause::simulationSeconds(1.0F / 60.0F, 2, false) == 2.0F / 60.0F);\n    assert(MissionPause::simulationSeconds(10.0F, 2, true) == 0.0F);\n    assert(MissionPause::simulationSeconds(-1.0F, 2, false) == 0.0F);\n    assert(MissionPause::simulationSeconds(1.0F, 0, false) == 0.0F);\n    return 0;\n}\n''', encoding="utf-8")
+(ROOT / "include/MissionPause.hpp").write_text('''#pragma once\n\nnamespace MissionPause {\nconstexpr bool toggled(bool paused, bool sessionFinished, bool benchmarkMode) {\n    return (!sessionFinished && !benchmarkMode) ? !paused : paused;\n}\nconstexpr bool gameplayInputAllowed(bool paused) { return !paused; }\nconstexpr float simulationSeconds(float frameSeconds, int speedMultiplier, bool paused) {\n    if (paused || frameSeconds <= 0.0F || speedMultiplier <= 0) return 0.0F;\n    return frameSeconds * static_cast<float>(speedMultiplier);\n}\n}  // namespace MissionPause\n''', encoding="utf-8")
+(ROOT / "tests/mission_pause_tests.cpp").write_text('''#include <cassert>\n#include "MissionPause.hpp"\nint main() {\n    assert(MissionPause::toggled(false, false, false));\n    assert(!MissionPause::toggled(true, false, false));\n    assert(!MissionPause::toggled(false, true, false));\n    assert(!MissionPause::toggled(false, false, true));\n    assert(MissionPause::gameplayInputAllowed(false));\n    assert(!MissionPause::gameplayInputAllowed(true));\n    assert(MissionPause::simulationSeconds(1.0F / 60.0F, 1, false) == 1.0F / 60.0F);\n    assert(MissionPause::simulationSeconds(1.0F / 60.0F, 2, false) == 2.0F / 60.0F);\n    assert(MissionPause::simulationSeconds(10.0F, 2, true) == 0.0F);\n    assert(MissionPause::simulationSeconds(-1.0F, 2, false) == 0.0F);\n    assert(MissionPause::simulationSeconds(1.0F, 0, false) == 0.0F);\n    return 0;\n}\n''', encoding="utf-8")
 
 host = ROOT / "scripts/run_host_tests.sh"
-replace_once(
-    host,
+replace_once(host,
     '"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/seven_segment_digits_tests.cpp" -o "$BUILD_DIR/seven-segment-digits-tests"\n',
-    '"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/seven_segment_digits_tests.cpp" -o "$BUILD_DIR/seven-segment-digits-tests"\n'
-    '"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/mission_pause_tests.cpp" -o "$BUILD_DIR/mission-pause-tests"\n'
-)
-replace_once(
-    host,
+    '"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/seven_segment_digits_tests.cpp" -o "$BUILD_DIR/seven-segment-digits-tests"\n"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/mission_pause_tests.cpp" -o "$BUILD_DIR/mission-pause-tests"\n')
+replace_once(host,
     '"$BUILD_DIR/seven-segment-digits-tests"\n',
-    '"$BUILD_DIR/seven-segment-digits-tests"\n'
-    '"$BUILD_DIR/mission-pause-tests"\n'
-)
-replace_once(
-    host,
+    '"$BUILD_DIR/seven-segment-digits-tests"\n"$BUILD_DIR/mission-pause-tests"\n')
+replace_once(host,
     'grep -q "int speedMultiplier = 1;" "$ROOT/source/main.cpp"\n',
-    'grep -q "int speedMultiplier = 1;" "$ROOT/source/main.cpp"\n'
-    'grep -q "MissionPause::toggled" "$ROOT/source/main.cpp"\n'
-    'grep -q "MissionPause::gameplayInputAllowed" "$ROOT/source/main.cpp"\n'
-    'grep -q "START  WZNOW" "$ROOT/source/UiRenderer.cpp"\n'
-)
+    'grep -q "int speedMultiplier = 1;" "$ROOT/source/main.cpp"\ngrep -q "MissionPause::toggled" "$ROOT/source/main.cpp"\ngrep -q "MissionPause::gameplayInputAllowed" "$ROOT/source/main.cpp"\ngrep -q "START  WZNOW" "$ROOT/source/UiRenderer.cpp"\n')
 
-# Remove the one-shot transformer and its workflow before committing the product patch.
 (ROOT / "scripts/apply_issue_185.py").unlink()
 workflow = ROOT / ".github/workflows/apply-issue-185.yml"
 if workflow.exists():
