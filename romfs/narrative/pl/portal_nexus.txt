@@ -1,0 +1,16 @@
+mission.id=portal_nexus
+briefing.1.id=portal_nexus.warning
+briefing.1.speaker=Mira
+briefing.1.text=Trzy portale otworzyly sie jednoczesnie. Kazdy prowadzi innym traktem, ale wszystkie zbiegaja sie przed cytadela.
+briefing.2.id=portal_nexus.plan
+briefing.2.speaker=Arven
+briefing.2.text=Rozdziel obrone przy wejsciach, a najmocniejsze wieze ustaw przy wspolnym wezle. Jedna linia nie zatrzyma calego natarcia.
+mechanic.id=portal_nexus.routes
+mechanic.speaker=Straznik Bramy
+mechanic.text=Kolejni przeciwnicy pojawiaja sie naprzemiennie w trzech portalach. Wieze przy centrum moga wspierac wszystkie trasy.
+victory.id=portal_nexus.victory
+victory.speaker=Arven
+victory.text=Portale gasna jeden po drugim. Wezel zostal zabezpieczony, a szlak do kolejnych regionow Asterii stoi otworem.
+defeat.id=portal_nexus.defeat
+defeat.speaker=Mira
+defeat.text=Obrona skupila sie zbyt mocno na jednym wejściu. Rozloz sily szerzej i wykorzystaj wspolny odcinek tras.
