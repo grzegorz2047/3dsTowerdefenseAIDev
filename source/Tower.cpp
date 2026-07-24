@@ -6,55 +6,33 @@
 
 namespace {
 
-struct TowerStats {
-    float range;
-    float attackIntervalSeconds;
-    ProjectilePayload payload;
+struct TowerRuntimeStats {
+    TowerCombatProfile profile;
+    ProjectileEffect effect;
+    float projectileSpeed;
+    float turnRateRadiansPerSecond;
+    float launchClimb;
 };
 
-TowerStats baseStatsFor(TowerType type) {
-    switch (type) {
-        case TowerType::Mortar:
-            return {2.85F, 1.25F,
-                {ProjectileEffect::Splash, 2, 1.15F, 0.0F, 1.0F,
-                    6.0F, 0.0F, 0.0F, DamageType::Explosive}};
-        case TowerType::Frost:
-            return {3.05F, 0.90F,
-                {ProjectileEffect::Frost, 1, 0.85F, 2.20F, 0.55F,
-                    6.0F, 0.0F, 0.0F, DamageType::Arcane}};
-        case TowerType::Rocket:
-            return {4.45F, 2.35F,
-                {ProjectileEffect::GuidedRocket, 3, 1.35F, 0.0F, 1.0F,
-                    4.5F, 4.5F, 0.45F, DamageType::Explosive}};
-        case TowerType::Ballista:
-        default:
-            return {3.40F, 0.55F,
-                {ProjectileEffect::Direct, 1, 0.0F, 0.0F, 1.0F,
-                    6.0F, 0.0F, 0.0F, DamageType::Physical}};
-    }
+std::uint8_t boundedLevel(std::uint8_t level) {
+    return std::max<std::uint8_t>(1U, std::min<std::uint8_t>(level, Tower::kMaximumLevel));
 }
 
-TowerStats statsFor(TowerType type, std::uint8_t level) {
-    TowerStats stats = baseStatsFor(type);
-    const int extraLevels = static_cast<int>(level) - 1;
-    stats.range += 0.18F * static_cast<float>(extraLevels);
-    stats.attackIntervalSeconds *= 1.0F - 0.12F * static_cast<float>(extraLevels);
-    stats.payload.damage += extraLevels;
-    if (stats.payload.effect == ProjectileEffect::Splash ||
-        stats.payload.effect == ProjectileEffect::GuidedRocket) {
-        stats.payload.radius += 0.12F * static_cast<float>(extraLevels);
+TowerRuntimeStats runtimeStatsFor(TowerType type, std::uint8_t level) {
+    const TowerCombatProfile profile = towerCombatProfile(type, level);
+    switch (type) {
+        case TowerType::Mortar:
+            return {profile, ProjectileEffect::Splash, 6.0F, 0.0F, 0.0F};
+        case TowerType::Frost:
+            return {profile, ProjectileEffect::Frost, 6.0F, 0.0F, 0.0F};
+        case TowerType::Rocket:
+            return {profile, ProjectileEffect::GuidedRocket,
+                level >= 3U ? 5.0F : (level >= 2U ? 4.75F : 4.5F),
+                level >= 3U ? 5.2F : (level >= 2U ? 4.8F : 4.5F), 0.45F};
+        case TowerType::Ballista:
+        default:
+            return {profile, ProjectileEffect::Direct, 6.0F, 0.0F, 0.0F};
     }
-    if (stats.payload.effect == ProjectileEffect::Frost) {
-        stats.payload.slowDurationSeconds += 0.35F * static_cast<float>(extraLevels);
-        stats.payload.slowMovementMultiplier = std::max(
-            0.40F,
-            stats.payload.slowMovementMultiplier - 0.05F * static_cast<float>(extraLevels));
-    }
-    if (stats.payload.effect == ProjectileEffect::GuidedRocket) {
-        stats.payload.turnRateRadiansPerSecond += 0.30F * static_cast<float>(extraLevels);
-        stats.payload.speed += 0.25F * static_cast<float>(extraLevels);
-    }
-    return stats;
 }
 
 float worldX(const LevelData& level, std::size_t gridX) {
@@ -81,12 +59,53 @@ int towerCost(TowerType type) {
 
 const char* towerName(TowerType type) {
     switch (type) {
-        case TowerType::Mortar: return "MOZDZIERZ";
-        case TowerType::Frost: return "MROZ";
-        case TowerType::Rocket: return "RAKIETY";
+        case TowerType::Mortar: return "MOZDZIERZ: OBSZAR";
+        case TowerType::Frost: return "MROZ: KONTROLA";
+        case TowerType::Rocket: return "RAKIETY: DUZY CEL";
         case TowerType::Ballista:
-        default: return "KUSZA";
+        default: return "KUSZA: SZYBKI CEL";
     }
+}
+
+TowerCombatProfile towerCombatProfile(TowerType type, std::uint8_t level) {
+    const std::uint8_t bounded = boundedLevel(level);
+    switch (type) {
+        case TowerType::Mortar:
+            if (bounded == 1U) return {2.85F, 1.25F, 2, 1.15F, 0.0F, 1.0F,
+                DamageType::Explosive, "GRUPY"};
+            if (bounded == 2U) return {2.85F, 1.35F, 3, 1.30F, 0.0F, 1.0F,
+                DamageType::Explosive, "WIEKSZY OBSZAR"};
+            return {2.95F, 1.50F, 4, 1.60F, 0.0F, 1.0F,
+                DamageType::Explosive, "OBLEZENIE"};
+        case TowerType::Frost:
+            if (bounded == 1U) return {3.05F, 0.90F, 1, 0.85F, 2.20F, 0.55F,
+                DamageType::Arcane, "SPOWOLNIENIE"};
+            if (bounded == 2U) return {3.10F, 0.88F, 1, 0.95F, 2.90F, 0.50F,
+                DamageType::Arcane, "DLUZSZA KONTROLA"};
+            return {3.20F, 0.85F, 1, 1.10F, 3.70F, 0.40F,
+                DamageType::Arcane, "GLEBOKI MROZ"};
+        case TowerType::Rocket:
+            if (bounded == 1U) return {4.45F, 2.35F, 3, 1.35F, 0.0F, 1.0F,
+                DamageType::Explosive, "DUZY CEL"};
+            if (bounded == 2U) return {4.70F, 2.60F, 5, 1.45F, 0.0F, 1.0F,
+                DamageType::Explosive, "CIEZKI CEL"};
+            return {5.05F, 3.00F, 8, 1.65F, 0.0F, 1.0F,
+                DamageType::Explosive, "EGZEKUTOR"};
+        case TowerType::Ballista:
+        default:
+            if (bounded == 1U) return {3.40F, 0.55F, 1, 0.0F, 0.0F, 1.0F,
+                DamageType::Physical, "SZYBKI CEL"};
+            if (bounded == 2U) return {3.40F, 0.65F, 2, 0.0F, 0.0F, 1.0F,
+                DamageType::Physical, "PRECYZJA"};
+            return {3.50F, 0.60F, 3, 0.0F, 0.0F, 1.0F,
+                DamageType::Physical, "LOWCA"};
+    }
+}
+
+float towerSingleTargetDps(TowerType type, std::uint8_t level) {
+    const TowerCombatProfile profile = towerCombatProfile(type, level);
+    return profile.attackIntervalSeconds > 0.0F
+        ? static_cast<float>(profile.damage) / profile.attackIntervalSeconds : 0.0F;
 }
 
 Tower::Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ, TowerType type)
@@ -108,8 +127,8 @@ void Tower::update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles) 
         return;
     }
 
-    const TowerStats stats = statsFor(type_, level_);
-    const float rangeSquared = stats.range * stats.range;
+    const TowerRuntimeStats stats = runtimeStatsFor(type_, level_);
+    const float rangeSquared = stats.profile.range * stats.profile.range;
     cooldown_ = std::max(cooldown_ - std::max(deltaSeconds, 0.0F), 0.0F);
 
     std::size_t targetIndex = wave.spawnedCount();
@@ -136,8 +155,13 @@ void Tower::update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles) 
     aimAngleRadians_ = std::atan2(target.x() - x_, target.z() - z_);
     if (cooldown_ > 0.0F) return;
 
-    if (projectiles.launch(x_, kMuzzleHeight, z_, targetIndex, stats.payload)) {
-        cooldown_ = stats.attackIntervalSeconds;
+    const ProjectilePayload payload{
+        stats.effect, stats.profile.damage, stats.profile.radius,
+        stats.profile.slowDurationSeconds, stats.profile.slowMovementMultiplier,
+        stats.projectileSpeed, stats.turnRateRadiansPerSecond, stats.launchClimb,
+        stats.profile.damageType};
+    if (projectiles.launch(x_, kMuzzleHeight, z_, targetIndex, payload)) {
+        cooldown_ = stats.profile.attackIntervalSeconds;
         ++shotsFired_;
     }
 }
@@ -165,6 +189,10 @@ std::size_t Tower::gridX() const { return gridX_; }
 std::size_t Tower::gridZ() const { return gridZ_; }
 TowerType Tower::type() const { return type_; }
 std::uint8_t Tower::level() const { return level_; }
+TowerCombatProfile Tower::combatProfile() const { return towerCombatProfile(type_, level_); }
+TowerCombatProfile Tower::nextCombatProfile() const {
+    return towerCombatProfile(type_, canUpgrade() ? static_cast<std::uint8_t>(level_ + 1U) : level_);
+}
 int Tower::investedGold() const { return investedGold_; }
 int Tower::upgradeCost() const {
     return canUpgrade() ? towerCost(type_) * static_cast<int>(level_ + 1U) / 2 : 0;
