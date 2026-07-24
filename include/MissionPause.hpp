@@ -1,5 +1,6 @@
 #pragma once
 
+// Pause is session-local: rendering remains live while gameplay time and actions are frozen.
 namespace MissionPause {
 constexpr bool toggled(bool paused, bool sessionFinished, bool benchmarkMode) {
     return (!sessionFinished && !benchmarkMode) ? !paused : paused;
