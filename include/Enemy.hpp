@@ -7,7 +7,8 @@
 
 class Enemy {
 public:
-    Enemy(const LevelData& level, EnemyType type = EnemyType::Raider);
+    Enemy(const LevelData& level, EnemyType type = EnemyType::Raider,
+        std::size_t pathIndex = 0U);
 
     void update(float deltaSeconds);
     void reset();
@@ -30,13 +31,15 @@ public:
     [[nodiscard]] bool hitFlashActive() const;
     [[nodiscard]] float pathProgress() const;
     [[nodiscard]] EnemyType type() const;
+    [[nodiscard]] std::size_t pathIndex() const;
 
 private:
     static constexpr float kHitFlashSeconds = 0.12F;
 
     const LevelData* level_ = nullptr;
     EnemyType type_ = EnemyType::Raider;
-    std::size_t segmentIndex_ = 0;
+    std::size_t pathIndex_ = 0U;
+    std::size_t segmentIndex_ = 0U;
     float segmentProgress_ = 0.0F;
     float x_ = 0.0F;
     float z_ = 0.0F;
