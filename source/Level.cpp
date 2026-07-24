@@ -24,33 +24,21 @@ TileType parseTile(char value, bool& valid) {
 }
 
 bool parseLong(const std::string& value, long& output) {
-    if (value.empty()) {
-        return false;
-    }
-
+    if (value.empty()) return false;
     errno = 0;
     char* end = nullptr;
     const long parsed = std::strtol(value.c_str(), &end, 10);
-    if (errno == ERANGE || end == value.c_str() || *end != '\0') {
-        return false;
-    }
-
+    if (errno == ERANGE || end == value.c_str() || *end != '\0') return false;
     output = parsed;
     return true;
 }
 
 bool parseFloat(const std::string& value, float& output) {
-    if (value.empty()) {
-        return false;
-    }
-
+    if (value.empty()) return false;
     errno = 0;
     char* end = nullptr;
     const float parsed = std::strtof(value.c_str(), &end);
-    if (errno == ERANGE || end == value.c_str() || *end != '\0') {
-        return false;
-    }
-
+    if (errno == ERANGE || end == value.c_str() || *end != '\0') return false;
     output = parsed;
     return true;
 }
@@ -60,20 +48,13 @@ bool parseDimensions(const std::string& value, std::uint8_t& width, std::uint8_t
     if (separator == std::string::npos || value.find(',', separator + 1) != std::string::npos) {
         return false;
     }
-
     long parsedWidth = 0;
     long parsedHeight = 0;
     if (!parseLong(value.substr(0, separator), parsedWidth) ||
-        !parseLong(value.substr(separator + 1), parsedHeight)) {
-        return false;
-    }
-
+        !parseLong(value.substr(separator + 1), parsedHeight)) return false;
     if (parsedWidth <= 0 || parsedHeight <= 0 ||
         parsedWidth > static_cast<long>(kMaximumMapWidth) ||
-        parsedHeight > static_cast<long>(kMaximumMapHeight)) {
-        return false;
-    }
-
+        parsedHeight > static_cast<long>(kMaximumMapHeight)) return false;
     width = static_cast<std::uint8_t>(parsedWidth);
     height = static_cast<std::uint8_t>(parsedHeight);
     return true;
@@ -84,39 +65,23 @@ bool parsePoint(const std::string& value, GridPoint& point) {
     if (separator == std::string::npos || value.find(',', separator + 1) != std::string::npos) {
         return false;
     }
-
     long x = 0;
     long z = 0;
     if (!parseLong(value.substr(0, separator), x) ||
-        !parseLong(value.substr(separator + 1), z)) {
-        return false;
-    }
-
+        !parseLong(value.substr(separator + 1), z)) return false;
     if (x < std::numeric_limits<std::int16_t>::min() ||
         x > std::numeric_limits<std::int16_t>::max() ||
         z < std::numeric_limits<std::int16_t>::min() ||
-        z > std::numeric_limits<std::int16_t>::max()) {
-        return false;
-    }
-
+        z > std::numeric_limits<std::int16_t>::max()) return false;
     point.x = static_cast<std::int16_t>(x);
     point.z = static_cast<std::int16_t>(z);
     return true;
 }
 
 bool parseEnemyType(const std::string& value, EnemyType& type) {
-    if (value == "Scout") {
-        type = EnemyType::Scout;
-        return true;
-    }
-    if (value == "Raider") {
-        type = EnemyType::Raider;
-        return true;
-    }
-    if (value == "Brute") {
-        type = EnemyType::Brute;
-        return true;
-    }
+    if (value == "Scout") { type = EnemyType::Scout; return true; }
+    if (value == "Raider") { type = EnemyType::Raider; return true; }
+    if (value == "Brute") { type = EnemyType::Brute; return true; }
     return false;
 }
 
@@ -124,23 +89,14 @@ bool parseWaveEntry(const std::string& value, WaveEntry& entry) {
     const std::size_t first = value.find(',');
     const std::size_t second = first == std::string::npos ? std::string::npos : value.find(',', first + 1);
     if (first == std::string::npos || second == std::string::npos ||
-        value.find(',', second + 1) != std::string::npos) {
-        return false;
-    }
-
+        value.find(',', second + 1) != std::string::npos) return false;
     long count = 0;
     float interval = 0.0F;
     if (!parseEnemyType(value.substr(0, first), entry.type) ||
         !parseLong(value.substr(first + 1, second - first - 1), count) ||
-        !parseFloat(value.substr(second + 1), interval)) {
-        return false;
-    }
-
+        !parseFloat(value.substr(second + 1), interval)) return false;
     if (count <= 0 || count > static_cast<long>(kMaximumWaveEnemies) ||
-        interval < 0.1F || interval > 10.0F) {
-        return false;
-    }
-
+        interval < 0.1F || interval > 10.0F) return false;
     entry.count = static_cast<std::uint8_t>(count);
     entry.spawnIntervalSeconds = interval;
     return true;
@@ -155,7 +111,6 @@ bool validatePath(const LevelData& level, std::string& error) {
         error = "Trasa musi miec co najmniej dwa punkty";
         return false;
     }
-
     for (std::size_t index = 0; index < level.pathLength; ++index) {
         const GridPoint point = level.path[index];
         if (point.x < 0 || point.z < 0 ||
@@ -164,15 +119,12 @@ bool validatePath(const LevelData& level, std::string& error) {
             error = "Punkt trasy znajduje sie poza mapa";
             return false;
         }
-
-        const TileType tile = level.tileAt(
-            static_cast<std::size_t>(point.x),
+        const TileType tile = level.tileAt(static_cast<std::size_t>(point.x),
             static_cast<std::size_t>(point.z));
         if (!isPathTile(tile)) {
             error = "Trasa moze przebiegac tylko przez S, R i E";
             return false;
         }
-
         if (index > 0) {
             const GridPoint previous = level.path[index - 1];
             const int distance = std::abs(static_cast<int>(point.x - previous.x)) +
@@ -183,7 +135,6 @@ bool validatePath(const LevelData& level, std::string& error) {
             }
         }
     }
-
     const GridPoint first = level.path[0];
     const GridPoint last = level.path[level.pathLength - 1];
     if (level.tileAt(static_cast<std::size_t>(first.x), static_cast<std::size_t>(first.z)) != TileType::Spawn ||
@@ -191,16 +142,13 @@ bool validatePath(const LevelData& level, std::string& error) {
         error = "Trasa musi zaczynac sie w S i konczyc w E";
         return false;
     }
-
     return true;
 }
 
 }  // namespace
 
 TileType LevelData::tileAt(std::size_t x, std::size_t z) const {
-    if (x >= width || z >= height) {
-        return TileType::Blocked;
-    }
+    if (x >= width || z >= height) return TileType::Blocked;
     return tiles[z * kMaximumMapWidth + x];
 }
 
@@ -219,12 +167,8 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
     std::size_t baseCount = 0;
 
     while (std::getline(input, line)) {
-        if (!line.empty() && line.back() == '\r') {
-            line.pop_back();
-        }
-        if (line.empty() || line[0] == ';') {
-            continue;
-        }
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty() || line[0] == ';') continue;
 
         if (readingGrid && gridRow < result.level.height) {
             if (line.size() != result.level.width) {
@@ -243,9 +187,7 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
                 baseCount += tile == TileType::Base ? 1U : 0U;
             }
             ++gridRow;
-            if (gridRow == result.level.height) {
-                readingGrid = false;
-            }
+            if (gridRow == result.level.height) readingGrid = false;
             continue;
         }
 
@@ -257,11 +199,9 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
         const std::string key = line.substr(0, equals);
         const std::string value = line.substr(equals + 1);
 
-        if (key == "id") {
-            result.level.id = value;
-        } else if (key == "name") {
-            result.level.name = value;
-        } else if (key == "size") {
+        if (key == "id") result.level.id = value;
+        else if (key == "name") result.level.name = value;
+        else if (key == "size") {
             if (!parseDimensions(value, result.level.width, result.level.height)) {
                 result.error = "Nieprawidlowy rozmiar poziomu";
                 return result;
@@ -302,7 +242,7 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
                 }
                 WaveEntry entry{};
                 if (!parseWaveEntry(entryValue, entry) ||
-                    result.level.totalEnemyCount + entry.count > kMaximumWaveEnemies) {
+                    result.level.totalEnemyCount + entry.count > kMaximumMissionEnemies) {
                     result.error = "Nieprawidlowa definicja fal";
                     return result;
                 }
@@ -327,9 +267,7 @@ LevelLoadResult LevelLoader::loadFromRomFs(const char* path) {
         result.error = "Poziom musi zawierac dokladnie jeden spawn i jedna baze";
         return result;
     }
-    if (!validatePath(result.level, result.error)) {
-        return result;
-    }
+    if (!validatePath(result.level, result.error)) return result;
     if (result.level.waveEntryCount == 0 || result.level.totalEnemyCount == 0) {
         result.error = "Poziom musi definiowac co najmniej jedna fale";
         return result;

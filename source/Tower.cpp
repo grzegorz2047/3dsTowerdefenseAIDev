@@ -93,7 +93,7 @@ TowerCombatProfile towerCombatProfile(TowerType type, std::uint8_t level) {
                 DamageType::Explosive, "EGZEKUTOR"};
         case TowerType::Ballista:
         default:
-            if (bounded == 1U) return {3.40F, 0.55F, 1, 0.0F, 0.0F, 1.0F,
+            if (bounded == 1U) return {3.40F, 0.45F, 1, 0.0F, 0.0F, 1.0F,
                 DamageType::Physical, "SZYBKI CEL"};
             if (bounded == 2U) return {3.40F, 0.65F, 2, 0.0F, 0.0F, 1.0F,
                 DamageType::Physical, "PRECYZJA"};

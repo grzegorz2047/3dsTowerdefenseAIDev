@@ -19,24 +19,24 @@ struct EnemyStats {
 EnemyStats statsFor(EnemyType type) {
     switch (type) {
         case EnemyType::Scout:
-            return {2, 1, 1.85F, 0, 0, 0, 8, 0.0F};
+            return {5, 1, 1.85F, 0, 0, 0, 8, 0.0F};
         case EnemyType::Brute:
-            return {5, 2, 0.82F, 2, 0, 0, 28, 0.45F};
+            return {30, 2, 0.82F, 2, 0, 0, 28, 0.45F};
         case EnemyType::Raider:
         default:
-            return {3, 1, 1.35F, 1, 0, 0, 15, 0.0F};
+            return {12, 1, 1.35F, 1, 0, 0, 15, 0.0F};
     }
 }
 
 float durabilityMultiplierFor(const LevelData& level) {
-    if (level.id == "ash_gate") return 1.15F;
-    if (level.id == "ruined_village") return 1.30F;
-    if (level.id == "stone_bridge") return 1.50F;
-    if (level.id == "echo_valley") return 1.70F;
-    if (level.id == "flooded_road") return 1.90F;
-    if (level.id == "iron_ravine") return 2.10F;
-    if (level.id == "storm_ring") return 2.30F;
-    if (level.id == "last_citadel") return 2.50F;
+    if (level.id == "ash_gate") return 1.05F;
+    if (level.id == "ruined_village") return 1.15F;
+    if (level.id == "stone_bridge") return 1.30F;
+    if (level.id == "echo_valley") return 1.45F;
+    if (level.id == "flooded_road") return 1.60F;
+    if (level.id == "iron_ravine") return 1.75F;
+    if (level.id == "storm_ring") return 1.90F;
+    if (level.id == "last_citadel") return 2.10F;
     return 1.0F;
 }
 
@@ -50,25 +50,20 @@ float worldZ(const LevelData& level, std::int16_t gridZ) {
 
 }  // namespace
 
-Enemy::Enemy(const LevelData& level, EnemyType type) : level_(&level), type_(type) {
-    reset();
-}
+Enemy::Enemy(const LevelData& level, EnemyType type) : level_(&level), type_(type) { reset(); }
 
 void Enemy::update(float deltaSeconds) {
     const float stepSeconds = std::max(deltaSeconds, 0.0F);
     hitFlashRemainingSeconds_ = std::max(hitFlashRemainingSeconds_ - stepSeconds, 0.0F);
     if (dead() || reachedBase_ || level_ == nullptr || level_->pathLength < 2) return;
-
     float remainingDistance = stepSeconds * effectiveMovementSpeed();
     slowRemainingSeconds_ = std::max(slowRemainingSeconds_ - stepSeconds, 0.0F);
     if (slowRemainingSeconds_ <= 0.0F) slowMovementMultiplier_ = 1.0F;
-
     while (remainingDistance > 0.0F && !reachedBase_) {
         const float available = 1.0F - segmentProgress_;
         const float step = std::min(remainingDistance, available);
         segmentProgress_ += step;
         remainingDistance -= step;
-
         const GridPoint from = level_->path[segmentIndex_];
         const GridPoint to = level_->path[segmentIndex_ + 1];
         const float fromX = worldX(*level_, from.x);
@@ -77,7 +72,6 @@ void Enemy::update(float deltaSeconds) {
         const float toZ = worldZ(*level_, to.z);
         x_ = fromX + (toX - fromX) * segmentProgress_;
         z_ = fromZ + (toZ - fromZ) * segmentProgress_;
-
         if (segmentProgress_ >= 1.0F) {
             ++segmentIndex_;
             segmentProgress_ = 0.0F;
@@ -115,9 +109,7 @@ void Enemy::takeDamage(int amount, DamageType type) {
 
 void Enemy::applySlow(float durationSeconds, float movementMultiplier) {
     if (durationSeconds <= 0.0F || movementMultiplier <= 0.0F ||
-        movementMultiplier >= 1.0F || dead() || reachedBase_) {
-        return;
-    }
+        movementMultiplier >= 1.0F || dead() || reachedBase_) return;
     const float resistance = std::clamp(slowResistance(), 0.0F, 0.95F);
     const float resistedDuration = durationSeconds * (1.0F - resistance);
     const float resistedMultiplier = movementMultiplier +
@@ -134,8 +126,8 @@ int Enemy::health() const { return health_; }
 int Enemy::maxHealth() const {
     const EnemyStats stats = statsFor(type_);
     if (level_ == nullptr) return stats.health;
-    return std::max(1, static_cast<int>(std::ceil(
-        static_cast<float>(stats.health) * durabilityMultiplierFor(*level_))));
+    return std::max(1, static_cast<int>(std::ceil(static_cast<float>(stats.health) *
+        durabilityMultiplierFor(*level_))));
 }
 int Enemy::baseDamage() const { return statsFor(type_).baseDamage; }
 int Enemy::armor(DamageType type) const {
@@ -154,7 +146,6 @@ float Enemy::slowResistance() const { return statsFor(type_).slowResistance; }
 bool Enemy::slowed() const { return slowRemainingSeconds_ > 0.0F; }
 bool Enemy::hitFlashActive() const { return hitFlashRemainingSeconds_ > 0.0F; }
 EnemyType Enemy::type() const { return type_; }
-
 float Enemy::pathProgress() const {
     if (level_ == nullptr || level_->pathLength < 2) return 1.0F;
     const float completed = static_cast<float>(segmentIndex_) + segmentProgress_;

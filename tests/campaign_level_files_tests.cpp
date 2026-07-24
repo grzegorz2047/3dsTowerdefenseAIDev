@@ -117,8 +117,8 @@ int main(int argc, char** argv) {
         expect(result.level.waveEntryCount >= 5U && result.level.waveEntryCount <= kMaximumWaveEntries,
             "campaign mission should define five to eight waves: " + std::string(mission.id));
         expect(result.level.totalEnemyCount > 0 &&
-            result.level.totalEnemyCount <= kMaximumWaveEnemies,
-            "enemy count should fit first multi-wave budget: " + std::string(mission.id));
+            result.level.totalEnemyCount <= kMaximumMissionEnemies,
+            "enemy count should fit total mission budget: " + std::string(mission.id));
         for (std::size_t wave = 0U; wave < result.level.waveEntryCount; ++wave) {
             expect(result.level.waveEntries[wave].count > 0U &&
                 result.level.waveEntries[wave].count <= kMaximumWaveEnemies,

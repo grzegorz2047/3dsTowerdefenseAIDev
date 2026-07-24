@@ -29,6 +29,20 @@ jobs:
       - name: Verify representative kill times
         run: build/tower-balance/tests
 
+  campaign-balance:
+    name: Campaign balance tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile campaign contract
+        run: |
+          mkdir -p build/campaign-balance
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude \
+            tests/campaign_balance_tests.cpp source/Economy.cpp source/Enemy.cpp source/Level.cpp \
+            -o build/campaign-balance/tests
+      - name: Verify campaign pressure curve
+        run: build/campaign-balance/tests "$GITHUB_WORKSPACE"
+
   build-release:
     runs-on: ubuntu-latest
     container:

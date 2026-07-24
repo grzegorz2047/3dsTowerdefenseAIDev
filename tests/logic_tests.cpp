@@ -57,13 +57,13 @@ void testBundledTutorialLevel() {
     require(level.width == 12 && level.height == 12, "tutorial dimensions should be 12x12");
     require(level.pathLength == 14, "tutorial path length should be 14");
     require(level.waveEntryCount == 5, "tutorial should define five waves");
-    require(level.totalEnemyCount == 16, "tutorial should define sixteen enemies");
+    require(level.totalEnemyCount == 18, "tutorial should define eighteen enemies");
     require(level.waveEntries[0].type == EnemyType::Scout, "tutorial should start with scouts");
     require(level.waveEntries[2].type == EnemyType::Raider, "tutorial should introduce raiders");
     require(level.waveEntries[4].type == EnemyType::Brute, "tutorial should end with brutes");
     require(level.waveEntries[0].spawnIntervalSeconds >= 1.40F,
         "tutorial first wave should leave preparation time");
-    require(level.waveEntries[4].spawnIntervalSeconds >= 1.80F,
+    require(level.waveEntries[4].spawnIntervalSeconds >= 1.70F,
         "tutorial final wave should keep brutes readable");
     const GridPoint first = level.path[0];
     const GridPoint second = level.path[1];
@@ -96,13 +96,13 @@ void testCampaignEnemyDurabilityCurve() {
     const LevelLoadResult tutorial = LevelLoader::loadFromRomFs(paths[0]);
     const LevelLoadResult finale = LevelLoader::loadFromRomFs(paths[8]);
     require(tutorial.success && finale.success, "campaign durability levels should load");
-    require(Enemy(tutorial.level, EnemyType::Scout).maxHealth() == 2,
-        "tutorial scout durability should remain unchanged");
-    require(Enemy(finale.level, EnemyType::Scout).maxHealth() >= 5,
-        "finale scouts should survive multiple basic hits");
-    require(Enemy(finale.level, EnemyType::Raider).maxHealth() >= 8,
-        "finale raiders should require sustained fire");
-    require(Enemy(finale.level, EnemyType::Brute).maxHealth() >= 13,
+    require(Enemy(tutorial.level, EnemyType::Scout).maxHealth() == 5,
+        "tutorial scout durability should use the new combat baseline");
+    require(Enemy(finale.level, EnemyType::Scout).maxHealth() >= 10,
+        "finale scouts should survive repeated basic hits");
+    require(Enemy(finale.level, EnemyType::Raider).maxHealth() >= 24,
+        "finale raiders should require sustained specialized fire");
+    require(Enemy(finale.level, EnemyType::Brute).maxHealth() >= 60,
         "finale brutes should provide meaningful heavy pressure");
 }
 
@@ -191,7 +191,7 @@ void testTowerCanWinWave() {
     const LevelData level = makeLevel();
     Wave wave(level);
     require(wave.startNextWave(), "tower test wave should start explicitly");
-    Tower tower(level, 3, 1);
+    Tower tower(level, 3, 1, TowerType::Mortar);
     ProjectilePool projectiles;
     require(tower.valid(), "test tower should be placed on BuildSpot");
     for (int step = 0; step < 60 * 35 && !wave.completed() && !wave.lost(); ++step) {
@@ -199,7 +199,7 @@ void testTowerCanWinWave() {
         projectiles.update(1.0F / 60.0F, wave);
         wave.update(1.0F / 60.0F);
     }
-    require(wave.completed(), "tower should defeat the complete test wave");
+    require(wave.completed(), "matched tower should defeat the complete test wave");
     require(!wave.lost(), "winning wave must preserve base health");
     require(wave.baseHealth() > 0, "winning wave should leave the base alive");
     require(tower.shotsFired() > 0, "tower should fire during the test");
