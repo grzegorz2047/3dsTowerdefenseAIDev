@@ -18,13 +18,10 @@ struct EnemyStats {
 
 EnemyStats statsFor(EnemyType type) {
     switch (type) {
-        case EnemyType::Scout:
-            return {5, 1, 1.85F, 0, 0, 0, 8, 0.0F};
-        case EnemyType::Brute:
-            return {30, 2, 0.82F, 2, 0, 0, 28, 0.45F};
+        case EnemyType::Scout: return {5, 1, 1.85F, 0, 0, 0, 8, 0.0F};
+        case EnemyType::Brute: return {30, 2, 0.82F, 2, 0, 0, 28, 0.45F};
         case EnemyType::Raider:
-        default:
-            return {12, 1, 1.35F, 1, 0, 0, 15, 0.0F};
+        default: return {12, 1, 1.35F, 1, 0, 0, 15, 0.0F};
     }
 }
 
@@ -49,18 +46,33 @@ float worldZ(const LevelData& level, std::int16_t gridZ) {
     return -static_cast<float>(level.height) * 0.5F + 0.5F + static_cast<float>(gridZ);
 }
 
+std::size_t effectivePathCount(const LevelData& level) {
+    return level.pathCount > 0U ? level.pathCount : (level.pathLength >= 2U ? 1U : 0U);
+}
+
+const GridPoint* pathDataFor(const LevelData& level, std::size_t index) {
+    if (index == 0U && level.pathLength >= 2U) return level.path.data();
+    return level.pathData(index);
+}
+
+std::size_t pathLengthFor(const LevelData& level, std::size_t index) {
+    if (index == 0U && level.pathLength >= 2U) return level.pathLength;
+    return level.pathLengthAt(index);
+}
+
 }  // namespace
 
 Enemy::Enemy(const LevelData& level, EnemyType type, std::size_t pathIndex)
-    : level_(&level), type_(type), pathIndex_(pathIndex < level.pathCount ? pathIndex : 0U) {
+    : level_(&level), type_(type),
+      pathIndex_(pathIndex < effectivePathCount(level) ? pathIndex : 0U) {
     reset();
 }
 
 void Enemy::update(float deltaSeconds) {
     const float stepSeconds = std::max(deltaSeconds, 0.0F);
     hitFlashRemainingSeconds_ = std::max(hitFlashRemainingSeconds_ - stepSeconds, 0.0F);
-    const GridPoint* points = level_ == nullptr ? nullptr : level_->pathData(pathIndex_);
-    const std::size_t length = level_ == nullptr ? 0U : level_->pathLengthAt(pathIndex_);
+    const GridPoint* points = level_ == nullptr ? nullptr : pathDataFor(*level_, pathIndex_);
+    const std::size_t length = level_ == nullptr ? 0U : pathLengthFor(*level_, pathIndex_);
     if (dead() || reachedBase_ || points == nullptr || length < 2U) return;
     float remainingDistance = stepSeconds * effectiveMovementSpeed();
     slowRemainingSeconds_ = std::max(slowRemainingSeconds_ - stepSeconds, 0.0F);
@@ -97,8 +109,8 @@ void Enemy::reset() {
     slowMovementMultiplier_ = 1.0F;
     hitFlashRemainingSeconds_ = 0.0F;
     health_ = maxHealth();
-    const GridPoint* points = level_ == nullptr ? nullptr : level_->pathData(pathIndex_);
-    const std::size_t length = level_ == nullptr ? 0U : level_->pathLengthAt(pathIndex_);
+    const GridPoint* points = level_ == nullptr ? nullptr : pathDataFor(*level_, pathIndex_);
+    const std::size_t length = level_ == nullptr ? 0U : pathLengthFor(*level_, pathIndex_);
     reachedBase_ = points == nullptr || length < 2U;
     if (!reachedBase_) {
         const GridPoint start = points[0];
@@ -156,7 +168,7 @@ bool Enemy::hitFlashActive() const { return hitFlashRemainingSeconds_ > 0.0F; }
 EnemyType Enemy::type() const { return type_; }
 std::size_t Enemy::pathIndex() const { return pathIndex_; }
 float Enemy::pathProgress() const {
-    const std::size_t length = level_ == nullptr ? 0U : level_->pathLengthAt(pathIndex_);
+    const std::size_t length = level_ == nullptr ? 0U : pathLengthFor(*level_, pathIndex_);
     if (length < 2U) return 1.0F;
     const float completed = static_cast<float>(segmentIndex_) + segmentProgress_;
     return std::min(completed / static_cast<float>(length - 1U), 1.0F);
