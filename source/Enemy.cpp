@@ -47,11 +47,12 @@ Enemy::Enemy(const LevelData& level, EnemyType type) : level_(&level), type_(typ
 }
 
 void Enemy::update(float deltaSeconds) {
+    const float stepSeconds = std::max(deltaSeconds, 0.0F);
+    hitFlashRemainingSeconds_ = std::max(hitFlashRemainingSeconds_ - stepSeconds, 0.0F);
     if (dead() || reachedBase_ || level_ == nullptr || level_->pathLength < 2) {
         return;
     }
 
-    const float stepSeconds = std::max(deltaSeconds, 0.0F);
     float remainingDistance = stepSeconds * effectiveMovementSpeed();
     slowRemainingSeconds_ = std::max(slowRemainingSeconds_ - stepSeconds, 0.0F);
     if (slowRemainingSeconds_ <= 0.0F) {
@@ -90,6 +91,7 @@ void Enemy::reset() {
     segmentProgress_ = 0.0F;
     slowRemainingSeconds_ = 0.0F;
     slowMovementMultiplier_ = 1.0F;
+    hitFlashRemainingSeconds_ = 0.0F;
     health_ = maxHealth();
     reachedBase_ = level_ == nullptr || level_->pathLength < 2;
     if (!reachedBase_) {
@@ -103,7 +105,9 @@ void Enemy::takeDamage(int amount) {
     if (amount <= 0 || dead() || reachedBase_) {
         return;
     }
+    const int previousHealth = health_;
     health_ = std::max(health_ - amount, 0);
+    if (health_ < previousHealth) hitFlashRemainingSeconds_ = kHitFlashSeconds;
 }
 
 void Enemy::applySlow(float durationSeconds, float movementMultiplier) {
@@ -129,6 +133,7 @@ int Enemy::baseDamage() const { return statsFor(type_).baseDamage; }
 float Enemy::movementSpeed() const { return statsFor(type_).movementSpeed; }
 float Enemy::effectiveMovementSpeed() const { return movementSpeed() * slowMovementMultiplier_; }
 bool Enemy::slowed() const { return slowRemainingSeconds_ > 0.0F; }
+bool Enemy::hitFlashActive() const { return hitFlashRemainingSeconds_ > 0.0F; }
 EnemyType Enemy::type() const { return type_; }
 
 float Enemy::pathProgress() const {
