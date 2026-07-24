@@ -54,8 +54,10 @@ std::size_t validateScene(const std::string& root, const LevelData& level,
     const SceneArtLoadResult scene = SceneArtLoader::parse(sceneInput);
     expect(scene.success, "scene should parse: " + level.id + " (" + scene.error + ")");
     expect(scene.art.levelId == level.id, "scene id should match level: " + level.id);
-    expect(scene.art.theme == LevelTheme::VhalPass, "handcrafted scene should use Vhal Pass theme: " + level.id);
-    expect(scene.art.propCount >= minimumProps, "scene should contain enough landmarks: " + level.id);
+    expect(scene.art.theme == LevelTheme::VhalPass,
+        "handcrafted scene should use Vhal Pass theme: " + level.id);
+    expect(scene.art.propCount >= minimumProps,
+        "scene should contain enough landmarks: " + level.id);
 
     std::set<ScenePropType> landmarkTypes;
     std::size_t propVertices = 0U;
@@ -64,13 +66,17 @@ std::size_t validateScene(const std::string& root, const LevelData& level,
         landmarkTypes.insert(prop.type);
         propVertices += scenePropVertexBudget(prop.type);
     }
-    expect(landmarkTypes.count(ScenePropType::Ruin) > 0U, "scene should contain ruins: " + level.id);
-    expect(landmarkTypes.count(ScenePropType::Watchtower) > 0U, "scene should contain watchtowers: " + level.id);
-    expect(landmarkTypes.size() >= 5U, "scene should use varied modular props: " + level.id);
+    expect(landmarkTypes.count(ScenePropType::Ruin) > 0U,
+        "scene should contain ruins: " + level.id);
+    expect(landmarkTypes.count(ScenePropType::Watchtower) > 0U,
+        "scene should contain watchtowers: " + level.id);
+    expect(landmarkTypes.size() >= 5U,
+        "scene should use varied modular props: " + level.id);
 
     const std::size_t tileVertices = static_cast<std::size_t>(level.width) * level.height * 6U;
     const std::size_t roadVertices = countTiles(level, TileType::Road) * kVerticesPerBox;
-    const std::size_t buildPlatformVertices = countTiles(level, TileType::BuildSpot) * 2U * kVerticesPerBox;
+    const std::size_t buildPlatformVertices =
+        countTiles(level, TileType::BuildSpot) * 2U * kVerticesPerBox;
     const std::size_t landmarksAndTerrain = 13U * kVerticesPerBox;
     const std::size_t conservativeTotal = tileVertices + roadVertices + buildPlatformVertices +
         landmarksAndTerrain + propVertices;
@@ -95,20 +101,34 @@ int main(int argc, char** argv) {
     for (const CampaignMission& mission : CampaignCatalog::missions()) {
         const std::string romfsPrefix = "romfs:/";
         const std::string configuredPath = mission.levelPath;
-        expect(configuredPath.rfind(romfsPrefix, 0) == 0, "mission path should use romfs:/ prefix");
-        const std::string hostPath = root + "/romfs/" + configuredPath.substr(romfsPrefix.size());
+        expect(configuredPath.rfind(romfsPrefix, 0) == 0,
+            "mission path should use romfs:/ prefix");
+        const std::string hostPath = root + "/romfs/" +
+            configuredPath.substr(romfsPrefix.size());
         const LevelLoadResult result = LevelLoader::loadFromRomFs(hostPath.c_str());
-        expect(result.success, "level should load: " + std::string(mission.id) + " (" + result.error + ")");
-        expect(result.level.id == mission.id, "level id should match catalog: " + std::string(mission.id));
-        expect(!result.level.name.empty(), "level name should be present: " + std::string(mission.id));
-        expect(result.level.pathLength >= 2, "path should be usable: " + std::string(mission.id));
-        expect(result.level.waveEntryCount > 0, "waves should be present: " + std::string(mission.id));
-        expect(result.level.totalEnemyCount > 0 && result.level.totalEnemyCount <= kMaximumWaveEnemies,
-            "enemy count should fit budget: " + std::string(mission.id));
+        expect(result.success,
+            "level should load: " + std::string(mission.id) + " (" + result.error + ")");
+        expect(result.level.id == mission.id,
+            "level id should match catalog: " + std::string(mission.id));
+        expect(!result.level.name.empty(),
+            "level name should be present: " + std::string(mission.id));
+        expect(result.level.pathLength >= 2,
+            "path should be usable: " + std::string(mission.id));
+        expect(result.level.waveEntryCount >= 5U && result.level.waveEntryCount <= kMaximumWaveEntries,
+            "campaign mission should define five to eight waves: " + std::string(mission.id));
+        expect(result.level.totalEnemyCount > 0 &&
+            result.level.totalEnemyCount <= kMaximumWaveEnemies,
+            "enemy count should fit first multi-wave budget: " + std::string(mission.id));
+        for (std::size_t wave = 0U; wave < result.level.waveEntryCount; ++wave) {
+            expect(result.level.waveEntries[wave].count > 0U &&
+                result.level.waveEntries[wave].count <= kMaximumWaveEnemies,
+                "each wave should fit active enemy budget: " + std::string(mission.id));
+        }
         expect(countTiles(result.level, TileType::BuildSpot) >= 3U,
             "mission should offer meaningful build choices: " + std::string(mission.id));
         expect(layouts.insert(layoutSignature(result.level)).second,
-            "each campaign map should have a unique route and build layout: " + std::string(mission.id));
+            "each campaign map should have a unique route and build layout: " +
+                std::string(mission.id));
 
         if (result.level.id == "tutorial") validateScene(root, result.level, 18U);
         if (isLargeCampaignMap(result.level.id)) {
@@ -122,14 +142,19 @@ int main(int argc, char** argv) {
             validateScene(root, result.level, 18U);
         }
 
-        const std::string narrativePath = root + "/romfs/narrative/pl/" + mission.id + ".txt";
+        const std::string narrativePath =
+            root + "/romfs/narrative/pl/" + result.level.id + ".txt";
         std::ifstream narrativeInput(narrativePath);
-        expect(narrativeInput.is_open(), "narrative file should exist: " + std::string(mission.id));
+        expect(narrativeInput.is_open(),
+            "narrative file should exist: " + std::string(mission.id));
         const NarrativeLoadResult narrative = NarrativeLoader::parse(narrativeInput);
-        expect(narrative.success, "narrative should parse: " + std::string(mission.id) + " (" + narrative.error + ")");
+        expect(narrative.success,
+            "narrative should parse: " + std::string(mission.id) + " (" +
+                narrative.error + ")");
         expect(narrative.narrative.missionId == mission.id,
             "narrative id should match catalog: " + std::string(mission.id));
-        expect(narrative.narrative.complete(), "narrative should be complete: " + std::string(mission.id));
+        expect(narrative.narrative.complete(),
+            "narrative should be complete: " + std::string(mission.id));
 
         const NarrativeCard* cards[] = {
             &narrative.narrative.briefing[0], &narrative.narrative.briefing[1],
