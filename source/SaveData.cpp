@@ -91,6 +91,12 @@ SaveLoadResult corrupt(const char* message) {
     return result;
 }
 
+std::size_t missionCountForVersion(unsigned long version) {
+    if (version >= 6UL) return kCampaignMissionCount;
+    if (version == 5UL) return kVersionFiveCampaignMissionCount;
+    return kOriginalCampaignMissionCount;
+}
+
 }  // namespace
 
 std::string SaveDataCodec::serialize(const SaveData& data) {
@@ -127,7 +133,7 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
         return result;
     }
 
-    const std::size_t missionCount = version >= 5 ? kCampaignMissionCount : kLegacyCampaignMissionCount;
+    const std::size_t missionCount = missionCountForVersion(version);
     SaveData data{};
     data.campaign.unlockedCount = static_cast<std::size_t>(unlocked);
     if (!parseCampaignArray(values["stars"], missionCount, data.campaign.bestStars)) {
