@@ -4,6 +4,10 @@
 
 void Economy::reset() {
     gold_ = kInitialGold;
+    beginWave();
+}
+
+void Economy::beginWave() {
     rewarded_.fill(false);
 }
 
@@ -29,6 +33,10 @@ bool Economy::rewardEnemy(std::size_t enemyIndex) {
     }
     rewarded_[enemyIndex] = true;
     return credit(kKillReward);
+}
+
+bool Economy::rewardWaveCompletion() {
+    return credit(kWaveCompletionReward);
 }
 
 int Economy::gold() const {
