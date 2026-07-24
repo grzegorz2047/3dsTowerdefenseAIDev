@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "Damage.hpp"
 #include "Enemy.hpp"
 #include "Level.hpp"
 
@@ -22,7 +23,8 @@ public:
         float radius,
         int damage,
         float slowDurationSeconds = 0.0F,
-        float slowMovementMultiplier = 1.0F);
+        float slowMovementMultiplier = 1.0F,
+        DamageType damageType = DamageType::Physical);
 
     [[nodiscard]] std::size_t spawnedCount() const;
     [[nodiscard]] std::size_t activeCount() const;

@@ -15,7 +15,7 @@ public:
     void beginWave();
     [[nodiscard]] bool trySpend(int amount);
     [[nodiscard]] bool credit(int amount);
-    [[nodiscard]] bool rewardEnemy(std::size_t enemyIndex);
+    [[nodiscard]] bool rewardEnemy(std::size_t enemyIndex, int reward = kKillReward);
     [[nodiscard]] bool rewardWaveCompletion();
 
     [[nodiscard]] int gold() const;

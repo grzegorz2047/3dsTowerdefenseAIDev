@@ -124,7 +124,8 @@ void Wave::applyAreaEffect(
     float radius,
     int damage,
     float slowDurationSeconds,
-    float slowMovementMultiplier) {
+    float slowMovementMultiplier,
+    DamageType damageType) {
     const float radiusSquared = std::max(radius, 0.0F) * std::max(radius, 0.0F);
     for (std::size_t index = 0; index < spawnedCount_; ++index) {
         Enemy& enemy = enemies_[index];
@@ -132,7 +133,7 @@ void Wave::applyAreaEffect(
         const float dx = enemy.x() - centerX;
         const float dz = enemy.z() - centerZ;
         if (dx * dx + dz * dz > radiusSquared) continue;
-        enemy.takeDamage(damage);
+        enemy.takeDamage(damage, damageType);
         enemy.applySlow(slowDurationSeconds, slowMovementMultiplier);
     }
 }
