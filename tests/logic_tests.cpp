@@ -56,14 +56,15 @@ void testBundledTutorialLevel() {
     require(level.id == "tutorial", "tutorial id should be stable");
     require(level.width == 12 && level.height == 12, "tutorial dimensions should be 12x12");
     require(level.pathLength == 14, "tutorial path length should be 14");
-    require(level.waveEntryCount == 3, "tutorial should define three wave entries");
-    require(level.totalEnemyCount == 5, "tutorial should define five enemies");
+    require(level.waveEntryCount == 5, "tutorial should define five waves");
+    require(level.totalEnemyCount == 16, "tutorial should define sixteen enemies");
     require(level.waveEntries[0].type == EnemyType::Scout, "tutorial should start with scouts");
-    require(level.waveEntries[1].type == EnemyType::Raider, "tutorial should include raiders");
-    require(level.waveEntries[2].type == EnemyType::Brute, "tutorial should end with a brute");
-    require(level.waveEntries[0].spawnIntervalSeconds >= 1.50F, "tutorial scouts should leave preparation time");
-    require(level.waveEntries[1].spawnIntervalSeconds >= 1.90F, "tutorial raiders should have a readable cadence");
-    require(level.waveEntries[2].spawnIntervalSeconds >= 2.30F, "tutorial brute should not enter immediately");
+    require(level.waveEntries[2].type == EnemyType::Raider, "tutorial should introduce raiders");
+    require(level.waveEntries[4].type == EnemyType::Brute, "tutorial should end with brutes");
+    require(level.waveEntries[0].spawnIntervalSeconds >= 1.40F,
+        "tutorial first wave should leave preparation time");
+    require(level.waveEntries[4].spawnIntervalSeconds >= 1.80F,
+        "tutorial final wave should keep brutes readable");
     const GridPoint first = level.path[0];
     const GridPoint second = level.path[1];
     const GridPoint last = level.path[level.pathLength - 1];
@@ -75,14 +76,10 @@ void testBundledTutorialLevel() {
 
 void testCampaignEnemyDurabilityCurve() {
     const char* paths[] = {
-        "romfs/levels/tutorial.lvl",
-        "romfs/levels/ash_gate.lvl",
-        "romfs/levels/ruined_village.lvl",
-        "romfs/levels/stone_bridge.lvl",
-        "romfs/levels/echo_valley.lvl",
-        "romfs/levels/flooded_road.lvl",
-        "romfs/levels/iron_ravine.lvl",
-        "romfs/levels/storm_ring.lvl",
+        "romfs/levels/tutorial.lvl", "romfs/levels/ash_gate.lvl",
+        "romfs/levels/ruined_village.lvl", "romfs/levels/stone_bridge.lvl",
+        "romfs/levels/echo_valley.lvl", "romfs/levels/flooded_road.lvl",
+        "romfs/levels/iron_ravine.lvl", "romfs/levels/storm_ring.lvl",
         "romfs/levels/last_citadel.lvl",
     };
 
@@ -117,7 +114,8 @@ void testEnemyTimePartitioning() {
     advanceEnemy(coarse, 1.0F / 20.0F, 40);
     require(std::fabs(fine.x() - coarse.x()) < 0.0001F, "enemy X depends on frame partition");
     require(std::fabs(fine.z() - coarse.z()) < 0.0001F, "enemy Z depends on frame partition");
-    require(std::fabs(fine.pathProgress() - coarse.pathProgress()) < 0.0001F, "enemy progress depends on frame partition");
+    require(std::fabs(fine.pathProgress() - coarse.pathProgress()) < 0.0001F,
+        "enemy progress depends on frame partition");
 }
 
 void testEnemyClassesHaveDistinctStats() {
@@ -140,11 +138,12 @@ void testWaveUsesLevelDefinitions() {
     level.waveEntries[2] = {EnemyType::Brute, 1, 0.75F};
     level.totalEnemyCount = 4;
     Wave wave(level);
-    require(wave.enemyCount() == 4, "wave enemy count should come from level data");
-    require(wave.enemyAt(0).type() == EnemyType::Scout, "first enemy should be a scout");
-    require(wave.enemyAt(1).type() == EnemyType::Scout, "second enemy should be a scout");
-    require(wave.enemyAt(2).type() == EnemyType::Raider, "third enemy should be a raider");
-    require(wave.enemyAt(3).type() == EnemyType::Brute, "fourth enemy should be a brute");
+    require(wave.waveCount() == 3, "mission should expose three waves");
+    require(wave.missionEnemyCount() == 4, "mission enemy count should come from level data");
+    require(wave.awaitingNextWave(), "mission should wait for explicit first-wave start");
+    require(wave.startNextWave(), "first wave should start on request");
+    require(wave.enemyCount() == 2, "first wave should contain only its own enemies");
+    require(wave.enemyAt(0).type() == EnemyType::Scout, "first wave should contain scouts");
     require(wave.spawnedCount() == 0, "wave should begin with a preparation interval");
     wave.update(0.24F);
     require(wave.spawnedCount() == 0, "first scout should respect the preparation interval");
@@ -152,13 +151,36 @@ void testWaveUsesLevelDefinitions() {
     require(wave.spawnedCount() == 1, "first scout should spawn after its interval");
     wave.update(0.24F);
     require(wave.spawnedCount() == 2, "second scout should spawn after its interval");
-    wave.update(0.50F);
-    require(wave.spawnedCount() == 3, "raider should spawn from level timing");
+}
+
+void testMultiWaveRequiresManualRestart() {
+    LevelData level = makeLevel();
+    level.waveEntryCount = 2;
+    level.waveEntries[0] = {EnemyType::Scout, 1, 0.1F};
+    level.waveEntries[1] = {EnemyType::Brute, 1, 0.1F};
+    level.totalEnemyCount = 2;
+    Wave wave(level);
+    require(wave.startNextWave(), "first wave should start");
+    wave.update(0.11F);
+    wave.enemyAt(0).takeDamage(99);
+    wave.update(0.01F);
+    require(wave.completedWaveCount() == 1, "first wave should complete exactly once");
+    require(wave.awaitingNextWave(), "mission should pause between waves");
+    require(!wave.completed(), "mission must not finish before final wave");
+    require(wave.waveNumber() == 2, "HUD should preview the next wave number");
+    require(wave.startNextWave(), "second wave should require explicit start");
+    require(wave.enemyAt(0).type() == EnemyType::Brute, "second wave should load its own archetype");
+    wave.update(0.11F);
+    wave.enemyAt(0).takeDamage(99);
+    wave.update(0.01F);
+    require(wave.completed(), "mission should finish after final wave");
+    require(wave.completedWaveCount() == 2, "all waves should be counted");
 }
 
 void testWaveLossWithoutTowers() {
     const LevelData level = makeLevel();
     Wave wave(level);
+    require(wave.startNextWave(), "unopposed wave should start explicitly");
     for (int step = 0; step < 60 * 35 && !wave.lost(); ++step) wave.update(1.0F / 60.0F);
     require(wave.lost(), "unopposed wave should destroy the base");
     require(!wave.completed(), "lost wave must not be completed as victory");
@@ -168,6 +190,7 @@ void testWaveLossWithoutTowers() {
 void testTowerCanWinWave() {
     const LevelData level = makeLevel();
     Wave wave(level);
+    require(wave.startNextWave(), "tower test wave should start explicitly");
     Tower tower(level, 3, 1);
     ProjectilePool projectiles;
     require(tower.valid(), "test tower should be placed on BuildSpot");
@@ -185,16 +208,20 @@ void testTowerCanWinWave() {
 void testProjectileDamagesOnlyOnImpact() {
     const LevelData level = makeLevel();
     Wave wave(level);
+    require(wave.startNextWave(), "projectile target wave should start");
     wave.update(1.16F);
     require(wave.spawnedCount() == 1, "test target should be spawned");
     ProjectilePool projectiles;
     Enemy& target = wave.enemyAt(0);
     const int initialHealth = target.health();
-    require(projectiles.launch(target.x() - 2.0F, 0.48F, target.z(), 0, 1), "projectile launch should reserve a slot");
+    require(projectiles.launch(target.x() - 2.0F, 0.48F, target.z(), 0, 1),
+        "projectile launch should reserve a slot");
     require(target.health() == initialHealth, "launch must not apply immediate damage");
     projectiles.update(1.0F / 60.0F, wave);
     require(target.health() == initialHealth, "projectile must not damage before reaching target");
-    for (int step = 0; step < 120 && projectiles.activeCount() > 0; ++step) projectiles.update(1.0F / 60.0F, wave);
+    for (int step = 0; step < 120 && projectiles.activeCount() > 0; ++step) {
+        projectiles.update(1.0F / 60.0F, wave);
+    }
     require(projectiles.activeCount() == 0, "projectile should resolve after impact");
     require(target.health() == initialHealth - 1, "projectile should apply damage exactly on impact");
 }
@@ -202,11 +229,13 @@ void testProjectileDamagesOnlyOnImpact() {
 void testProjectileDropsLostTarget() {
     const LevelData level = makeLevel();
     Wave wave(level);
+    require(wave.startNextWave(), "lost-target wave should start");
     wave.update(1.16F);
     require(wave.spawnedCount() == 1, "test target should be spawned");
     ProjectilePool projectiles;
     Enemy& target = wave.enemyAt(0);
-    require(projectiles.launch(target.x() - 2.0F, 0.48F, target.z(), 0, 1), "projectile launch should succeed");
+    require(projectiles.launch(target.x() - 2.0F, 0.48F, target.z(), 0, 1),
+        "projectile launch should succeed");
     target.takeDamage(99);
     projectiles.update(1.0F / 60.0F, wave);
     require(projectiles.activeCount() == 0, "projectile should deactivate when target is already dead");
@@ -224,23 +253,26 @@ void testEconomySpendsExactlyOnce() {
     Economy economy;
     economy.reset();
     require(economy.trySpend(Economy::kTowerCost), "first tower cost should be accepted");
-    require(economy.gold() == Economy::kInitialGold - Economy::kTowerCost, "first cost should be deducted exactly once");
+    require(economy.gold() == Economy::kInitialGold - Economy::kTowerCost,
+        "first cost should be deducted exactly once");
     require(economy.trySpend(Economy::kTowerCost), "second affordable tower cost should be accepted");
     require(economy.gold() == 0, "two tower costs should consume initial gold exactly");
     require(!economy.trySpend(Economy::kTowerCost), "unaffordable tower cost must be rejected");
     require(economy.gold() == 0, "rejected cost must not change gold");
 }
 
-void testEconomyRewardsEachEnemyOnce() {
+void testEconomyRewardsEachEnemyOncePerWave() {
     Economy economy;
     economy.reset();
     require(economy.rewardEnemy(0), "first reward for enemy should be accepted");
-    require(economy.gold() == Economy::kInitialGold + Economy::kKillReward, "first reward should be credited once");
-    require(!economy.rewardEnemy(0), "duplicate reward for enemy must be rejected");
-    require(economy.gold() == Economy::kInitialGold + Economy::kKillReward, "duplicate reward must not change gold");
-    require(economy.rewardEnemy(1), "different enemy should grant a reward");
-    require(economy.gold() == Economy::kInitialGold + 2 * Economy::kKillReward, "two unique enemies should grant two rewards");
-    require(!economy.rewardEnemy(Economy::kMaximumRewardedEnemies), "out-of-range enemy reward must be rejected");
+    require(economy.gold() == Economy::kInitialGold + Economy::kKillReward,
+        "first reward should be credited once");
+    require(!economy.rewardEnemy(0), "duplicate reward must be rejected");
+    economy.beginWave();
+    require(economy.rewardEnemy(0), "same slot should be rewardable in the next wave");
+    require(economy.rewardWaveCompletion(), "wave completion bonus should be credited");
+    require(economy.gold() == Economy::kInitialGold + 2 * Economy::kKillReward +
+        Economy::kWaveCompletionReward, "wave rewards should accumulate without resetting gold");
 }
 
 }  // namespace
@@ -251,13 +283,14 @@ int main() {
     testEnemyTimePartitioning();
     testEnemyClassesHaveDistinctStats();
     testWaveUsesLevelDefinitions();
+    testMultiWaveRequiresManualRestart();
     testWaveLossWithoutTowers();
     testTowerCanWinWave();
     testProjectileDamagesOnlyOnImpact();
     testProjectileDropsLostTarget();
     testTowerPlacementRules();
     testEconomySpendsExactlyOnce();
-    testEconomyRewardsEachEnemyOnce();
+    testEconomyRewardsEachEnemyOncePerWave();
     std::cout << "All host gameplay tests passed.\n";
     return 0;
 }
