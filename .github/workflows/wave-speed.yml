@@ -8,40 +8,9 @@ on:
   pull_request:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  apply-issue-185:
-    name: Apply issue 185 product patch
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/issue-185-mission-pause' && github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GITHUB_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/issue-185-mission-pause
-          fetch-depth: 0
-      - name: Apply and commit
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/fix_issue_185_transformer.py
-          if ! output=$(python3 scripts/apply_issue_185.py 2>&1); then
-            gh pr comment 186 --repo "$GITHUB_REPOSITORY" --body "Transformer #185 zatrzymał się:\n\n\`\`\`text\n${output}\n\`\`\`"
-            exit 1
-          fi
-          rm -f .issue-185-trigger scripts/fix_issue_185_transformer.py
-          git checkout origin/main -- .github/workflows/build.yml .github/workflows/wave-speed.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --cached --check
-          git commit -m "gameplay: add deterministic mission pause"
-          git push origin HEAD:agent/issue-185-mission-pause
-
   wave-speed:
     name: Wave speed tests
     runs-on: ubuntu-latest

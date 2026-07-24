@@ -20,6 +20,7 @@
 #include "Input.hpp"
 #include "Level.hpp"
 #include "Narrative.hpp"
+#include "MissionPause.hpp"
 #include "PerformanceBudget.hpp"
 #include "Renderer.hpp"
 #include "SaveData.hpp"
@@ -258,6 +259,10 @@ bool startMissionWave(TutorialFlow& tutorialFlow, Wave& wave, BuildSystem& build
 void applyTouchAction(TouchUiAction action, BuildSystem& buildSystem, Wave& wave,
     TutorialFlow& tutorialFlow, AudioSystem& audioSystem, bool soundEnabled,
     bool& paused, int& speedMultiplier) {
+    if (!MissionPause::gameplayInputAllowed(paused) &&
+        action != TouchUiAction::TogglePause) {
+        return;
+    }
     switch (action) {
         case TouchUiAction::SelectBallista:
             buildSystem.selectTowerType(TowerType::Ballista);
@@ -288,7 +293,9 @@ void applyTouchAction(TouchUiAction action, BuildSystem& buildSystem, Wave& wave
             paused = false;
             break;
         case TouchUiAction::TogglePause:
-            if (tutorialFlow.waveRunning()) paused = !paused;
+            if (tutorialFlow.waveRunning()) {
+                paused = MissionPause::toggled(paused, false, false);
+            }
             break;
         case TouchUiAction::ToggleSpeed:
             speedMultiplier = speedMultiplier == 1 ? 2 : 1;
@@ -514,15 +521,18 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
     while (aptMainLoop()) {
         const u64 frameStartMilliseconds = osGetTime();
         const InputSnapshot input = inputSystem.poll();
-        if (input.pressed(KEY_START)) {
-            action = benchmarkConfig != nullptr
-                ? MissionSessionAction::ReturnToCampaign
-                : MissionSessionAction::ExitApplication;
-            break;
-        }
         const bool benchmarkFinished = benchmarkConfig != nullptr &&
             benchmarkElapsed >= kBenchmarkDurationSeconds;
         const bool sessionFinished = benchmarkFinished || tutorialFlow.finished();
+        if (input.pressed(KEY_START)) {
+            if (benchmarkConfig != nullptr) {
+                action = MissionSessionAction::ReturnToCampaign;
+                break;
+            }
+            paused = MissionPause::toggled(paused, sessionFinished, false);
+            simulationAccumulator = 0.0F;
+            previousMilliseconds = osGetTime();
+        }
 
         const TouchGestureResult gesture = touchGesture.update(input.touching(),
             static_cast<std::int16_t>(input.touch.px), static_cast<std::int16_t>(input.touch.py));
@@ -540,6 +550,15 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
                 action = MissionSessionAction::Replay;
                 break;
             }
+        } else if (paused) {
+            if (input.pressed(KEY_X)) {
+                action = MissionSessionAction::ReturnToCampaign;
+                break;
+            }
+            if (input.pressed(KEY_Y)) {
+                action = MissionSessionAction::Replay;
+                break;
+            }
         }
 
         const HudMode hudMode = hudModeForSelectHeld(input.isHeld(KEY_SELECT));
@@ -551,7 +570,7 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
             applyTouchAction(touch, buildSystem, wave, tutorialFlow, audioSystem,
                 saveData.settings.soundEnabled, paused, speedMultiplier);
         }
-        if (!sessionFinished && benchmarkConfig == nullptr && input.pressed(KEY_X)) {
+        if (!sessionFinished && !paused && benchmarkConfig == nullptr && input.pressed(KEY_X)) {
             if (tutorialFlow.waveRunning()) {
                 paused = !paused;
             } else {
@@ -559,7 +578,7 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
                 paused = false;
             }
         }
-        if (!sessionFinished && input.pressed(KEY_L) && input.pressed(KEY_R)) {
+        if (!sessionFinished && !paused && input.pressed(KEY_L) && input.pressed(KEY_R)) {
             speedMultiplier = speedMultiplier == 1 ? 2 : 1;
         }
 
@@ -567,7 +586,7 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
         const float frameSeconds = calculateFrameSeconds(nowMilliseconds, previousMilliseconds);
         previousMilliseconds = nowMilliseconds;
         camera.update(input, frameSeconds);
-        if (!sessionFinished && benchmarkConfig == nullptr) {
+        if (!sessionFinished && !paused && benchmarkConfig == nullptr) {
             buildSystem.handleInput(input);
             if (saveData.settings.soundEnabled && input.pressed(KEY_A)) {
                 audioSystem.play(cueForBuildResult(buildSystem.lastBuildResult()));
@@ -575,9 +594,12 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
         }
         tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost(),
             wave.awaitingNextWave());
-        if (!paused && !sessionFinished) {
+        if (paused) {
+            simulationAccumulator = 0.0F;
+        } else if (!sessionFinished) {
             simulationAccumulator = std::min(
-                simulationAccumulator + frameSeconds * speedMultiplier,
+                simulationAccumulator + MissionPause::simulationSeconds(
+                    frameSeconds, speedMultiplier, paused),
                 kMaximumAccumulatorSeconds);
             if (benchmarkConfig != nullptr) benchmarkElapsed += frameSeconds;
         }

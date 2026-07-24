@@ -44,6 +44,7 @@ COMMON_FLAGS=(
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/benchmark_config_tests.cpp" "$ROOT/source/Level.cpp" -o "$BUILD_DIR/benchmark-config-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/orbit_camera_tests.cpp" "$ROOT/source/OrbitCamera.cpp" -o "$BUILD_DIR/orbit-camera-tests"
 "$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/seven_segment_digits_tests.cpp" -o "$BUILD_DIR/seven-segment-digits-tests"
+"$HOST_CXX" "${COMMON_FLAGS[@]}" "$ROOT/tests/mission_pause_tests.cpp" -o "$BUILD_DIR/mission-pause-tests"
 
 "$BUILD_DIR/gameplay-tests"
 "$BUILD_DIR/tower-archetype-tests"
@@ -69,6 +70,7 @@ COMMON_FLAGS=(
 "$BUILD_DIR/benchmark-config-tests"
 "$BUILD_DIR/orbit-camera-tests"
 "$BUILD_DIR/seven-segment-digits-tests"
+"$BUILD_DIR/mission-pause-tests"
 
 # One screen, one owner. PrintConsole is allowed only on the top startup-error path.
 if grep -R "consoleInit(GFX_BOTTOM" "$ROOT/source" "$ROOT/include"; then
@@ -148,6 +150,9 @@ grep -q "configureBenchmark" "$ROOT/source/main.cpp"
 
 # Physical-device regression and runtime diagnostics contracts.
 grep -q "int speedMultiplier = 1;" "$ROOT/source/main.cpp"
+grep -q "MissionPause::toggled" "$ROOT/source/main.cpp"
+grep -q "MissionPause::gameplayInputAllowed" "$ROOT/source/main.cpp"
+grep -q "START  WZNOW" "$ROOT/source/UiRenderer.cpp"
 grep -q "OrbitCamera orbit_" "$ROOT/include/Camera.hpp"
 grep -q "kDefaultPitch = 0.50F" "$ROOT/include/OrbitCamera.hpp"
 grep -q "kDefaultDistance = 13.25F" "$ROOT/include/OrbitCamera.hpp"
