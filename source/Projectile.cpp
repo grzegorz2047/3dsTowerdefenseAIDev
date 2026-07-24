@@ -14,6 +14,19 @@ float length3(float x, float y, float z) {
     return std::sqrt(x * x + y * y + z * z);
 }
 
+DamageType defaultDamageTypeFor(ProjectileEffect effect) {
+    switch (effect) {
+        case ProjectileEffect::Splash:
+        case ProjectileEffect::GuidedRocket:
+            return DamageType::Explosive;
+        case ProjectileEffect::Frost:
+            return DamageType::Arcane;
+        case ProjectileEffect::Direct:
+        default:
+            return DamageType::Physical;
+    }
+}
+
 }  // namespace
 
 void Projectile::launch(
@@ -27,6 +40,10 @@ void Projectile::launch(
     z_ = startZ;
     targetIndex_ = targetIndex;
     payload_ = payload;
+    if (payload_.damageType == DamageType::Physical &&
+        payload_.effect != ProjectileEffect::Direct) {
+        payload_.damageType = defaultDamageTypeFor(payload_.effect);
+    }
     active_ = payload.damage > 0 || payload.slowDurationSeconds > 0.0F;
     velocityX_ = 0.0F;
     velocityY_ = 0.0F;
@@ -150,12 +167,8 @@ void Projectile::resolveImpact(Wave& wave, Enemy& target) {
     }
 
     wave.applyAreaEffect(
-        target.x(),
-        target.z(),
-        payload_.radius,
-        payload_.damage,
-        payload_.slowDurationSeconds,
-        payload_.slowMovementMultiplier,
+        target.x(), target.z(), payload_.radius, payload_.damage,
+        payload_.slowDurationSeconds, payload_.slowMovementMultiplier,
         payload_.damageType);
 }
 
@@ -183,10 +196,7 @@ ProjectileEffect Projectile::effect() const { return payload_.effect; }
 DamageType Projectile::damageType() const { return payload_.damageType; }
 
 bool ProjectilePool::launch(
-    float startX,
-    float startY,
-    float startZ,
-    std::size_t targetIndex,
+    float startX, float startY, float startZ, std::size_t targetIndex,
     const ProjectilePayload& payload) {
     for (std::size_t index = 0U; index < activeLimit_; ++index) {
         Projectile& projectile = projectiles_[index];
@@ -237,7 +247,6 @@ std::size_t ProjectilePool::activeCount() const {
 std::size_t ProjectilePool::activeLimit() const { return activeLimit_; }
 std::uint32_t ProjectilePool::shotEventCount() const { return shotEventCount_; }
 std::uint32_t ProjectilePool::impactEventCount() const { return impactEventCount_; }
-
 const Projectile& ProjectilePool::projectileAt(std::size_t index) const {
     return projectiles_.at(index);
 }
