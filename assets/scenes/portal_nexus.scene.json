@@ -13,19 +13,14 @@
     {"name":"portal_south_cliff","type":"Cliff","group":"southern portal","order":70,"location":[0.5,-14.7,0.0],"scale":[1.5,1.5,1.5],"rotation_euler_deg":[0.0,0.0,18.0]},
     {"name":"portal_south_ruin","type":"Ruin","group":"southern portal","order":80,"location":[1.8,-13.7,0.0],"scale":[1.2,1.2,1.2],"rotation_euler_deg":[0.0,0.0,-25.0]},
     {"name":"portal_south_banner","type":"Banner","group":"southern portal","order":90,"location":[2.8,-13.2,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,8.0]},
-    {"name":"nexus_watchtower_a","type":"Watchtower","group":"central nexus","order":100,"location":[7.0,-7.0,0.0],"scale":[1.2,1.2,1.2],"rotation_euler_deg":[0.0,0.0,0.0]},
-    {"name":"nexus_watchtower_b","type":"Watchtower","group":"central nexus","order":110,"location":[9.0,-7.0,0.0],"scale":[1.2,1.2,1.2],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"nexus_watchtower","type":"Watchtower","group":"central nexus","order":100,"location":[7.5,-7.0,0.0],"scale":[1.2,1.2,1.2],"rotation_euler_deg":[0.0,0.0,0.0]},
     {"name":"nexus_ruin","type":"Ruin","group":"central nexus","order":120,"location":[8.0,-8.6,0.0],"scale":[1.3,1.3,1.3],"rotation_euler_deg":[0.0,0.0,0.0]},
     {"name":"nexus_rock_a","type":"Rock","group":"central nexus","order":130,"location":[5.0,-7.8,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,0.0]},
     {"name":"nexus_rock_b","type":"Rock","group":"central nexus","order":140,"location":[11.0,-7.8,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,0.0]},
-    {"name":"citadel_watchtower_a","type":"Watchtower","group":"citadel approach","order":200,"location":[12.0,-13.5,0.0],"scale":[1.1,1.1,1.1],"rotation_euler_deg":[0.0,0.0,0.0]},
-    {"name":"citadel_watchtower_b","type":"Watchtower","group":"citadel approach","order":210,"location":[14.2,-12.0,0.0],"scale":[1.1,1.1,1.1],"rotation_euler_deg":[0.0,0.0,0.0]},
+    {"name":"citadel_watchtower","type":"Watchtower","group":"citadel approach","order":200,"location":[12.0,-13.5,0.0],"scale":[1.1,1.1,1.1],"rotation_euler_deg":[0.0,0.0,0.0]},
     {"name":"citadel_banner_a","type":"Banner","group":"citadel approach","order":220,"location":[12.9,-14.0,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,0.0]},
     {"name":"citadel_banner_b","type":"Banner","group":"citadel approach","order":230,"location":[14.1,-13.5,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,0.0]},
     {"name":"citadel_barricade_a","type":"Barricade","group":"citadel approach","order":240,"location":[11.8,-12.0,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,-12.0]},
-    {"name":"citadel_barricade_b","type":"Barricade","group":"citadel approach","order":250,"location":[13.3,-11.5,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,12.0]},
-    {"name":"edge_pine_a","type":"Pine","group":"outer boundary","order":300,"location":[3.5,-5.5,0.0],"scale":[1.1,1.1,1.1],"rotation_euler_deg":[0.0,0.0,0.0]},
-    {"name":"edge_pine_b","type":"Pine","group":"outer boundary","order":310,"location":[12.5,-5.5,0.0],"scale":[1.1,1.1,1.1],"rotation_euler_deg":[0.0,0.0,0.0]},
-    {"name":"edge_wagon","type":"Wagon","group":"outer boundary","order":320,"location":[4.0,-11.5,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,22.0]}
+    {"name":"citadel_barricade_b","type":"Barricade","group":"citadel approach","order":250,"location":[13.3,-11.5,0.0],"scale":[0.9,0.9,0.9],"rotation_euler_deg":[0.0,0.0,12.0]}
   ]
 }
