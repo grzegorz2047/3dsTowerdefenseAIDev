@@ -11,6 +11,24 @@ Campaign difficulty is not defined by enemy count alone. Every mission is review
 
 All missions remain capped at 16 active wave enemies and 16 defenses. A later mission should introduce a harder spatial problem before it reduces spawn intervals.
 
+## Enemy durability curve
+
+The tutorial keeps the base enemy values (`Scout 2`, `Raider 3`, `Brute 5`). Later missions apply a campaign multiplier to maximum health while preserving movement speed and base damage:
+
+| Mission | HP multiplier |
+| --- | ---: |
+| Straznica | 1.00x |
+| Popielna Brama | 1.15x |
+| Zniszczona Osada | 1.30x |
+| Kamienny Most | 1.50x |
+| Dolina Echa | 1.70x |
+| Zatopiony Trakt | 1.90x |
+| Zelazny Wawoz | 2.10x |
+| Krag Burz | 2.30x |
+| Ostatnia Cytadela | 2.50x |
+
+Health is rounded upward. This keeps the first mission approachable while making later enemies require sustained fire, mixed tower roles and upgrades instead of dying to one or two basic hits.
+
 ## Campaign curve
 
 | # | Mission | Size | Tactical lesson | Intended pressure |
