@@ -73,6 +73,42 @@ void testBundledTutorialLevel() {
     require(last.x == 8 && last.z == 9, "tutorial path should end at base");
 }
 
+void testCampaignEnemyDurabilityCurve() {
+    const char* paths[] = {
+        "romfs/levels/tutorial.lvl",
+        "romfs/levels/ash_gate.lvl",
+        "romfs/levels/ruined_village.lvl",
+        "romfs/levels/stone_bridge.lvl",
+        "romfs/levels/echo_valley.lvl",
+        "romfs/levels/flooded_road.lvl",
+        "romfs/levels/iron_ravine.lvl",
+        "romfs/levels/storm_ring.lvl",
+        "romfs/levels/last_citadel.lvl",
+    };
+
+    int previousRaiderHealth = 0;
+    for (const char* path : paths) {
+        const LevelLoadResult result = LevelLoader::loadFromRomFs(path);
+        require(result.success, result.error.c_str());
+        const Enemy raider(result.level, EnemyType::Raider);
+        require(raider.maxHealth() >= previousRaiderHealth,
+            "campaign raider health should not decrease between missions");
+        previousRaiderHealth = raider.maxHealth();
+    }
+
+    const LevelLoadResult tutorial = LevelLoader::loadFromRomFs(paths[0]);
+    const LevelLoadResult finale = LevelLoader::loadFromRomFs(paths[8]);
+    require(tutorial.success && finale.success, "campaign durability levels should load");
+    require(Enemy(tutorial.level, EnemyType::Scout).maxHealth() == 2,
+        "tutorial scout durability should remain unchanged");
+    require(Enemy(finale.level, EnemyType::Scout).maxHealth() >= 5,
+        "finale scouts should survive multiple basic hits");
+    require(Enemy(finale.level, EnemyType::Raider).maxHealth() >= 8,
+        "finale raiders should require sustained fire");
+    require(Enemy(finale.level, EnemyType::Brute).maxHealth() >= 13,
+        "finale brutes should provide meaningful heavy pressure");
+}
+
 void testEnemyTimePartitioning() {
     const LevelData level = makeLevel();
     Enemy fine(level);
@@ -211,6 +247,7 @@ void testEconomyRewardsEachEnemyOnce() {
 
 int main() {
     testBundledTutorialLevel();
+    testCampaignEnemyDurabilityCurve();
     testEnemyTimePartitioning();
     testEnemyClassesHaveDistinctStats();
     testWaveUsesLevelDefinitions();
