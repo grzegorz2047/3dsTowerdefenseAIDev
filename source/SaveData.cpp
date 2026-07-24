@@ -62,7 +62,7 @@ std::string payloadFor(const SaveData& data, std::uint32_t version) {
         stream << "base_health=" << joinArray(data.campaign.bestBaseHealth) << '\n';
         stream << "fewest_towers=" << joinArray(data.campaign.fewestTowers) << '\n';
         stream << "sound=" << (data.settings.soundEnabled ? 1 : 0) << '\n';
-        stream << "speed=" << static_cast<unsigned int>(data.settings.preferredSpeed) << '\n';
+        stream << "speed=" << WaveSpeed::initial() << '\n';
     }
     if (version >= 3) {
         stream << "stereo=" << (data.settings.stereoEnabled ? 1 : 0) << '\n';
@@ -147,7 +147,7 @@ SaveLoadResult SaveDataCodec::deserialize(const std::string& text) {
             return corrupt("Nieprawidlowe ustawienia");
         }
         data.settings.soundEnabled = sound == 1;
-        data.settings.preferredSpeed = static_cast<std::uint8_t>(speed);
+        data.settings.preferredSpeed = static_cast<std::uint8_t>(WaveSpeed::initial());
     }
     if (version >= 3) {
         unsigned long stereo = 0;
