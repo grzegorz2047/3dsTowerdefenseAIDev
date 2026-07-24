@@ -1,0 +1,25 @@
+; Citadel Defense 3D scene art v1
+level=ash_gate
+theme=VhalPass
+; charred invasion gate
+prop=Cliff,0.2,1.0,1.5,-8
+prop=Ruin,1.2,1.2,1.3,18
+prop=Banner,2.1,1.0,0.9,-12
+prop=Banner,3.0,1.1,0.8,10
+; broken outer defenses
+prop=Barricade,4.8,1.0,1.0,12
+prop=Barricade,6.2,1.0,0.9,-16
+prop=Wagon,7.5,1.2,0.9,28
+prop=Rock,9.8,2.0,1.1,0
+; ash field
+prop=Rock,10.0,5.0,0.8,0
+prop=Rock,10.2,7.0,1.0,0
+prop=Ruin,9.8,9.8,1.1,-22
+prop=Pine,1.0,8.8,0.9,0
+prop=Pine,1.3,10.0,1.1,0
+; citadel approach
+prop=Watchtower,5.8,10.1,1.1,0
+prop=Watchtower,8.5,10.0,1.0,0
+prop=Banner,7.2,10.2,0.9,0
+prop=Barricade,6.8,9.2,0.9,0
+prop=Cliff,10.2,10.3,1.4,0

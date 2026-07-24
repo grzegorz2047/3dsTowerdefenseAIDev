@@ -1,0 +1,26 @@
+; Citadel Defense 3D scene art v1
+level=echo_valley
+theme=VhalPass
+; western echo gate
+prop=Cliff,0.3,0.8,1.5,-5
+prop=Ruin,1.4,0.6,1.1,20
+prop=Banner,2.7,0.7,0.9,-12
+prop=Watchtower,4.3,0.7,1.0,0
+; northern valley wall
+prop=Cliff,9.8,1.0,1.4,8
+prop=Rock,10.0,3.2,1.1,0
+prop=Pine,10.1,5.5,1.2,0
+prop=Pine,10.0,7.8,1.0,0
+; central signal ridge
+prop=Watchtower,4.5,5.8,1.1,0
+prop=Watchtower,6.5,6.0,1.0,0
+prop=Banner,5.2,6.5,0.9,0
+prop=Banner,7.2,6.3,0.8,0
+prop=Ruin,5.8,8.8,1.1,-22
+; southern valley wall
+prop=Cliff,0.7,9.8,1.5,-8
+prop=Rock,2.0,10.0,0.9,0
+prop=Wagon,4.5,10.0,0.8,18
+; citadel echo approach
+prop=Barricade,6.0,10.0,0.9,0
+prop=Banner,9.8,10.1,0.9,0
