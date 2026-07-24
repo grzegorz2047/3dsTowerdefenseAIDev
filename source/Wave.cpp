@@ -6,6 +6,10 @@ namespace {
 
 constexpr float kSpawnTimeEpsilon = 0.00001F;
 
+std::size_t effectivePathCount(const LevelData& level) {
+    return level.pathCount > 0U ? level.pathCount : (level.pathLength >= 2U ? 1U : 0U);
+}
+
 }  // namespace
 
 Wave::Wave(const LevelData& level) : level_(&level) {
@@ -24,8 +28,10 @@ void Wave::prepareWave(std::size_t waveIndex) {
 
     const WaveEntry& entry = level_->waveEntries[waveIndex];
     const std::size_t count = std::min<std::size_t>(entry.count, kMaximumWaveEnemies);
+    const std::size_t paths = effectivePathCount(*level_);
+    if (paths == 0U) return;
     for (std::size_t index = 0U; index < count; ++index) {
-        enemies_.emplace_back(*level_, entry.type);
+        enemies_.emplace_back(*level_, entry.type, index % paths);
         spawnIntervals_[index] = entry.spawnIntervalSeconds;
     }
 }
@@ -54,7 +60,7 @@ void Wave::update(float deltaSeconds) {
         }
     }
 
-    for (std::size_t index = 0; index < spawnedCount_; ++index) {
+    for (std::size_t index = 0U; index < spawnedCount_; ++index) {
         if (resolved_[index]) continue;
 
         Enemy& enemy = enemies_[index];
@@ -127,7 +133,7 @@ void Wave::applyAreaEffect(
     float slowMovementMultiplier,
     DamageType damageType) {
     const float radiusSquared = std::max(radius, 0.0F) * std::max(radius, 0.0F);
-    for (std::size_t index = 0; index < spawnedCount_; ++index) {
+    for (std::size_t index = 0U; index < spawnedCount_; ++index) {
         Enemy& enemy = enemies_[index];
         if (resolved_[index] || enemy.dead() || enemy.reachedBase()) continue;
         const float dx = enemy.x() - centerX;
