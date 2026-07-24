@@ -1,0 +1,11 @@
+Release v0.3.1-alpha
+
+Includes:
+- rebuilt multi-wave gameplay core;
+- nine rebalanced campaign missions with 18-52 enemies;
+- distinct Scout, Raider and Brute visuals with HP feedback;
+- armor, resistances and enemy-specific rewards;
+- four specialized tower archetypes and upgrade previews;
+- safe 1x mission start with explicit optional 2x;
+- renderer cleanup fixes confirmed on physical Nintendo 3DS XL;
+- camera direction confirmed on physical Nintendo 3DS XL.
