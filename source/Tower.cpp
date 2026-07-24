@@ -59,11 +59,11 @@ int towerCost(TowerType type) {
 
 const char* towerName(TowerType type) {
     switch (type) {
-        case TowerType::Mortar: return "MOZDZIERZ: OBSZAR";
-        case TowerType::Frost: return "MROZ: KONTROLA";
-        case TowerType::Rocket: return "RAKIETY: DUZY CEL";
+        case TowerType::Mortar: return "MOZDZIERZ";
+        case TowerType::Frost: return "MROZ";
+        case TowerType::Rocket: return "RAKIETY";
         case TowerType::Ballista:
-        default: return "KUSZA: SZYBKI CEL";
+        default: return "KUSZA";
     }
 }
 
