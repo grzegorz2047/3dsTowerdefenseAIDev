@@ -48,7 +48,8 @@ void Projectile::launch(
     }
 }
 
-void Projectile::launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage) {
+void Projectile::launch(float startX, float startY, float startZ,
+    std::size_t targetIndex, int damage) {
     launch(startX, startY, startZ, targetIndex,
         {ProjectileEffect::Direct, damage, 0.0F, 0.0F, 1.0F});
 }
@@ -68,9 +69,11 @@ void Projectile::updateGuidedVelocity(
     const float goalX = desiredX / desiredLength;
     const float goalY = desiredY / desiredLength;
     const float goalZ = desiredZ / desiredLength;
-    const float dot = std::clamp(currentX * goalX + currentY * goalY + currentZ * goalZ, -1.0F, 1.0F);
+    const float dot = std::clamp(
+        currentX * goalX + currentY * goalY + currentZ * goalZ, -1.0F, 1.0F);
     const float angle = std::acos(dot);
-    const float maximumTurn = std::max(payload_.turnRateRadiansPerSecond, 0.0F) * deltaSeconds;
+    const float maximumTurn =
+        std::max(payload_.turnRateRadiansPerSecond, 0.0F) * deltaSeconds;
     const float blend = angle <= 0.0001F ? 1.0F : std::min(maximumTurn / angle, 1.0F);
 
     float nextX = currentX + (goalX - currentX) * blend;
@@ -116,7 +119,8 @@ ProjectileUpdateResult Projectile::update(float deltaSeconds, Wave& wave) {
         x_ += velocityX_ * deltaSeconds;
         y_ += velocityY_ * deltaSeconds;
         z_ += velocityZ_ * deltaSeconds;
-        if (y_ < -1.0F || y_ > 8.0F || std::abs(x_) > 20.0F || std::abs(z_) > 20.0F) {
+        if (y_ < -1.0F || y_ > 8.0F || std::abs(x_) > 20.0F ||
+            std::abs(z_) > 20.0F) {
             active_ = false;
             return ProjectileUpdateResult::Cancelled;
         }
@@ -141,7 +145,7 @@ ProjectileUpdateResult Projectile::update(float deltaSeconds, Wave& wave) {
 
 void Projectile::resolveImpact(Wave& wave, Enemy& target) {
     if (payload_.effect == ProjectileEffect::Direct) {
-        target.takeDamage(payload_.damage);
+        target.takeDamage(payload_.damage, payload_.damageType);
         return;
     }
 
@@ -151,7 +155,8 @@ void Projectile::resolveImpact(Wave& wave, Enemy& target) {
         payload_.radius,
         payload_.damage,
         payload_.slowDurationSeconds,
-        payload_.slowMovementMultiplier);
+        payload_.slowMovementMultiplier,
+        payload_.damageType);
 }
 
 void Projectile::reset() {
@@ -175,6 +180,7 @@ float Projectile::velocityY() const { return velocityY_; }
 float Projectile::velocityZ() const { return velocityZ_; }
 std::size_t Projectile::targetIndex() const { return targetIndex_; }
 ProjectileEffect Projectile::effect() const { return payload_.effect; }
+DamageType Projectile::damageType() const { return payload_.damageType; }
 
 bool ProjectilePool::launch(
     float startX,
@@ -193,7 +199,8 @@ bool ProjectilePool::launch(
     return false;
 }
 
-bool ProjectilePool::launch(float startX, float startY, float startZ, std::size_t targetIndex, int damage) {
+bool ProjectilePool::launch(float startX, float startY, float startZ,
+    std::size_t targetIndex, int damage) {
     return launch(startX, startY, startZ, targetIndex,
         {ProjectileEffect::Direct, damage, 0.0F, 0.0F, 1.0F});
 }
@@ -208,7 +215,9 @@ void ProjectilePool::update(float deltaSeconds, Wave& wave) {
 
 void ProjectilePool::setActiveLimit(std::size_t limit) {
     activeLimit_ = std::max<std::size_t>(1U, std::min(limit, kCapacity));
-    for (std::size_t index = activeLimit_; index < kCapacity; ++index) projectiles_[index].reset();
+    for (std::size_t index = activeLimit_; index < kCapacity; ++index) {
+        projectiles_[index].reset();
+    }
 }
 
 void ProjectilePool::reset() {
@@ -226,7 +235,6 @@ std::size_t ProjectilePool::activeCount() const {
 }
 
 std::size_t ProjectilePool::activeLimit() const { return activeLimit_; }
-
 std::uint32_t ProjectilePool::shotEventCount() const { return shotEventCount_; }
 std::uint32_t ProjectilePool::impactEventCount() const { return impactEventCount_; }
 
