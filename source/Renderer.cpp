@@ -6,6 +6,7 @@
 #include <cstring>
 #include <vector>
 
+#include "EnemyVisual.hpp"
 #include "PerformanceBudget.hpp"
 #include "SceneArt.hpp"
 #include "UiRenderer.hpp"
@@ -193,10 +194,36 @@ void appendProp(std::vector<Vertex>& vertices, const SceneProp& prop,
     }
 }
 
-void appendEnemy(std::vector<Vertex>& vertices) {
-    appendBox(vertices, 0.0F, 0.0F, 0.23F, 0.15F, 0.12F, 0.66F, 0.58F, 0.13F, 0.34F);
-    appendBox(vertices, 0.0F, 0.0F, 0.15F, 0.14F, 0.66F, 0.91F, 0.72F, 0.48F, 0.30F);
-    appendBox(vertices, -0.28F, 0.0F, 0.07F, 0.22F, 0.30F, 0.74F, 0.45F, 0.48F, 0.52F);
+void appendEnemy(std::vector<Vertex>& vertices, EnemyType type, bool hitFlash) {
+    const EnemyVisualProfile visual = EnemyVisual::profile(type);
+    const float r = hitFlash ? 1.0F : visual.red;
+    const float g = hitFlash ? 0.86F : visual.green;
+    const float b = hitFlash ? 0.42F : visual.blue;
+    const float bodyTop = 0.12F + visual.bodyHeight;
+    appendBox(vertices, 0.0F, 0.0F, visual.halfWidth, visual.halfDepth,
+        0.12F, bodyTop, r, g, b);
+    appendBox(vertices, 0.0F, -0.01F, visual.halfWidth * 0.66F,
+        visual.halfDepth * 0.80F, bodyTop, bodyTop + visual.headHeight,
+        hitFlash ? 1.0F : std::min(r + 0.14F, 1.0F),
+        hitFlash ? 0.91F : std::min(g + 0.12F, 1.0F),
+        hitFlash ? 0.55F : std::min(b + 0.10F, 1.0F));
+
+    if (type == EnemyType::Scout) {
+        appendBox(vertices, -0.12F, 0.0F, 0.035F, 0.04F, 0.0F, 0.22F, 0.22F, 0.20F, 0.17F);
+        appendBox(vertices, 0.12F, 0.0F, 0.035F, 0.04F, 0.0F, 0.22F, 0.22F, 0.20F, 0.17F);
+        appendRotatedBox(vertices, 0.18F, -0.02F, 0.025F, 0.23F,
+            0.22F, 0.31F, -0.18F, 0.78F, 0.68F, 0.28F);
+    } else if (type == EnemyType::Raider) {
+        appendBox(vertices, -0.30F, 0.0F, 0.075F, 0.24F, 0.28F, 0.76F,
+            hitFlash ? 1.0F : 0.30F, hitFlash ? 0.86F : 0.38F, hitFlash ? 0.42F : 0.48F);
+        appendRotatedBox(vertices, 0.27F, -0.04F, 0.025F, 0.31F,
+            0.20F, 0.30F, 0.20F, 0.72F, 0.67F, 0.50F);
+    } else {
+        appendBox(vertices, -0.34F, 0.0F, 0.13F, 0.20F, 0.42F, 0.78F, r, g, b);
+        appendBox(vertices, 0.34F, 0.0F, 0.13F, 0.20F, 0.42F, 0.78F, r, g, b);
+        appendBox(vertices, 0.0F, 0.08F, 0.38F, 0.10F, 0.68F, 0.82F,
+            hitFlash ? 1.0F : 0.20F, hitFlash ? 0.86F : 0.15F, hitFlash ? 0.42F : 0.12F);
+    }
 }
 
 void appendTower(std::vector<Vertex>& v) {
@@ -205,18 +232,21 @@ void appendTower(std::vector<Vertex>& v) {
     appendBox(v,0,-.18F,.48F,.07F,.70F,.82F,.67F,.45F,.20F);
     appendBox(v,0,-.52F,.04F,.42F,.73F,.79F,.20F,.16F,.12F);
 }
+
 void appendMortarTower(std::vector<Vertex>& v) {
     appendBox(v,0,0,.45F,.45F,.05F,.25F,.29F,.33F,.38F);
     appendBox(v,0,0,.32F,.32F,.24F,.52F,.38F,.40F,.42F);
     appendRotatedBox(v,0,-.18F,.17F,.40F,.48F,.76F,-.18F,.18F,.20F,.22F);
     appendBox(v,0,-.57F,.13F,.18F,.58F,.82F,.10F,.11F,.12F);
 }
+
 void appendFrostTower(std::vector<Vertex>& v) {
     appendBox(v,0,0,.43F,.43F,.04F,.20F,.18F,.34F,.51F);
     appendBox(v,0,0,.25F,.25F,.18F,.85F,.23F,.67F,.83F);
     appendRotatedBox(v,0,0,.08F,.50F,.50F,.94F,.78F,.65F,.91F,1.0F);
     appendRotatedBox(v,0,0,.50F,.08F,.50F,.94F,.78F,.65F,.91F,1.0F);
 }
+
 void appendRocketTower(std::vector<Vertex>& v) {
     appendBox(v,0,0,.46F,.46F,.04F,.22F,.29F,.31F,.35F);
     appendBox(v,0,0,.29F,.29F,.20F,.66F,.43F,.18F,.13F);
@@ -225,15 +255,18 @@ void appendRocketTower(std::vector<Vertex>& v) {
     appendBox(v,-.17F,-.58F,.08F,.12F,.61F,.79F,.80F,.24F,.12F);
     appendBox(v,.17F,-.58F,.08F,.12F,.61F,.79F,.80F,.24F,.12F);
 }
+
 void appendProjectile(std::vector<Vertex>& v) {
     appendBox(v,0,0,.06F,.06F,-.06F,.06F,.94F,.76F,.24F);
 }
+
 void appendRocketProjectile(std::vector<Vertex>& v) {
     appendBox(v,0,0,.07F,.25F,-.07F,.07F,.72F,.72F,.75F);
     appendBox(v,0,-.29F,.065F,.08F,-.065F,.065F,.91F,.22F,.13F);
     appendBox(v,0,.31F,.05F,.12F,-.05F,.05F,1.0F,.62F,.10F);
     appendBox(v,0,.52F,.035F,.18F,-.035F,.035F,1.0F,.26F,.05F);
 }
+
 void appendBenchmarkDecoration(std::vector<Vertex>& v, std::size_t i, float x, float z) {
     switch (i % 6U) {
         case 0: appendBox(v,x,z,.07F,.07F,0,.48F,.30F,.18F,.08F); appendBox(v,x,z,.30F,.30F,.42F,.86F,.16F,.38F,.17F); break;
@@ -289,7 +322,7 @@ bool Renderer::initialize(const LevelData& level, std::size_t benchmarkDecoratio
 
 bool Renderer::buildLevelMesh(const LevelData& level) {
     std::vector<Vertex> vertices;
-    vertices.reserve(PerformanceBudget::kMaximumLevelVertices + 512U);
+    vertices.reserve(PerformanceBudget::kMaximumLevelVertices + 2048U);
     const float offsetX = -static_cast<float>(level.width) * 0.5F + 0.5F;
     const float offsetZ = -static_cast<float>(level.height) * 0.5F + 0.5F;
     const SceneArtLoadResult artResult = SceneArtLoader::load(SceneArtLoader::pathFor(level.id.c_str()).c_str());
@@ -315,27 +348,53 @@ bool Renderer::buildLevelMesh(const LevelData& level) {
         }
     }
     if (artResult.success && artResult.art.levelId == level.id) {
-        for (std::size_t index = 0U; index < artResult.art.propCount; ++index) appendProp(vertices, artResult.art.props[index], offsetX, offsetZ);
+        for (std::size_t index = 0U; index < artResult.art.propCount; ++index) {
+            appendProp(vertices, artResult.art.props[index], offsetX, offsetZ);
+        }
     }
     if (level.id == "performance_stress") {
-        for (std::size_t i=0; i<benchmarkDecorations_; ++i) {
-            const std::size_t column=i % static_cast<std::size_t>(level.width);
-            const std::size_t band=i / static_cast<std::size_t>(level.width);
-            const float x=offsetX+static_cast<float>(column);
-            const float z=band%2U==0U ? offsetZ+.45F : offsetZ+static_cast<float>(level.height-1U)-.45F;
-            appendBenchmarkDecoration(vertices,i,x,z);
+        for (std::size_t i = 0U; i < benchmarkDecorations_; ++i) {
+            const std::size_t column = i % static_cast<std::size_t>(level.width);
+            const std::size_t band = i / static_cast<std::size_t>(level.width);
+            const float x = offsetX + static_cast<float>(column);
+            const float z = band % 2U == 0U ? offsetZ + .45F :
+                offsetZ + static_cast<float>(level.height - 1U) - .45F;
+            appendBenchmarkDecoration(vertices, i, x, z);
         }
     }
     if (vertices.size() > PerformanceBudget::kMaximumLevelVertices) return false;
 
     levelVertexCount_ = vertices.size();
-    enemyVertexOffset_=vertices.size(); appendEnemy(vertices); enemyVertexCount_=vertices.size()-enemyVertexOffset_;
-    towerVertexOffsets_[0]=vertices.size(); appendTower(vertices); towerVertexCounts_[0]=vertices.size()-towerVertexOffsets_[0];
-    towerVertexOffsets_[1]=vertices.size(); appendMortarTower(vertices); towerVertexCounts_[1]=vertices.size()-towerVertexOffsets_[1];
-    towerVertexOffsets_[2]=vertices.size(); appendFrostTower(vertices); towerVertexCounts_[2]=vertices.size()-towerVertexOffsets_[2];
-    towerVertexOffsets_[3]=vertices.size(); appendRocketTower(vertices); towerVertexCounts_[3]=vertices.size()-towerVertexOffsets_[3];
-    projectileVertexOffset_=vertices.size(); appendProjectile(vertices); projectileVertexCount_=vertices.size()-projectileVertexOffset_;
-    rocketVertexOffset_=vertices.size(); appendRocketProjectile(vertices); rocketVertexCount_=vertices.size()-rocketVertexOffset_;
+    const std::array<EnemyType, 3U> enemyTypes{
+        EnemyType::Scout, EnemyType::Raider, EnemyType::Brute};
+    for (std::size_t type = 0U; type < enemyTypes.size(); ++type) {
+        for (std::size_t flash = 0U; flash < 2U; ++flash) {
+            enemyVertexOffsets_[type][flash] = vertices.size();
+            appendEnemy(vertices, enemyTypes[type], flash != 0U);
+            enemyVertexCounts_[type][flash] = vertices.size() - enemyVertexOffsets_[type][flash];
+        }
+    }
+
+    healthBarBackgroundOffset_ = vertices.size();
+    appendBox(vertices, 0.0F, 0.0F, 0.50F, 0.045F, 0.0F, 0.055F, 0.10F, 0.10F, 0.11F);
+    healthBarBackgroundCount_ = vertices.size() - healthBarBackgroundOffset_;
+    for (std::size_t bucket = 0U; bucket <= 10U; ++bucket) {
+        healthBarFillOffsets_[bucket] = vertices.size();
+        if (bucket > 0U) {
+            const float width = 0.46F * static_cast<float>(bucket) / 10.0F;
+            appendBox(vertices, -0.46F + width, -0.002F, width, 0.030F,
+                0.008F, 0.065F, bucket <= 3U ? 0.90F : 0.20F,
+                bucket <= 3U ? 0.18F : 0.82F, 0.15F);
+        }
+        healthBarFillCounts_[bucket] = vertices.size() - healthBarFillOffsets_[bucket];
+    }
+
+    towerVertexOffsets_[0] = vertices.size(); appendTower(vertices); towerVertexCounts_[0] = vertices.size() - towerVertexOffsets_[0];
+    towerVertexOffsets_[1] = vertices.size(); appendMortarTower(vertices); towerVertexCounts_[1] = vertices.size() - towerVertexOffsets_[1];
+    towerVertexOffsets_[2] = vertices.size(); appendFrostTower(vertices); towerVertexCounts_[2] = vertices.size() - towerVertexOffsets_[2];
+    towerVertexOffsets_[3] = vertices.size(); appendRocketTower(vertices); towerVertexCounts_[3] = vertices.size() - towerVertexOffsets_[3];
+    projectileVertexOffset_ = vertices.size(); appendProjectile(vertices); projectileVertexCount_ = vertices.size() - projectileVertexOffset_;
+    rocketVertexOffset_ = vertices.size(); appendRocketProjectile(vertices); rocketVertexCount_ = vertices.size() - rocketVertexOffset_;
 
     const std::size_t bytes = vertices.size() * sizeof(Vertex);
     vertexBuffer_ = linearAlloc(bytes);
@@ -395,35 +454,58 @@ void Renderer::drawScene(C3D_RenderTarget* target, const Camera& camera,
         Mtx_Translate(&model, tower.x(), 0.0F, tower.z(), true);
         Mtx_RotateY(&model, tower.aimAngleRadians(), true);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &model);
-        const std::size_t type=static_cast<std::size_t>(tower.type());
-        C3D_DrawArrays(GPU_TRIANGLES,static_cast<int>(towerVertexOffsets_[type]),static_cast<int>(towerVertexCounts_[type]));
+        const std::size_t type = static_cast<std::size_t>(tower.type());
+        C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(towerVertexOffsets_[type]),
+            static_cast<int>(towerVertexCounts_[type]));
     }
     if (level_ != nullptr) {
         C3D_Mtx cursor{}; camera.writeView(cursor);
         Mtx_Translate(&cursor, worldX(*level_, buildSystem.cursorX()),
-            buildSystem.cursorCanBuild() ? -0.02F : -0.65F, worldZ(*level_, buildSystem.cursorZ()), true);
+            buildSystem.cursorCanBuild() ? -0.02F : -0.65F,
+            worldZ(*level_, buildSystem.cursorZ()), true);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &cursor);
-        const std::size_t selected=static_cast<std::size_t>(buildSystem.selectedTowerType());
-        C3D_DrawArrays(GPU_TRIANGLES,static_cast<int>(towerVertexOffsets_[selected]),static_cast<int>(towerVertexCounts_[selected]));
+        const std::size_t selected = static_cast<std::size_t>(buildSystem.selectedTowerType());
+        C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(towerVertexOffsets_[selected]),
+            static_cast<int>(towerVertexCounts_[selected]));
     }
     for (std::size_t index = 0; index < wave.spawnedCount(); ++index) {
         const Enemy& enemy = wave.enemyAt(index);
         if (enemy.dead() || enemy.reachedBase()) continue;
+        const std::size_t type = EnemyVisual::typeIndex(enemy.type());
+        const std::size_t flash = enemy.hitFlashActive() ? 1U : 0U;
         C3D_Mtx model{}; camera.writeView(model);
         Mtx_Translate(&model, enemy.x(), 0.0F, enemy.z(), true);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &model);
-        C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(enemyVertexOffset_), static_cast<int>(enemyVertexCount_));
+        C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(enemyVertexOffsets_[type][flash]),
+            static_cast<int>(enemyVertexCounts_[type][flash]));
+
+        if (EnemyVisual::shouldShowHealthBar(enemy.type(), enemy.health(), enemy.maxHealth())) {
+            const EnemyVisualProfile visual = EnemyVisual::profile(enemy.type());
+            C3D_Mtx health{}; camera.writeView(health);
+            Mtx_Translate(&health, enemy.x(),
+                visual.bodyHeight + visual.headHeight + 0.22F, enemy.z(), true);
+            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &health);
+            C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(healthBarBackgroundOffset_),
+                static_cast<int>(healthBarBackgroundCount_));
+            const std::size_t bucket = EnemyVisual::healthBucket(enemy.health(), enemy.maxHealth());
+            if (healthBarFillCounts_[bucket] > 0U) {
+                C3D_DrawArrays(GPU_TRIANGLES, static_cast<int>(healthBarFillOffsets_[bucket]),
+                    static_cast<int>(healthBarFillCounts_[bucket]));
+            }
+        }
     }
     const ProjectilePool& projectiles = buildSystem.projectiles();
     for (std::size_t index = 0; index < ProjectilePool::kCapacity; ++index) {
         const Projectile& projectile = projectiles.projectileAt(index);
         if (!projectile.active()) continue;
         C3D_Mtx model{}; camera.writeView(model);
-        Mtx_Translate(&model,projectile.x(),projectile.y(),projectile.z(),true);
-        const bool rocket=projectile.effect()==ProjectileEffect::GuidedRocket;
-        if (rocket) Mtx_RotateY(&model,std::atan2(projectile.velocityX(),projectile.velocityZ()),true);
-        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,modelViewUniform_,&model);
-        C3D_DrawArrays(GPU_TRIANGLES,static_cast<int>(rocket?rocketVertexOffset_:projectileVertexOffset_),static_cast<int>(rocket?rocketVertexCount_:projectileVertexCount_));
+        Mtx_Translate(&model, projectile.x(), projectile.y(), projectile.z(), true);
+        const bool rocket = projectile.effect() == ProjectileEffect::GuidedRocket;
+        if (rocket) Mtx_RotateY(&model, std::atan2(projectile.velocityX(), projectile.velocityZ()), true);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, modelViewUniform_, &model);
+        C3D_DrawArrays(GPU_TRIANGLES,
+            static_cast<int>(rocket ? rocketVertexOffset_ : projectileVertexOffset_),
+            static_cast<int>(rocket ? rocketVertexCount_ : projectileVertexCount_));
     }
 }
 
@@ -440,10 +522,16 @@ void Renderer::shutdown() {
     level_ = nullptr;
     projectionUniform_ = -1;
     modelViewUniform_ = -1;
-    levelVertexCount_=enemyVertexOffset_=enemyVertexCount_=0U;
-    towerVertexOffsets_.fill(0U); towerVertexCounts_.fill(0U);
-    projectileVertexOffset_=projectileVertexCount_=0U;
-    rocketVertexOffset_=rocketVertexCount_=0U;
+    levelVertexCount_ = 0U;
+    for (auto& offsets : enemyVertexOffsets_) offsets.fill(0U);
+    for (auto& counts : enemyVertexCounts_) counts.fill(0U);
+    healthBarBackgroundOffset_ = healthBarBackgroundCount_ = 0U;
+    healthBarFillOffsets_.fill(0U);
+    healthBarFillCounts_.fill(0U);
+    towerVertexOffsets_.fill(0U);
+    towerVertexCounts_.fill(0U);
+    projectileVertexOffset_ = projectileVertexCount_ = 0U;
+    rocketVertexOffset_ = rocketVertexCount_ = 0U;
     lastStereoPlan_ = {};
     benchmarkDecorations_ = 0U;
 }

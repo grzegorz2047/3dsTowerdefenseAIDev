@@ -23,10 +23,13 @@ public:
     [[nodiscard]] float movementSpeed() const;
     [[nodiscard]] float effectiveMovementSpeed() const;
     [[nodiscard]] bool slowed() const;
+    [[nodiscard]] bool hitFlashActive() const;
     [[nodiscard]] float pathProgress() const;
     [[nodiscard]] EnemyType type() const;
 
 private:
+    static constexpr float kHitFlashSeconds = 0.12F;
+
     const LevelData* level_ = nullptr;
     EnemyType type_ = EnemyType::Raider;
     std::size_t segmentIndex_ = 0;
@@ -35,6 +38,7 @@ private:
     float z_ = 0.0F;
     float slowRemainingSeconds_ = 0.0F;
     float slowMovementMultiplier_ = 1.0F;
+    float hitFlashRemainingSeconds_ = 0.0F;
     int health_ = 0;
     bool reachedBase_ = false;
 };

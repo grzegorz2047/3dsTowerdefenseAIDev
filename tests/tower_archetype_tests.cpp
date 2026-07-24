@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "EnemyVisual.hpp"
 #include "Level.hpp"
 #include "Projectile.hpp"
 #include "Tower.hpp"
@@ -47,6 +48,41 @@ LevelData makeLevel() {
 void spawnFirstEnemy(Wave& wave) {
     wave.update(0.11F);
     expect(wave.spawnedCount() >= 1, "tower test target should be spawned");
+}
+
+void testEnemyVisualProfilesAndHitReaction() {
+    const EnemyVisualProfile scout = EnemyVisual::profile(EnemyType::Scout);
+    const EnemyVisualProfile raider = EnemyVisual::profile(EnemyType::Raider);
+    const EnemyVisualProfile brute = EnemyVisual::profile(EnemyType::Brute);
+    expect(scout.halfWidth < raider.halfWidth, "scout silhouette should be narrower than raider");
+    expect(raider.halfWidth < brute.halfWidth, "brute silhouette should be widest");
+    expect(brute.halfWidth >= scout.halfWidth * 1.5F,
+        "brute should be at least one and a half times wider than scout");
+    expect(scout.bodyHeight < raider.bodyHeight && raider.bodyHeight < brute.bodyHeight,
+        "enemy silhouettes should increase in height by threat class");
+    expect(EnemyVisual::typeIndex(EnemyType::Scout) != EnemyVisual::typeIndex(EnemyType::Raider),
+        "scout and raider should use different mesh ranges");
+    expect(EnemyVisual::typeIndex(EnemyType::Raider) != EnemyVisual::typeIndex(EnemyType::Brute),
+        "raider and brute should use different mesh ranges");
+    expect(!EnemyVisual::shouldShowHealthBar(EnemyType::Scout, 2, 2),
+        "healthy scout should not clutter the battlefield with a health bar");
+    expect(EnemyVisual::shouldShowHealthBar(EnemyType::Scout, 1, 2),
+        "injured scout should expose its remaining health");
+    expect(EnemyVisual::shouldShowHealthBar(EnemyType::Raider, 3, 3),
+        "raider should always expose health");
+    expect(EnemyVisual::shouldShowHealthBar(EnemyType::Brute, 5, 5),
+        "brute should always expose health");
+    expect(EnemyVisual::healthBucket(10, 10) == 10U, "full health should fill all segments");
+    expect(EnemyVisual::healthBucket(5, 10) == 5U, "half health should fill half the bar");
+    expect(EnemyVisual::healthBucket(0, 10) == 0U, "dead enemy should have empty health bar");
+
+    const LevelData level = makeLevel();
+    Enemy enemy(level, EnemyType::Raider);
+    expect(!enemy.hitFlashActive(), "enemy should not flash before taking damage");
+    enemy.takeDamage(1);
+    expect(enemy.hitFlashActive(), "real damage should activate hit feedback");
+    enemy.update(0.13F);
+    expect(!enemy.hitFlashActive(), "hit feedback should expire after a short deterministic window");
 }
 
 void testTowerCatalog() {
@@ -164,6 +200,7 @@ void testFrostSlowsAndExpires() {
 }  // namespace
 
 int main() {
+    testEnemyVisualProfilesAndHitReaction();
     testTowerCatalog();
     testTowersLaunchDistinctPayloads();
     testTowerAimsAtSelectedTarget();
