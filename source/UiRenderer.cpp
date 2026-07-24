@@ -386,6 +386,15 @@ void UiRenderer::drawMission(const UiState& state) {
         return;
     }
 
+    if (state.paused) {
+        C2D_DrawRectSolid(8.0F, 124.0F, 0.2F, 304.0F, 108.0F, kPanelStrong);
+        drawText("PAUZA", 118.0F, 134.0F, 0.62F, kGold);
+        drawText("START  WZNOW", 91.0F, 164.0F, 0.44F, kText);
+        drawText("X  KAMPANIA    Y  POWTORZ", 48.0F, 187.0F, 0.40F, kText);
+        drawText("Kamera i 3D pozostaja aktywne", 43.0F, 211.0F, 0.40F, kMuted);
+        return;
+    }
+
     const TouchRect pause = TouchUiLayout::rectFor(TouchUiAction::TogglePause);
     const TouchRect speed = TouchUiLayout::rectFor(TouchUiAction::ToggleSpeed);
     const TouchRect cancel = TouchUiLayout::rectFor(TouchUiAction::Cancel);
