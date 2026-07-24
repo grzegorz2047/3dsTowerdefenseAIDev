@@ -14,6 +14,17 @@ enum class TowerType : std::uint8_t {
     Rocket,
 };
 
+struct TowerCombatProfile {
+    float range = 0.0F;
+    float attackIntervalSeconds = 1.0F;
+    int damage = 0;
+    float radius = 0.0F;
+    float slowDurationSeconds = 0.0F;
+    float slowMovementMultiplier = 1.0F;
+    DamageType damageType = DamageType::Physical;
+    const char* role = "";
+};
+
 [[nodiscard]] constexpr TowerType nextTowerType(TowerType type) {
     switch (type) {
         case TowerType::Ballista: return TowerType::Mortar;
@@ -36,13 +47,16 @@ enum class TowerType : std::uint8_t {
 
 [[nodiscard]] int towerCost(TowerType type);
 [[nodiscard]] const char* towerName(TowerType type);
+[[nodiscard]] TowerCombatProfile towerCombatProfile(TowerType type, std::uint8_t level);
+[[nodiscard]] float towerSingleTargetDps(TowerType type, std::uint8_t level);
 
 class Tower {
 public:
     static constexpr std::uint8_t kMaximumLevel = 3;
 
     Tower() = default;
-    Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ, TowerType type = TowerType::Ballista);
+    Tower(const LevelData& level, std::size_t gridX, std::size_t gridZ,
+        TowerType type = TowerType::Ballista);
 
     void update(float deltaSeconds, Wave& wave, ProjectilePool& projectiles);
     void resetCombat();
@@ -56,6 +70,8 @@ public:
     [[nodiscard]] std::size_t gridZ() const;
     [[nodiscard]] TowerType type() const;
     [[nodiscard]] std::uint8_t level() const;
+    [[nodiscard]] TowerCombatProfile combatProfile() const;
+    [[nodiscard]] TowerCombatProfile nextCombatProfile() const;
     [[nodiscard]] int investedGold() const;
     [[nodiscard]] int upgradeCost() const;
     [[nodiscard]] int sellValue() const;

@@ -15,6 +15,20 @@ permissions:
   pull-requests: write
 
 jobs:
+  tower-balance:
+    name: Tower balance tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile balance contract
+        run: |
+          mkdir -p build/tower-balance
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude \
+            tests/tower_balance_tests.cpp source/Enemy.cpp source/Level.cpp source/Tower.cpp \
+            source/Projectile.cpp source/Wave.cpp -o build/tower-balance/tests
+      - name: Verify representative kill times
+        run: build/tower-balance/tests
+
   build-release:
     runs-on: ubuntu-latest
     container:
