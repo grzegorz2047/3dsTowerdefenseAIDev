@@ -2,6 +2,7 @@
 
 #include <cstddef>
 
+#include "Damage.hpp"
 #include "Level.hpp"
 
 class Enemy {
@@ -10,7 +11,7 @@ public:
 
     void update(float deltaSeconds);
     void reset();
-    void takeDamage(int amount);
+    void takeDamage(int amount, DamageType type = DamageType::Physical);
     void applySlow(float durationSeconds, float movementMultiplier);
 
     [[nodiscard]] float x() const;
@@ -20,8 +21,11 @@ public:
     [[nodiscard]] int health() const;
     [[nodiscard]] int maxHealth() const;
     [[nodiscard]] int baseDamage() const;
+    [[nodiscard]] int armor(DamageType type) const;
+    [[nodiscard]] int killReward() const;
     [[nodiscard]] float movementSpeed() const;
     [[nodiscard]] float effectiveMovementSpeed() const;
+    [[nodiscard]] float slowResistance() const;
     [[nodiscard]] bool slowed() const;
     [[nodiscard]] bool hitFlashActive() const;
     [[nodiscard]] float pathProgress() const;
