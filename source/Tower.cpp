@@ -71,11 +71,11 @@ TowerCombatProfile towerCombatProfile(TowerType type, std::uint8_t level) {
     const std::uint8_t bounded = boundedLevel(level);
     switch (type) {
         case TowerType::Mortar:
-            if (bounded == 1U) return {2.85F, 1.25F, 2, 1.15F, 0.0F, 1.0F,
+            if (bounded == 1U) return {2.85F, 1.25F, 3, 1.15F, 0.0F, 1.0F,
                 DamageType::Explosive, "GRUPY"};
-            if (bounded == 2U) return {2.85F, 1.35F, 3, 1.30F, 0.0F, 1.0F,
+            if (bounded == 2U) return {2.85F, 1.35F, 4, 1.30F, 0.0F, 1.0F,
                 DamageType::Explosive, "WIEKSZY OBSZAR"};
-            return {2.95F, 1.50F, 4, 1.60F, 0.0F, 1.0F,
+            return {2.95F, 1.50F, 5, 1.60F, 0.0F, 1.0F,
                 DamageType::Explosive, "OBLEZENIE"};
         case TowerType::Frost:
             if (bounded == 1U) return {3.05F, 0.90F, 1, 0.85F, 2.20F, 0.55F,
@@ -89,7 +89,7 @@ TowerCombatProfile towerCombatProfile(TowerType type, std::uint8_t level) {
                 DamageType::Explosive, "DUZY CEL"};
             if (bounded == 2U) return {4.70F, 2.60F, 5, 1.45F, 0.0F, 1.0F,
                 DamageType::Explosive, "CIEZKI CEL"};
-            return {5.05F, 3.00F, 8, 1.65F, 0.0F, 1.0F,
+            return {5.05F, 2.85F, 8, 1.65F, 0.0F, 1.0F,
                 DamageType::Explosive, "EGZEKUTOR"};
         case TowerType::Ballista:
         default:
