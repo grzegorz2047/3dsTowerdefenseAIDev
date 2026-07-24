@@ -40,7 +40,7 @@ void BuildSystem::update(float deltaSeconds, Wave& wave) {
     projectiles_.update(deltaSeconds, wave);
     for (std::size_t index = 0; index < wave.spawnedCount(); ++index) {
         const Enemy& enemy = wave.enemyAt(index);
-        if (enemy.dead()) economy_.rewardEnemy(index);
+        if (enemy.dead()) (void)economy_.rewardEnemy(index);
     }
 }
 
@@ -52,6 +52,17 @@ void BuildSystem::reset() {
     projectiles_.reset();
     economy_.reset();
     cancelAction();
+}
+
+void BuildSystem::beginWave() {
+    projectiles_.reset();
+    economy_.beginWave();
+    for (std::size_t index = 0U; index < towerCount_; ++index) towers_[index].resetCombat();
+    cancelAction();
+}
+
+void BuildSystem::rewardWaveCompletion() {
+    (void)economy_.rewardWaveCompletion();
 }
 
 void BuildSystem::prepareBenchmarkLayout(std::size_t requestedTowers,

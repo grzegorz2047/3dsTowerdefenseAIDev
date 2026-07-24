@@ -21,21 +21,27 @@ int main() {
     require(!flow.waveRunning(), "wave is paused on startup");
     require(!flow.requestWaveStart(0), "wave cannot start without a tower");
 
-    flow.update(1, false, false);
+    flow.update(1, false, false, true);
     require(flow.phase() == TutorialPhase::ReadyToStart, "first tower unlocks wave start");
     require(flow.requestWaveStart(1), "wave starts after tower is built");
     require(flow.waveRunning(), "wave running state is exposed");
 
-    flow.update(1, true, false);
-    require(flow.phase() == TutorialPhase::Victory, "completed wave produces victory");
+    flow.update(1, false, false, true);
+    require(flow.phase() == TutorialPhase::ReadyToStart,
+        "completed non-final wave returns to preparation");
+    require(!flow.finished(), "preparation between waves is not a finished mission");
+    require(flow.requestWaveStart(1), "next wave can start after preparation");
+
+    flow.update(1, true, false, false);
+    require(flow.phase() == TutorialPhase::Victory, "completed mission produces victory");
     require(flow.finished(), "victory is a finished state");
 
     flow.reset();
     require(flow.phase() == TutorialPhase::BuildFirstTower, "reset returns to first instruction");
     require(!flow.waveRunning(), "reset pauses the next wave");
-    flow.update(1, false, false);
+    flow.update(1, false, false, true);
     require(flow.requestWaveStart(1), "flow can start after reset");
-    flow.update(1, false, true);
+    flow.update(1, false, true, false);
     require(flow.phase() == TutorialPhase::Defeat, "lost wave produces defeat");
     flow.reset();
     require(!flow.finished(), "reset clears finished state");

@@ -45,8 +45,9 @@ LevelData makeLevel() {
     return level;
 }
 
-void spawnFirstEnemy(Wave& wave) {
-    wave.update(0.11F);
+void startAndSpawn(Wave& wave, float seconds = 0.2F) {
+    expect(wave.startNextWave(), "tower test wave should start explicitly");
+    wave.update(seconds);
     expect(wave.spawnedCount() >= 1, "tower test target should be spawned");
 }
 
@@ -99,7 +100,7 @@ void testTowerCatalog() {
 void testTowersLaunchDistinctPayloads() {
     const LevelData level = makeLevel();
     Wave wave(level);
-    wave.update(0.2F);
+    startAndSpawn(wave);
 
     const TowerType types[] = {
         TowerType::Ballista, TowerType::Mortar, TowerType::Frost, TowerType::Rocket};
@@ -111,14 +112,15 @@ void testTowersLaunchDistinctPayloads() {
         ProjectilePool projectiles;
         tower.update(1.0F, wave, projectiles);
         expect(projectiles.activeCount() == 1, "each defense should launch one pooled projectile");
-        expect(projectiles.projectileAt(0).effect() == effects[index], "defense should launch its own projectile effect");
+        expect(projectiles.projectileAt(0).effect() == effects[index],
+            "defense should launch its own projectile effect");
     }
 }
 
 void testTowerAimsAtSelectedTarget() {
     const LevelData level = makeLevel();
     Wave wave(level);
-    spawnFirstEnemy(wave);
+    startAndSpawn(wave, 0.11F);
     Tower tower(level, 2, 1, TowerType::Ballista);
     ProjectilePool projectiles;
 
@@ -126,7 +128,8 @@ void testTowerAimsAtSelectedTarget() {
     expect(tower.hasTarget(), "tower should expose an in-range target");
     Enemy& target = wave.enemyAt(0);
     const float expected = std::atan2(target.x() - tower.x(), target.z() - tower.z());
-    expect(std::fabs(tower.aimAngleRadians() - expected) < 0.0001F, "tower aim should point at selected enemy");
+    expect(std::fabs(tower.aimAngleRadians() - expected) < 0.0001F,
+        "tower aim should point at selected enemy");
 
     target.takeDamage(99);
     tower.update(1.0F / 60.0F, wave, projectiles);
@@ -136,13 +139,14 @@ void testTowerAimsAtSelectedTarget() {
 void testSplashDamagesNearbyEnemies() {
     const LevelData level = makeLevel();
     Wave wave(level);
-    wave.update(0.2F);
+    startAndSpawn(wave);
     const int firstHealth = wave.enemyAt(0).health();
     const int secondHealth = wave.enemyAt(1).health();
 
     ProjectilePool projectiles;
     const ProjectilePayload splash{ProjectileEffect::Splash, 2, 1.2F, 0.0F, 1.0F};
-    expect(projectiles.launch(wave.enemyAt(0).x(), 0.48F, wave.enemyAt(0).z(), 0, splash), "splash projectile should launch");
+    expect(projectiles.launch(wave.enemyAt(0).x(), 0.48F, wave.enemyAt(0).z(), 0, splash),
+        "splash projectile should launch");
     projectiles.update(1.0F / 60.0F, wave);
 
     expect(wave.enemyAt(0).health() == firstHealth - 2, "splash should damage its target");
@@ -152,7 +156,7 @@ void testSplashDamagesNearbyEnemies() {
 void testGuidedRocketCurvesAndImpacts() {
     const LevelData level = makeLevel();
     Wave wave(level);
-    wave.update(0.2F);
+    startAndSpawn(wave);
     const int firstHealth = wave.enemyAt(0).health();
     const int secondHealth = wave.enemyAt(1).health();
 
@@ -185,16 +189,18 @@ void testGuidedRocketCurvesAndImpacts() {
 void testFrostSlowsAndExpires() {
     const LevelData level = makeLevel();
     Wave wave(level);
-    spawnFirstEnemy(wave);
+    startAndSpawn(wave, 0.11F);
     Enemy& target = wave.enemyAt(0);
     const float normalSpeed = target.movementSpeed();
 
     wave.applyAreaEffect(target.x(), target.z(), 0.5F, 0, 0.5F, 0.5F);
     expect(target.slowed(), "frost should mark enemy as slowed");
-    expect(std::fabs(target.effectiveMovementSpeed() - normalSpeed * 0.5F) < 0.0001F, "frost should reduce movement speed");
+    expect(std::fabs(target.effectiveMovementSpeed() - normalSpeed * 0.5F) < 0.0001F,
+        "frost should reduce movement speed");
     target.update(0.6F);
     expect(!target.slowed(), "slow should expire deterministically");
-    expect(std::fabs(target.effectiveMovementSpeed() - normalSpeed) < 0.0001F, "speed should recover after slow expires");
+    expect(std::fabs(target.effectiveMovementSpeed() - normalSpeed) < 0.0001F,
+        "speed should recover after slow expires");
 }
 
 }  // namespace

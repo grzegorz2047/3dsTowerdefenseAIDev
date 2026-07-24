@@ -14,6 +14,7 @@
 #include "BuildSystem.hpp"
 #include "Camera.hpp"
 #include "Campaign.hpp"
+#include "Economy.hpp"
 #include "HudMode.hpp"
 #include "HudText.hpp"
 #include "Input.hpp"
@@ -60,7 +61,9 @@ enum class MissionSessionAction {
 };
 
 float calculateFrameSeconds(u64 nowMilliseconds, u64 previousMilliseconds) {
-    if (previousMilliseconds == 0U || nowMilliseconds <= previousMilliseconds) return kFixedStepSeconds;
+    if (previousMilliseconds == 0U || nowMilliseconds <= previousMilliseconds) {
+        return kFixedStepSeconds;
+    }
     const float elapsed = static_cast<float>(nowMilliseconds - previousMilliseconds) / 1000.0F;
     return std::min(elapsed, kMaximumFrameSeconds);
 }
@@ -102,12 +105,17 @@ bool showNarrativeCards(UiRenderer& uiRenderer, InputSystem& inputSystem, const 
             static_cast<std::int16_t>(input.touch.px), static_cast<std::int16_t>(input.touch.py));
         const TouchUiAction touch = gesture.tapped
             ? TouchUiLayout::narrativeActionAt(gesture.endX, gesture.endY) : TouchUiAction::None;
-        if (input.pressed(KEY_START) || input.pressed(KEY_X) || touch == TouchUiAction::NarrativeSkip) return true;
-        if (input.pressed(KEY_B) || input.pressed(KEY_DLEFT) || touch == TouchUiAction::NarrativeBack) {
+        if (input.pressed(KEY_START) || input.pressed(KEY_X) ||
+            touch == TouchUiAction::NarrativeSkip) {
+            return true;
+        }
+        if (input.pressed(KEY_B) || input.pressed(KEY_DLEFT) ||
+            touch == TouchUiAction::NarrativeBack) {
             if (page == 0U) return false;
             --page;
         }
-        if (input.pressed(KEY_A) || input.pressed(KEY_DRIGHT) || touch == TouchUiAction::NarrativeNext) {
+        if (input.pressed(KEY_A) || input.pressed(KEY_DRIGHT) ||
+            touch == TouchUiAction::NarrativeNext) {
             if (page + 1U >= count) return true;
             ++page;
         }
@@ -163,6 +171,7 @@ UiState campaignUiState(const CampaignProgress& progress, const SaveData& saveDa
     state.threats = mission.threats;
     state.fullHealthThreshold = mission.fullHealthThreshold;
     state.efficientTowerLimit = mission.efficientTowerLimit;
+    state.difficulty = static_cast<std::uint8_t>(selected + 1U);
     return state;
 }
 
@@ -178,7 +187,9 @@ std::size_t selectCampaignMission(UiRenderer& uiRenderer, CampaignProgress& prog
             static_cast<std::int16_t>(input.touch.px), static_cast<std::int16_t>(input.touch.py));
         const TouchUiAction touch = gesture.tapped
             ? TouchUiLayout::campaignActionAt(gesture.endX, gesture.endY) : TouchUiAction::None;
-        if (input.pressed(KEY_START) || touch == TouchUiAction::Exit) return kExitCampaignSelection;
+        if (input.pressed(KEY_START) || touch == TouchUiAction::Exit) {
+            return kExitCampaignSelection;
+        }
         if (saveProblem && input.isHeld(KEY_SELECT) && input.pressed(KEY_Y)) {
             (void)SaveDataStore::reset(kSavePath);
             progress.reset();
@@ -212,7 +223,8 @@ std::size_t selectCampaignMission(UiRenderer& uiRenderer, CampaignProgress& prog
 
         const std::size_t selectableCount = progress.unlockedCount();
         if (touch >= TouchUiAction::CampaignRow0 && touch <= TouchUiAction::CampaignRow5) {
-            const std::size_t first = selected < 6U ? 0U : std::min(selected - 5U, kCampaignMissionCount - 6U);
+            const std::size_t first = selected < 6U ? 0U :
+                std::min(selected - 5U, kCampaignMissionCount - 6U);
             const std::size_t row = static_cast<std::size_t>(touch) -
                 static_cast<std::size_t>(TouchUiAction::CampaignRow0);
             const std::size_t candidate = first + row;
@@ -225,35 +237,68 @@ std::size_t selectCampaignMission(UiRenderer& uiRenderer, CampaignProgress& prog
             selected = (selected + 1U) % selectableCount;
         }
 
-        uiRenderer.renderStandalone(campaignUiState(progress, saveData, selected, saveProblem, saveMessage));
+        uiRenderer.renderStandalone(campaignUiState(
+            progress, saveData, selected, saveProblem, saveMessage));
         if (input.pressed(KEY_A) || touch == TouchUiAction::CampaignPlay) return selected;
     }
     return kExitCampaignSelection;
 }
 
-void applyTouchAction(TouchUiAction action, BuildSystem& buildSystem, TutorialFlow& tutorialFlow,
-    AudioSystem& audioSystem, bool soundEnabled, bool& paused, int& speedMultiplier) {
+bool startMissionWave(TutorialFlow& tutorialFlow, Wave& wave, BuildSystem& buildSystem) {
+    if (!tutorialFlow.requestWaveStart(buildSystem.towerCount())) return false;
+    buildSystem.beginWave();
+    if (!wave.startNextWave()) {
+        tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost(),
+            wave.awaitingNextWave());
+        return false;
+    }
+    return true;
+}
+
+void applyTouchAction(TouchUiAction action, BuildSystem& buildSystem, Wave& wave,
+    TutorialFlow& tutorialFlow, AudioSystem& audioSystem, bool soundEnabled,
+    bool& paused, int& speedMultiplier) {
     switch (action) {
-        case TouchUiAction::SelectBallista: buildSystem.selectTowerType(TowerType::Ballista); break;
-        case TouchUiAction::SelectMortar: buildSystem.selectTowerType(TowerType::Mortar); break;
-        case TouchUiAction::SelectFrost: buildSystem.selectTowerType(TowerType::Frost); break;
-        case TouchUiAction::SelectRocket: buildSystem.selectTowerType(TowerType::Rocket); break;
+        case TouchUiAction::SelectBallista:
+            buildSystem.selectTowerType(TowerType::Ballista);
+            break;
+        case TouchUiAction::SelectMortar:
+            buildSystem.selectTowerType(TowerType::Mortar);
+            break;
+        case TouchUiAction::SelectFrost:
+            buildSystem.selectTowerType(TowerType::Frost);
+            break;
+        case TouchUiAction::SelectRocket:
+            buildSystem.selectTowerType(TowerType::Rocket);
+            break;
         case TouchUiAction::BuildOrSelect:
             buildSystem.buildOrSelectCursor();
-            if (soundEnabled) audioSystem.play(cueForBuildResult(buildSystem.lastBuildResult()));
+            if (soundEnabled) {
+                audioSystem.play(cueForBuildResult(buildSystem.lastBuildResult()));
+            }
             break;
-        case TouchUiAction::Upgrade: (void)buildSystem.upgradeCursorTower(); break;
-        case TouchUiAction::Sell: (void)buildSystem.sellCursorTower(); break;
+        case TouchUiAction::Upgrade:
+            (void)buildSystem.upgradeCursorTower();
+            break;
+        case TouchUiAction::Sell:
+            (void)buildSystem.sellCursorTower();
+            break;
         case TouchUiAction::StartWave:
-            (void)tutorialFlow.requestWaveStart(buildSystem.towerCount());
+            (void)startMissionWave(tutorialFlow, wave, buildSystem);
             paused = false;
             break;
         case TouchUiAction::TogglePause:
             if (tutorialFlow.waveRunning()) paused = !paused;
             break;
-        case TouchUiAction::ToggleSpeed: speedMultiplier = speedMultiplier == 1 ? 2 : 1; break;
-        case TouchUiAction::Cancel: buildSystem.cancelAction(); break;
-        case TouchUiAction::None: default: break;
+        case TouchUiAction::ToggleSpeed:
+            speedMultiplier = speedMultiplier == 1 ? 2 : 1;
+            break;
+        case TouchUiAction::Cancel:
+            buildSystem.cancelAction();
+            break;
+        case TouchUiAction::None:
+        default:
+            break;
     }
 }
 
@@ -271,10 +316,14 @@ bool configureBenchmark(UiRenderer& uiRenderer, BenchmarkConfig& config) {
         if (input.pressed(KEY_A) || touch == TouchUiAction::BenchmarkStart) return true;
         if (input.pressed(KEY_DUP)) selected = selected == 0U ? 6U : selected - 1U;
         if (input.pressed(KEY_DDOWN)) selected = (selected + 1U) % 7U;
-        if (input.pressed(KEY_DLEFT)) config = BenchmarkProfiles::adjusted(
-            config, static_cast<BenchmarkSetting>(selected), -1);
-        if (input.pressed(KEY_DRIGHT)) config = BenchmarkProfiles::adjusted(
-            config, static_cast<BenchmarkSetting>(selected), 1);
+        if (input.pressed(KEY_DLEFT)) {
+            config = BenchmarkProfiles::adjusted(
+                config, static_cast<BenchmarkSetting>(selected), -1);
+        }
+        if (input.pressed(KEY_DRIGHT)) {
+            config = BenchmarkProfiles::adjusted(
+                config, static_cast<BenchmarkSetting>(selected), 1);
+        }
 
         const std::array<std::pair<TouchUiAction, BenchmarkSetting>, 12U> adjustments{{
             {TouchUiAction::BenchmarkMapDown, BenchmarkSetting::MapSize},
@@ -296,7 +345,8 @@ bool configureBenchmark(UiRenderer& uiRenderer, BenchmarkConfig& config) {
                 index % 2U == 0U ? -1 : 1);
         }
         if (touch == TouchUiAction::BenchmarkAutomatic) {
-            config = BenchmarkProfiles::adjusted(config, BenchmarkSetting::AutomaticRamp, 1);
+            config = BenchmarkProfiles::adjusted(
+                config, BenchmarkSetting::AutomaticRamp, 1);
         }
 
         UiState state{};
@@ -325,17 +375,26 @@ UiState missionUiState(const CampaignMission& mission, const Wave& wave,
     state.spawnedEnemies = wave.spawnedCount();
     state.activeEnemies = wave.activeCount();
     state.totalEnemies = wave.enemyCount();
+    state.waveNumber = wave.waveNumber();
+    state.waveCount = wave.waveCount();
+    state.completedWaves = wave.completedWaveCount();
+    state.waveRunning = wave.waveRunning();
+    state.awaitingNextWave = wave.awaitingNextWave();
+    state.waveCompletionReward = Economy::kWaveCompletionReward;
     state.selectedTower = buildSystem.selectedTowerType();
     state.selectedTowerName = buildSystem.selectedTowerName();
     state.towerCost = buildSystem.towerCost();
     state.towerCount = buildSystem.towerCount();
+    state.buildSpotCount = buildSystem.buildSpotCount();
+    state.availableBuildSpotCount = buildSystem.availableBuildSpotCount();
     state.activeProjectiles = buildSystem.projectiles().activeCount();
     state.cursorX = buildSystem.cursorX();
     state.cursorZ = buildSystem.cursorZ();
     state.cursorOccupied = buildSystem.cursorOccupied();
     state.tutorialPhase = tutorialFlow.phase();
-    state.instruction = benchmarkConfig != nullptr ? "Pomiar automatyczny: START wraca, SELECT pokazuje diagnostyke" :
-        tutorialInstruction(tutorialFlow.phase());
+    state.instruction = benchmarkConfig != nullptr
+        ? "Pomiar automatyczny: START wraca, SELECT pokazuje diagnostyke"
+        : tutorialInstruction(tutorialFlow.phase());
     state.paused = paused;
     state.speedMultiplier = speedMultiplier;
     state.diagnosticsVisible = showAudioDiagnostics(hudMode);
@@ -362,8 +421,11 @@ UiState missionUiState(const CampaignMission& mission, const Wave& wave,
         state.cursorTowerSellValue = tower->sellValue();
         state.statusMessage = towerName(tower->type());
     } else if (sessionFinished) {
-        state.statusMessage = benchmarkConfig != nullptr ? BenchmarkProfiles::verdictName(state.benchmarkVerdict) :
-            (recordsCampaignProgress ? "X kampania, Y powtorz" : "Test zakonczony bez zapisu");
+        state.statusMessage = benchmarkConfig != nullptr
+            ? BenchmarkProfiles::verdictName(state.benchmarkVerdict)
+            : (recordsCampaignProgress ? "X kampania, Y powtorz" : "Test zakonczony bez zapisu");
+    } else if (wave.awaitingNextWave() && wave.completedWaveCount() > 0U) {
+        state.statusMessage = "Premia za fale przyznana. Rozbuduj obrone.";
     } else {
         state.statusMessage = buildAttemptMessage(buildSystem.lastBuildResult());
     }
@@ -425,12 +487,15 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
         buildSystem.setProjectileLimit(benchmarkConfig->projectiles);
     }
     TutorialFlow tutorialFlow;
-    if (benchmarkConfig != nullptr) (void)tutorialFlow.requestWaveStart(buildSystem.towerCount());
+    if (benchmarkConfig != nullptr) {
+        (void)tutorialFlow.requestWaveStart(buildSystem.towerCount());
+    }
     AudioSystem audioSystem;
     (void)audioSystem.initialize();
     AudioEventRouter audioRouter;
     audioRouter.reset({tutorialFlow.phase(), buildSystem.projectiles().shotEventCount(),
-        buildSystem.projectiles().impactEventCount(), wave.deathEventCount(), wave.baseDamageEventCount()});
+        buildSystem.projectiles().impactEventCount(), wave.deathEventCount(),
+        wave.baseDamageEventCount()});
     PerformanceSampler performanceSampler;
     PerformanceSnapshot performanceSnapshot{};
 
@@ -442,6 +507,7 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
     int speedMultiplier = 1;
     bool resultRecorded = false;
     bool resultNarrativeShown = false;
+    std::uint32_t observedWaveCompletionEvents = 0U;
     MissionResult missionResult{};
     MissionSessionAction action = MissionSessionAction::ExitApplication;
 
@@ -449,8 +515,9 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
         const u64 frameStartMilliseconds = osGetTime();
         const InputSnapshot input = inputSystem.poll();
         if (input.pressed(KEY_START)) {
-            action = benchmarkConfig != nullptr ? MissionSessionAction::ReturnToCampaign :
-                MissionSessionAction::ExitApplication;
+            action = benchmarkConfig != nullptr
+                ? MissionSessionAction::ReturnToCampaign
+                : MissionSessionAction::ExitApplication;
             break;
         }
         const bool benchmarkFinished = benchmarkConfig != nullptr &&
@@ -459,29 +526,38 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
 
         const TouchGestureResult gesture = touchGesture.update(input.touching(),
             static_cast<std::int16_t>(input.touch.px), static_cast<std::int16_t>(input.touch.py));
-        const TouchUiAction touch = gesture.tapped ? (sessionFinished
-            ? TouchUiLayout::resultActionAt(gesture.endX, gesture.endY)
-            : TouchUiLayout::actionAt(gesture.endX, gesture.endY)) : TouchUiAction::None;
+        const TouchUiAction touch = gesture.tapped
+            ? (sessionFinished
+                ? TouchUiLayout::resultActionAt(gesture.endX, gesture.endY)
+                : TouchUiLayout::actionAt(gesture.endX, gesture.endY))
+            : TouchUiAction::None;
         if (sessionFinished) {
             if (input.pressed(KEY_X) || touch == TouchUiAction::ResultCampaign) {
-                action = MissionSessionAction::ReturnToCampaign; break;
+                action = MissionSessionAction::ReturnToCampaign;
+                break;
             }
             if (input.pressed(KEY_Y) || touch == TouchUiAction::ResultReplay) {
-                action = MissionSessionAction::Replay; break;
+                action = MissionSessionAction::Replay;
+                break;
             }
         }
 
         const HudMode hudMode = hudModeForSelectHeld(input.isHeld(KEY_SELECT));
-        if (saveData.settings.soundEnabled && allowDiagnosticTone(hudMode, input.pressed(KEY_B))) {
+        if (saveData.settings.soundEnabled &&
+            allowDiagnosticTone(hudMode, input.pressed(KEY_B))) {
             audioSystem.playDiagnosticTone();
         }
         if (gesture.tapped && !sessionFinished) {
-            applyTouchAction(touch, buildSystem, tutorialFlow, audioSystem,
+            applyTouchAction(touch, buildSystem, wave, tutorialFlow, audioSystem,
                 saveData.settings.soundEnabled, paused, speedMultiplier);
         }
         if (!sessionFinished && benchmarkConfig == nullptr && input.pressed(KEY_X)) {
-            if (tutorialFlow.waveRunning()) paused = !paused;
-            else { (void)tutorialFlow.requestWaveStart(buildSystem.towerCount()); paused = false; }
+            if (tutorialFlow.waveRunning()) {
+                paused = !paused;
+            } else {
+                (void)startMissionWave(tutorialFlow, wave, buildSystem);
+                paused = false;
+            }
         }
         if (!sessionFinished && input.pressed(KEY_L) && input.pressed(KEY_R)) {
             speedMultiplier = speedMultiplier == 1 ? 2 : 1;
@@ -497,9 +573,11 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
                 audioSystem.play(cueForBuildResult(buildSystem.lastBuildResult()));
             }
         }
-        tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost());
+        tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost(),
+            wave.awaitingNextWave());
         if (!paused && !sessionFinished) {
-            simulationAccumulator = std::min(simulationAccumulator + frameSeconds * speedMultiplier,
+            simulationAccumulator = std::min(
+                simulationAccumulator + frameSeconds * speedMultiplier,
                 kMaximumAccumulatorSeconds);
             if (benchmarkConfig != nullptr) benchmarkElapsed += frameSeconds;
         }
@@ -507,19 +585,33 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
             if (tutorialFlow.waveRunning()) {
                 buildSystem.update(kFixedStepSeconds, wave);
                 wave.update(kFixedStepSeconds);
-                tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost());
+                tutorialFlow.update(buildSystem.towerCount(), wave.completed(), wave.lost(),
+                    wave.awaitingNextWave());
             }
             simulationAccumulator -= kFixedStepSeconds;
         }
 
+        if (wave.waveCompletedEventCount() > observedWaveCompletionEvents) {
+            const std::uint32_t newEvents =
+                wave.waveCompletedEventCount() - observedWaveCompletionEvents;
+            observedWaveCompletionEvents = wave.waveCompletedEventCount();
+            if (!wave.completed()) {
+                for (std::uint32_t event = 0U; event < newEvents; ++event) {
+                    buildSystem.rewardWaveCompletion();
+                }
+            }
+        }
+
         if (tutorialFlow.finished() && benchmarkConfig == nullptr && !resultRecorded) {
             if (recordsCampaignProgress && tutorialFlow.phase() == TutorialPhase::Victory) {
-                missionResult = progress.complete(missionIndex, wave.baseHealth(), buildSystem.towerCount());
+                missionResult = progress.complete(
+                    missionIndex, wave.baseHealth(), buildSystem.towerCount());
                 saveProblem = !persistSave(progress, saveData, saveMessage);
             }
             resultRecorded = true;
         }
-        if (tutorialFlow.finished() && resultRecorded && !resultNarrativeShown && narrative != nullptr) {
+        if (tutorialFlow.finished() && resultRecorded && !resultNarrativeShown &&
+            narrative != nullptr) {
             showMissionOutcome(uiRenderer, inputSystem, mission, *narrative,
                 tutorialFlow.phase() == TutorialPhase::Victory);
             resultNarrativeShown = true;
@@ -527,27 +619,37 @@ MissionSessionAction runMission(UiRenderer& uiRenderer, const CampaignMission& m
         }
         if (benchmarkFinished && benchmarkConfig->automaticRamp) {
             benchmarkResultElapsed += frameSeconds;
-            if (benchmarkResultElapsed >= 2.0F && !BenchmarkProfiles::maximumReached(*benchmarkConfig)) {
+            if (benchmarkResultElapsed >= 2.0F &&
+                !BenchmarkProfiles::maximumReached(*benchmarkConfig)) {
                 action = MissionSessionAction::AdvanceBenchmark;
                 break;
             }
         }
 
-        const AudioFrameState audioState{tutorialFlow.phase(),
-            buildSystem.projectiles().shotEventCount(), buildSystem.projectiles().impactEventCount(),
-            wave.deathEventCount(), wave.baseDamageEventCount()};
-        audioSystem.updateMusic(tutorialFlow.phase(), saveData.settings.musicEnabled, frameSeconds);
-        if (saveData.settings.soundEnabled) audioSystem.playMask(audioRouter.update(audioState, frameSeconds));
+        const AudioFrameState audioState{
+            tutorialFlow.phase(),
+            buildSystem.projectiles().shotEventCount(),
+            buildSystem.projectiles().impactEventCount(),
+            wave.deathEventCount(),
+            wave.baseDamageEventCount(),
+        };
+        audioSystem.updateMusic(
+            tutorialFlow.phase(), saveData.settings.musicEnabled, frameSeconds);
+        if (saveData.settings.soundEnabled) {
+            audioSystem.playMask(audioRouter.update(audioState, frameSeconds));
+        }
         audioSystem.updateProbe();
 
-        UiState uiState = missionUiState(mission, wave, buildSystem, tutorialFlow, audioSystem,
-            renderer, saveData.settings, performanceSnapshot, hudMode, paused, speedMultiplier,
+        UiState uiState = missionUiState(
+            mission, wave, buildSystem, tutorialFlow, audioSystem, renderer,
+            saveData.settings, performanceSnapshot, hudMode, paused, speedMultiplier,
             missionResult, recordsCampaignProgress, sessionFinished, benchmarkConfig);
         const u64 renderStartMilliseconds = osGetTime();
         renderer.render(camera, wave, buildSystem, tutorialFlow,
             saveData.settings.maximum3DDepthPercent, uiRenderer, uiState);
         const u64 frameEndMilliseconds = osGetTime();
-        performanceSampler.record(elapsedMilliseconds(frameStartMilliseconds, frameEndMilliseconds),
+        performanceSampler.record(
+            elapsedMilliseconds(frameStartMilliseconds, frameEndMilliseconds),
             elapsedMilliseconds(renderStartMilliseconds, frameEndMilliseconds),
             static_cast<std::size_t>(linearSpaceFree()));
         performanceSnapshot = performanceSampler.snapshot();
@@ -587,20 +689,24 @@ int main() {
     const Result romfsResult = romfsInit();
     if (R_FAILED(romfsResult)) {
         char detail[96]{};
-        std::snprintf(detail, sizeof(detail), "romfsInit() = 0x%08lX", static_cast<unsigned long>(romfsResult));
+        std::snprintf(detail, sizeof(detail), "romfsInit() = 0x%08lX",
+            static_cast<unsigned long>(romfsResult));
         return showStartupError("ROMFS", detail, false, false, false);
     }
     if (!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)) {
-        return showStartupError("CITRO3D", "C3D_Init nie przydzielil bufora polecen GPU.", false, false, true);
+        return showStartupError(
+            "CITRO3D", "C3D_Init nie przydzielil bufora polecen GPU.", false, false, true);
     }
     if (!C2D_Init(C2D_DEFAULT_MAX_OBJECTS)) {
-        return showStartupError("CITRO2D", "C2D_Init nie przydzielil zasobow UI.", false, true, true);
+        return showStartupError(
+            "CITRO2D", "C2D_Init nie przydzielil zasobow UI.", false, true, true);
     }
     C2D_Prepare();
 
     UiRenderer uiRenderer;
     if (!uiRenderer.initialize()) {
-        return showStartupError("UI", "Nie udalo sie utworzyc dolnego targetu lub bufora tekstu.", true, true, true);
+        return showStartupError(
+            "UI", "Nie udalo sie utworzyc dolnego targetu lub bufora tekstu.", true, true, true);
     }
 
     (void)mkdir("sdmc:/3ds", 0777);
@@ -613,8 +719,11 @@ int main() {
     if (loaded.status == SaveLoadStatus::Loaded && progress.restore(loaded.data.campaign)) {
         saveData = loaded.data;
         saveMessage = loaded.migrated ? "Zapis zmigrowany do v4." : "Wczytano zapis.";
-        if (loaded.migrated) saveProblem = !persistSave(progress, saveData, saveMessage);
-    } else if (loaded.status == SaveLoadStatus::Corrupt || loaded.status == SaveLoadStatus::UnsupportedVersion) {
+        if (loaded.migrated) {
+            saveProblem = !persistSave(progress, saveData, saveMessage);
+        }
+    } else if (loaded.status == SaveLoadStatus::Corrupt ||
+        loaded.status == SaveLoadStatus::UnsupportedVersion) {
         saveProblem = true;
         saveMessage = loaded.error;
     }
@@ -622,15 +731,19 @@ int main() {
     std::size_t selectedMission = 0U;
     bool exitApplication = false;
     while (aptMainLoop() && !exitApplication) {
-        selectedMission = selectCampaignMission(uiRenderer, progress, saveData, selectedMission,
-            saveProblem, saveMessage);
+        selectedMission = selectCampaignMission(
+            uiRenderer, progress, saveData, selectedMission, saveProblem, saveMessage);
         if (selectedMission == kExitCampaignSelection) break;
 
         const bool stressTest = selectedMission == kPerformanceStressSelection;
         BenchmarkConfig benchmarkConfig = BenchmarkProfiles::kBalanced;
         if (stressTest && !configureBenchmark(uiRenderer, benchmarkConfig)) continue;
-        if (stressTest && benchmarkConfig.automaticRamp) benchmarkConfig = BenchmarkProfiles::kAutomatic;
-        const CampaignMission& mission = stressTest ? kPerformanceStressMission : CampaignCatalog::mission(selectedMission);
+        if (stressTest && benchmarkConfig.automaticRamp) {
+            benchmarkConfig = BenchmarkProfiles::kAutomatic;
+        }
+        const CampaignMission& mission = stressTest
+            ? kPerformanceStressMission
+            : CampaignCatalog::mission(selectedMission);
         const std::size_t progressMissionIndex = stressTest ? 0U : selectedMission;
 
         NarrativeLoadResult narrative{};
@@ -638,7 +751,10 @@ int main() {
             narrative = loadMissionNarrative(mission);
             if (narrative.success) {
                 InputSystem briefingInput;
-                if (!showMissionBriefing(uiRenderer, briefingInput, mission, narrative.narrative)) continue;
+                if (!showMissionBriefing(
+                    uiRenderer, briefingInput, mission, narrative.narrative)) {
+                    continue;
+                }
             } else {
                 saveMessage = "BLAD ODPRAWY: " + narrative.error;
                 saveProblem = true;
@@ -647,8 +763,9 @@ int main() {
 
         bool replay = true;
         while (aptMainLoop() && replay) {
-            const MissionSessionAction action = runMission(uiRenderer, mission, progressMissionIndex,
-                !stressTest, progress, saveData, saveProblem, saveMessage,
+            const MissionSessionAction action = runMission(
+                uiRenderer, mission, progressMissionIndex, !stressTest,
+                progress, saveData, saveProblem, saveMessage,
                 narrative.success ? &narrative.narrative : nullptr,
                 stressTest ? &benchmarkConfig : nullptr);
             if (action == MissionSessionAction::AdvanceBenchmark) {
@@ -657,7 +774,10 @@ int main() {
             } else {
                 replay = action == MissionSessionAction::Replay;
             }
-            if (action == MissionSessionAction::ExitApplication) { exitApplication = true; break; }
+            if (action == MissionSessionAction::ExitApplication) {
+                exitApplication = true;
+                break;
+            }
         }
     }
 

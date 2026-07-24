@@ -13,7 +13,8 @@ enum class TutorialPhase {
 class TutorialFlow {
 public:
     void reset();
-    void update(std::size_t towerCount, bool waveCompleted, bool waveLost);
+    void update(std::size_t towerCount, bool missionCompleted, bool missionLost,
+        bool awaitingNextWave = false);
     [[nodiscard]] bool requestWaveStart(std::size_t towerCount);
 
     [[nodiscard]] TutorialPhase phase() const;
