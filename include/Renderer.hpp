@@ -54,8 +54,12 @@ private:
     int modelViewUniform_ = -1;
     void* vertexBuffer_ = nullptr;
     std::size_t levelVertexCount_ = 0;
-    std::size_t enemyVertexOffset_ = 0;
-    std::size_t enemyVertexCount_ = 0;
+    std::array<std::array<std::size_t, 2U>, 3U> enemyVertexOffsets_{};
+    std::array<std::array<std::size_t, 2U>, 3U> enemyVertexCounts_{};
+    std::size_t healthBarBackgroundOffset_ = 0U;
+    std::size_t healthBarBackgroundCount_ = 0U;
+    std::array<std::size_t, 11U> healthBarFillOffsets_{};
+    std::array<std::size_t, 11U> healthBarFillCounts_{};
     std::array<std::size_t, 4U> towerVertexOffsets_{};
     std::array<std::size_t, 4U> towerVertexCounts_{};
     std::size_t projectileVertexOffset_ = 0U;
