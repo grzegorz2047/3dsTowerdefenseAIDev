@@ -1,0 +1,30 @@
+name: Wave speed safety
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  wave-speed:
+    name: Wave speed tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile speed policy
+        run: |
+          mkdir -p build/wave-speed
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude \
+            tests/wave_speed_tests.cpp -o build/wave-speed/tests
+      - name: Verify 1x and explicit 2x timing
+        run: build/wave-speed/tests
+      - name: Verify runtime starts safely
+        run: |
+          grep -q "int speedMultiplier = 1;" source/main.cpp
+          grep -q "speedMultiplier = speedMultiplier == 1 ? 2 : 1;" source/main.cpp
+          grep -q '"TEMPO %dx"' source/UiRenderer.cpp
