@@ -740,7 +740,7 @@ int main() {
     const SaveLoadResult loaded = SaveDataStore::load(kSavePath);
     if (loaded.status == SaveLoadStatus::Loaded && progress.restore(loaded.data.campaign)) {
         saveData = loaded.data;
-        saveMessage = loaded.migrated ? "Zapis zmigrowany do v4." : "Wczytano zapis.";
+        saveMessage = loaded.migrated ? "Zapis zmigrowany do v6." : "Wczytano zapis.";
         if (loaded.migrated) {
             saveProblem = !persistSave(progress, saveData, saveMessage);
         }
