@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "release": "vX.Y.Z-alpha.N",
+  "commit": "0000000000000000000000000000000000000000",
+  "artifacts": {
+    "cia": {"filename": "CitadelDefense3D.cia", "sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    "3dsx": {"filename": "CitadelDefense3D.3dsx", "sha256": "0000000000000000000000000000000000000000000000000000000000000000"}
+  },
+  "png_evidence": [
+    {"kind": "campaign", "path": "hardware-audit/releases/vX.Y.Z-alpha.N/campaign.png", "review": {"readability": "PASS", "framing": "PASS", "hud_overlap": "PASS", "touch_alignment": "N/A"}},
+    {"kind": "briefing", "path": "hardware-audit/releases/vX.Y.Z-alpha.N/briefing.png", "review": {"readability": "PASS", "framing": "PASS", "hud_overlap": "PASS", "touch_alignment": "PASS"}},
+    {"kind": "benchmark_config", "path": "hardware-audit/releases/vX.Y.Z-alpha.N/benchmark-config.png", "review": {"readability": "PASS", "framing": "PASS", "hud_overlap": "PASS", "touch_alignment": "PASS"}},
+    {"kind": "loaded_mission", "path": "hardware-audit/releases/vX.Y.Z-alpha.N/loaded-mission.png", "review": {"readability": "PASS", "framing": "PASS", "hud_overlap": "PASS", "touch_alignment": "PASS"}},
+    {"kind": "pause", "path": "hardware-audit/releases/vX.Y.Z-alpha.N/pause.png", "review": {"readability": "PASS", "framing": "PASS", "hud_overlap": "PASS", "touch_alignment": "PASS"}},
+    {"kind": "outcome", "path": "hardware-audit/releases/vX.Y.Z-alpha.N/outcome.png", "review": {"readability": "PASS", "framing": "PASS", "hud_overlap": "PASS", "touch_alignment": "PASS"}},
+    {"kind": "benchmark_result", "path": "hardware-audit/releases/vX.Y.Z-alpha.N/benchmark-result.png", "review": {"readability": "PASS", "framing": "PASS", "hud_overlap": "PASS", "touch_alignment": "N/A"}},
+    {"kind": "stereo_comparison", "path": "hardware-audit/releases/vX.Y.Z-alpha.N/stereo-comparison.png", "emulator_limitation_note": "Emulator does not confirm physical 3D comfort.", "review": {"readability": "PASS", "framing": "PASS", "hud_overlap": "PASS", "touch_alignment": "N/A"}}
+  ],
+  "physical_tests": {
+    "old3ds": {
+      "model": "Old Nintendo 3DS XL",
+      "system": "FILL",
+      "tester": "FILL",
+      "tested_at": "YYYY-MM-DD",
+      "launch_format": "BOTH",
+      "benchmark_profile": "FILL",
+      "cpu_speedup": "N/A",
+      "mono": {"average_ms": 0, "worst_ms": 0, "render_ms": 0, "minimum_free_linear_memory_bytes": 0},
+      "stereo": {"average_ms": 0, "worst_ms": 0, "render_ms": 0, "minimum_free_linear_memory_bytes": 0},
+      "ten_entry_stability": "FAIL",
+      "touch": "FAIL",
+      "screens": "FAIL",
+      "stereo_comfort": "FAIL",
+      "verdict": "FAIL",
+      "notes": "Template intentionally blocks release until physical testing is complete."
+    },
+    "new3ds": null
+  },
+  "deviations": ["Remove for PASS or document an accepted WARN deviation."],
+  "decision": "FAIL"
+}
