@@ -2,6 +2,8 @@
 
 Ten dokument opisuje powtarzalny pomiar wydajności gry na docelowym sprzęcie. Wynik z emulatora nie zastępuje tego testu.
 
+Pełny przegląd zmian sprzętowych, obu ekranów, dotyku, stereoskopii i pakietu PNG opisuje [`HARDWARE_AUDIT.md`](HARDWARE_AUDIT.md). Test z tego dokumentu jest obowiązkową częścią profilu bazowego Old 3DS, ale nie zastępuje pozostałych punktów audytu.
+
 ## Wymagane środowisko
 
 - oryginalny Nintendo 3DS XL, nie New Nintendo 3DS;
@@ -108,3 +110,14 @@ Build spełnia podstawowy budżet Old 3DS XL, gdy:
 - pamięć liniowa pozostaje powyżej 512 KiB;
 - nie występuje narastający ubytek pamięci ani crash w teście 10 sesji;
 - stereoskopia pozostaje komfortowa i nie powoduje widocznego podwójnego obrazu w punkcie zbieżności.
+
+## Profil New Nintendo 3DS
+
+Gdy dostępny jest New Nintendo 3DS lub New Nintendo 3DS XL, ten sam scenariusz należy powtórzyć i zapisać oddzielnie. Wynik New 3DS służy do oceny dodatkowego zapasu oraz rozszerzonego sterowania, ale nie może zastąpić ani unieważnić wyniku profilu bazowego Old 3DS.
+
+W raporcie New 3DS należy dodatkowo wskazać:
+
+- dokładny model konsoli;
+- dostępność C-Sticka oraz ZL/ZR;
+- czy rozszerzony tryb CPU był aktywny;
+- różnicę względem tego samego profilu i obciążenia na Old 3DS.
