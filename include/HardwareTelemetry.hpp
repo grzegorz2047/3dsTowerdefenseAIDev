@@ -19,7 +19,7 @@ constexpr std::uint16_t LinearMemory = 1U << 9U;
 constexpr std::uint16_t DeviceProfile = 1U << 10U;
 constexpr std::uint16_t CitroProcessing = 1U << 11U;
 constexpr std::uint16_t GpuDrawing = 1U << 12U;
-constexpr std::uint16_t BaseRequired = LeftEye | TopUi | BottomUi | FrameWait |
+constexpr std::uint16_t BaseRequired = Cpu | LeftEye | TopUi | BottomUi | FrameWait |
     SceneCounters | UiCounters | TextureCounters | LinearMemory | DeviceProfile |
     CitroProcessing | GpuDrawing;
 }  // namespace HardwareMeasurement
