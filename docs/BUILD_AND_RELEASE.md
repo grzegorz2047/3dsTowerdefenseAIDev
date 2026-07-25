@@ -54,7 +54,8 @@ Identyfikator tytułu nie może być zmieniany pomiędzy zwykłymi aktualizacjam
 - walidacja danych poziomów;
 - testy hostowe logiki niezależnej od sprzętu;
 - utworzenie `.3dsx`;
-- opcjonalne utworzenie testowego `.cia`, jeżeli środowisko CI zawiera wyłącznie legalne narzędzia open-source i nie wymaga sekretów.
+- opcjonalne utworzenie testowego `.cia`, jeżeli środowisko CI zawiera wyłącznie legalne narzędzia open-source i nie wymaga sekretów;
+- obowiązkowa sekcja audytu sprzętowego z [`HARDWARE_AUDIT.md`](HARDWARE_AUDIT.md) dla zmian renderera, UI, zasobów, obu ekranów, dotyku, stereo lub wydajności.
 
 ### Merge do `main`
 
@@ -69,7 +70,8 @@ Identyfikator tytułu nie może być zmieniany pomiędzy zwykłymi aktualizacjam
 - utworzenie `.cia` i `.3dsx`;
 - sumy SHA-256;
 - utworzenie GitHub Release;
-- dołączenie instrukcji instalacji i changelogu.
+- dołączenie instrukcji instalacji i changelogu;
+- wskazanie wyniku ostatniego pełnego audytu Old 3DS oraz, gdy dostępny, oddzielnego wyniku New 3DS.
 
 ## Instalacja i aktualizacje
 
@@ -81,6 +83,16 @@ Dokumentacja release powinna jasno informować, że:
 - zapis gry musi być zgodny wstecznie albo migrowany przed wydaniem nowej wersji;
 - przed wersją `1.0.0` zgodność zapisu może być ograniczona, ale każda taka zmiana musi zostać opisana.
 
+## Bramka audytu sprzętowego
+
+Build i smoke test emulatora potwierdzają poprawność techniczną artefaktu, ale nie potwierdzają realnego budżetu konsoli. Zasady dopuszczenia:
+
+- `FAIL` profilu Old 3DS blokuje merge zmiany sprzętowej oraz release;
+- `WARN` wymaga zapisanej decyzji i follow-up issue, jeżeli ryzyko nie jest usuwane w tym samym PR;
+- wynik New 3DS jest raportowany osobno i nie może maskować regresji Old 3DS;
+- zrzuty PNG muszą zostać ocenione według checklisty, ale nie zastępują fizycznego testu suwaka 3D, dotyku i komfortu stereo;
+- `.cia`, `.3dsx`, logi i PNG użyte jako dowód muszą być powiązane z tym samym commitem albo jednoznacznie opisaną wersją.
+
 ## Kryteria ukończenia pipeline release
 
 - pojedyncze polecenie lokalne buduje `.3dsx`;
@@ -89,4 +101,5 @@ Dokumentacja release powinna jasno informować, że:
 - release zawiera oba formaty i sumy kontrolne;
 - instalacja `.cia` na rzeczywistym sprzęcie uruchamia grę;
 - zamknięcie i ponowne uruchomienie gry zachowuje zapis;
-- repozytorium nie zawiera materiałów objętych NDA ani prywatnych kluczy.
+- repozytorium nie zawiera materiałów objętych NDA ani prywatnych kluczy;
+- kandydat release ma wypełniony audyt z `HARDWARE_AUDIT.md` i nie ma wyniku `FAIL` na Old 3DS.
