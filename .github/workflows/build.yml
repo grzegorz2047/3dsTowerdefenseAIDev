@@ -130,6 +130,44 @@ jobs:
           path: azahar-*.log
           if-no-files-found: warn
 
+  hardware-release-audit:
+    name: Old 3DS release evidence
+    if: github.event_name == 'push' && startsWith(github.ref_name, 'publish-v')
+    needs:
+      - build-release
+      - azahar-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: CitadelDefense3D-playable
+          path: dist
+      - name: Validate hardware evidence
+        id: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#publish-}"
+          manifest="hardware-audit/releases/$version/manifest.json"
+          python3 scripts/validate_hardware_evidence.py \
+            --manifest "$manifest" \
+            --expected-version "$version" \
+            --expected-commit "$GITHUB_SHA" \
+            --artifact-dir dist \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --release
+          archive="CitadelDefense3D-hardware-audit-$version.zip"
+          (cd "hardware-audit/releases/$version" && zip -r "$GITHUB_WORKSPACE/dist/$archive" .)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+      - name: Upload hardware evidence package
+        uses: actions/upload-artifact@v4
+        with:
+          name: CitadelDefense3D-hardware-audit
+          path: dist/${{ steps.audit.outputs.archive }}
+          if-no-files-found: error
+
   publish-release:
     name: Publish immutable alpha release
     if: github.event_name == 'push' && startsWith(github.ref_name, 'publish-v')
@@ -138,6 +176,7 @@ jobs:
       - campaign-balance
       - build-release
       - azahar-smoke
+      - hardware-release-audit
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
@@ -147,6 +186,10 @@ jobs:
         with:
           name: CitadelDefense3D-playable
           path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: CitadelDefense3D-hardware-audit
+          path: dist
       - name: Resolve and validate version
         id: version
         shell: bash
@@ -155,6 +198,7 @@ jobs:
           version="${GITHUB_REF_NAME#publish-}"
           test "$version" != "$GITHUB_REF_NAME"
           test -f "releases/$version.txt"
+          test -s "dist/CitadelDefense3D-hardware-audit-$version.zip"
           if git ls-remote --exit-code --tags origin "refs/tags/$version" >/dev/null 2>&1; then
             echo "Tag $version already exists; releases are immutable." >&2
             exit 1
@@ -183,4 +227,5 @@ jobs:
             dist/CitadelDefense3D.cia \
             dist/CitadelDefense3D.3dsx \
             dist/SHA256SUMS.txt \
+            "dist/CitadelDefense3D-hardware-audit-$version.zip" \
             docs/INSTALLATION.md
