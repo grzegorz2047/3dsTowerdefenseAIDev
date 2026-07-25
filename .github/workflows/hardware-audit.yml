@@ -1,0 +1,47 @@
+name: Hardware audit gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  audit-tests:
+    name: Hardware audit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run hardware audit unit tests
+        run: python3 -m unittest tests/test_hardware_audit.py
+
+  pr-checklist:
+    name: Hardware PR checklist
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Collect changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --name-only "$BASE_SHA" "$HEAD_SHA" > changed-files.txt
+      - name: Store PR body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          Path('pr-body.md').write_text(os.environ.get('PR_BODY', ''), encoding='utf-8')
+          PY
+      - name: Enforce hardware audit checklist
+        run: >-
+          python3 scripts/check_pr_hardware_audit.py
+          --body-file pr-body.md
+          --changed-files-file changed-files.txt
