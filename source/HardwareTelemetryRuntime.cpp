@@ -1,10 +1,14 @@
 #include "HardwareTelemetryRuntime.hpp"
 
 #include <3ds.h>
+#include <citro2d.h>
 #include <citro3d.h>
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
+
+#include "PerformanceBudget.hpp"
 
 namespace {
 
@@ -14,10 +18,20 @@ HardwareFrameMetrics gCurrent{};
 HardwareFrameMetrics gPending{};
 HardwareDeviceProfile gDeviceProfile = HardwareDeviceProfile::Unknown;
 C3D_RenderTarget* gCurrentTarget = nullptr;
+C2D_TextBuf gOverlayTextBuffer = nullptr;
 bool gDeviceProfileInitialized = false;
 bool gFrameActive = false;
 bool gPendingReady = false;
 bool gRightEyeObserved = false;
+bool gSceneObserved = false;
+bool gOverlayDrawing = false;
+
+constexpr u32 kOverlayBackground = 0xF5261D14U;
+constexpr u32 kOverlayText = 0xFFF4F0ECU;
+constexpr u32 kOverlayMuted = 0xFFD5CABEU;
+constexpr u32 kOverlayPass = 0xFF8FE0A0U;
+constexpr u32 kOverlayWarn = 0xFF70DEFFU;
+constexpr u32 kOverlayFail = 0xFF8484FFU;
 
 float elapsedMilliseconds(u64 startTicks, u64 endTicks) {
     if (endTicks <= startTicks) return 0.0F;
@@ -41,6 +55,7 @@ void beginCurrentFrame(float frameWaitMilliseconds) {
     gCounters.reset();
     gCurrentTarget = nullptr;
     gRightEyeObserved = false;
+    gSceneObserved = false;
     gCurrent.frameWaitMilliseconds = frameWaitMilliseconds;
     gCurrent.deviceProfile = gDeviceProfile;
     gCurrent.speedupEnabled = false;
@@ -95,6 +110,91 @@ void finishCurrentFrame() {
     gCurrentTarget = nullptr;
 }
 
+const char* hardwareVerdict(const HardwareTelemetrySnapshot& snapshot) {
+    if (snapshot.sampleCount == 0U || !snapshot.measurementComplete()) return "WARN";
+    const float gpuBudget = snapshot.last.eyeCount > 1U
+        ? PerformanceBudget::kStereoRenderBudgetMilliseconds
+        : PerformanceBudget::kMonoRenderBudgetMilliseconds;
+    if (snapshot.minimumFreeLinearMemoryBytes <
+            PerformanceBudget::kMinimumLinearMemoryReserveBytes ||
+        snapshot.worstGpuDrawingMilliseconds > gpuBudget) {
+        return "FAIL";
+    }
+    return "PASS";
+}
+
+u32 hardwareVerdictColor(const char* verdict) {
+    if (verdict[0] == 'P') return kOverlayPass;
+    if (verdict[0] == 'F') return kOverlayFail;
+    return kOverlayWarn;
+}
+
+bool shouldDrawOverlay() {
+    return gFrameActive && gSceneObserved && !gOverlayDrawing &&
+        gCurrentTarget != nullptr && gCurrentTarget->screen == GFX_BOTTOM &&
+        (hidKeysHeld() & KEY_SELECT) != 0U;
+}
+
+bool ensureOverlayTextBuffer() {
+    if (gOverlayTextBuffer != nullptr) return true;
+    gOverlayTextBuffer = C2D_TextBufNew(1024U);
+    return gOverlayTextBuffer != nullptr;
+}
+
+void drawOverlayLine(const char* text, float y, u32 color) {
+    C2D_Text parsed{};
+    C2D_TextParse(&parsed, gOverlayTextBuffer, text);
+    C2D_TextOptimize(&parsed);
+    C2D_DrawText(&parsed, C2D_WithColor, 12.0F, y, 0.98F, 0.39F, 0.39F, color);
+}
+
+void drawHardwareOverlay() {
+    if (!ensureOverlayTextBuffer()) return;
+    gOverlayDrawing = true;
+    C2D_TextBufClear(gOverlayTextBuffer);
+    C2D_DrawRectSolid(8.0F, 124.0F, 0.96F, 304.0F, 110.0F, kOverlayBackground);
+
+    const HardwareTelemetrySnapshot& snapshot = gSampler.snapshot();
+    const HardwareFrameMetrics& last = snapshot.last;
+    const char* verdict = hardwareVerdict(snapshot);
+    char line[96]{};
+
+    std::snprintf(line, sizeof(line), "HW %s %s %s", hardwareDeviceProfileName(last.deviceProfile),
+        verdict, snapshot.measurementComplete() ? "KOMPLET" : "NIEPELNY");
+    drawOverlayLine(line, 130.0F, hardwareVerdictColor(verdict));
+
+    std::snprintf(line, sizeof(line), "CPU %.1f C3D %.1f GPU %.1f WAIT %.1f",
+        last.cpuMilliseconds, last.citroProcessingMilliseconds,
+        last.gpuDrawingMilliseconds, last.frameWaitMilliseconds);
+    drawOverlayLine(line, 150.0F, kOverlayText);
+
+    std::snprintf(line, sizeof(line), "L %.1f R %.1f UI %.1f/%.1f O %u",
+        last.leftEyeMilliseconds, last.rightEyeMilliseconds,
+        last.topUiMilliseconds, last.bottomUiMilliseconds,
+        static_cast<unsigned int>(last.eyeCount));
+    drawOverlayLine(line, 170.0F, kOverlayText);
+
+    std::snprintf(line, sizeof(line), "DRAW %lu/%lu VTX %lu",
+        static_cast<unsigned long>(last.sceneDrawCalls),
+        static_cast<unsigned long>(last.uiDrawCalls),
+        static_cast<unsigned long>(last.submittedVertices));
+    drawOverlayLine(line, 190.0F, kOverlayMuted);
+
+    std::snprintf(line, sizeof(line), "MEM MIN %luK TEX %lu/%luK N %lu",
+        static_cast<unsigned long>(snapshot.minimumFreeLinearMemoryBytes / 1024U),
+        static_cast<unsigned long>(last.textureUploads),
+        static_cast<unsigned long>(last.textureUploadBytes / 1024U),
+        static_cast<unsigned long>(snapshot.sampleCount));
+    drawOverlayLine(line, 210.0F, kOverlayMuted);
+    gOverlayDrawing = false;
+}
+
+void releaseOverlayTextBuffer() {
+    if (gOverlayTextBuffer == nullptr) return;
+    C2D_TextBufDelete(gOverlayTextBuffer);
+    gOverlayTextBuffer = nullptr;
+}
+
 }  // namespace
 
 extern "C" bool __real_C3D_FrameBegin(u8 flags);
@@ -105,6 +205,8 @@ extern "C" void __real_C3D_DrawElements(
     GPU_Primitive_t primitive, int count, int type, const void* indices);
 extern "C" void __real_C3D_SyncTextureCopy(
     u32* inadr, u32 indim, u32* outadr, u32 outdim, u32 size, u32 flags);
+extern "C" void __real_C2D_Flush(void);
+extern "C" void __real_C2D_Fini(void);
 
 extern "C" bool __wrap_C3D_FrameBegin(u8 flags) {
     const u64 start = svcGetSystemTick();
@@ -138,6 +240,7 @@ extern "C" void __wrap_C3D_DrawArrays(
     if (!gFrameActive) return;
     const std::uint32_t vertices = size > 0 ? static_cast<std::uint32_t>(size) : 0U;
     gCounters.recordSceneDraw(vertices);
+    gSceneObserved = true;
     addSceneTime(elapsedMilliseconds(start, end));
 }
 
@@ -155,6 +258,16 @@ extern "C" void __wrap_C3D_SyncTextureCopy(
     u32* inadr, u32 indim, u32* outadr, u32 outdim, u32 size, u32 flags) {
     __real_C3D_SyncTextureCopy(inadr, indim, outadr, outdim, size, flags);
     if (gFrameActive) gCounters.recordTextureUpload(static_cast<std::size_t>(size));
+}
+
+extern "C" void __wrap_C2D_Flush(void) {
+    if (shouldDrawOverlay()) drawHardwareOverlay();
+    __real_C2D_Flush();
+}
+
+extern "C" void __wrap_C2D_Fini(void) {
+    releaseOverlayTextBuffer();
+    __real_C2D_Fini();
 }
 
 void hardwareTelemetryRecordGameCpu(float milliseconds) {
