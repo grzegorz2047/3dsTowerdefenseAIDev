@@ -1,0 +1,46 @@
+name: Hardware telemetry
+
+on:
+  pull_request:
+    paths:
+      - 'include/HardwareTelemetry.hpp'
+      - 'include/HardwareTelemetryRuntime.hpp'
+      - 'source/HardwareTelemetryRuntime.cpp'
+      - 'tests/hardware_telemetry_tests.cpp'
+      - 'Makefile'
+      - '.github/workflows/hardware-telemetry.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'include/HardwareTelemetry.hpp'
+      - 'include/HardwareTelemetryRuntime.hpp'
+      - 'source/HardwareTelemetryRuntime.cpp'
+      - 'tests/hardware_telemetry_tests.cpp'
+      - 'Makefile'
+      - '.github/workflows/hardware-telemetry.yml'
+
+jobs:
+  host-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile telemetry tests
+        run: >-
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude
+          tests/hardware_telemetry_tests.cpp
+          -o hardware-telemetry-tests
+      - name: Run telemetry tests
+        run: ./hardware-telemetry-tests
+      - name: Verify runtime integration contract
+        run: |
+          grep -q -- '--wrap=C3D_FrameBegin' Makefile
+          grep -q -- '--wrap=C3D_DrawArrays' Makefile
+          grep -q -- '--wrap=C3D_DrawElements' Makefile
+          grep -q -- '--wrap=C2D_Flush' Makefile
+          grep -q -- '--wrap=C2D_Fini' Makefile
+          grep -q 'C3D_GetDrawingTime' source/HardwareTelemetryRuntime.cpp
+          grep -q 'C3D_GetProcessingTime' source/HardwareTelemetryRuntime.cpp
+          grep -q 'linearSpaceFree' source/HardwareTelemetryRuntime.cpp
+          grep -q 'KEY_SELECT' source/HardwareTelemetryRuntime.cpp
+          grep -q 'measurementComplete' source/HardwareTelemetryRuntime.cpp
+          grep -q 'minimumFreeLinearMemoryBytes' source/HardwareTelemetryRuntime.cpp

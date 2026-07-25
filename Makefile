@@ -42,6 +42,10 @@ CFLAGS      += $(INCLUDE) -D__3DS__
 CXXFLAGS    := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++17
 ASFLAGS     := -g $(ARCH)
 LDFLAGS     := -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LDFLAGS     += -Wl,--wrap=C3D_FrameBegin -Wl,--wrap=C3D_FrameDrawOn \
+               -Wl,--wrap=C3D_FrameEnd -Wl,--wrap=C3D_DrawArrays \
+               -Wl,--wrap=C3D_DrawElements -Wl,--wrap=C3D_SyncTextureCopy \
+               -Wl,--wrap=C2D_Flush -Wl,--wrap=C2D_Fini
 LIBS        := -lcitro2d -lcitro3d -lctru -lm
 LIBDIRS     := $(CTRULIB)
 
