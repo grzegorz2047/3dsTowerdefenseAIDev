@@ -14,8 +14,10 @@ HardwareFrameMetrics gCurrent{};
 HardwareFrameMetrics gPending{};
 HardwareDeviceProfile gDeviceProfile = HardwareDeviceProfile::Unknown;
 C3D_RenderTarget* gCurrentTarget = nullptr;
+bool gDeviceProfileInitialized = false;
 bool gFrameActive = false;
 bool gPendingReady = false;
+bool gRightEyeObserved = false;
 
 float elapsedMilliseconds(u64 startTicks, u64 endTicks) {
     if (endTicks <= startTicks) return 0.0F;
@@ -23,9 +25,34 @@ float elapsedMilliseconds(u64 startTicks, u64 endTicks) {
         static_cast<float>(CPU_TICKS_PER_MSEC);
 }
 
+void initializeDeviceProfile() {
+    if (gDeviceProfileInitialized) return;
+    bool isNew3DS = false;
+    const Result result = APT_CheckNew3DS(&isNew3DS);
+    gDeviceProfile = R_SUCCEEDED(result)
+        ? (isNew3DS ? HardwareDeviceProfile::New3DS : HardwareDeviceProfile::Old3DS)
+        : HardwareDeviceProfile::Unknown;
+    gDeviceProfileInitialized = true;
+}
+
+void beginCurrentFrame(float frameWaitMilliseconds) {
+    initializeDeviceProfile();
+    gCurrent = {};
+    gCounters.reset();
+    gCurrentTarget = nullptr;
+    gRightEyeObserved = false;
+    gCurrent.frameWaitMilliseconds = frameWaitMilliseconds;
+    gCurrent.deviceProfile = gDeviceProfile;
+    gCurrent.speedupEnabled = false;
+    gCurrent.measured = HardwareMeasurement::FrameWait |
+        HardwareMeasurement::DeviceProfile;
+    gFrameActive = true;
+}
+
 void addSceneTime(float milliseconds) {
     if (gCurrentTarget == nullptr || gCurrentTarget->screen != GFX_TOP) return;
     if (gCurrentTarget->side == GFX_RIGHT) {
+        gRightEyeObserved = true;
         gCurrent.rightEyeMilliseconds += milliseconds;
         gCurrent.measured |= HardwareMeasurement::RightEye;
     } else {
@@ -40,6 +67,7 @@ void addUiTime(float milliseconds) {
         gCurrent.bottomUiMilliseconds += milliseconds;
         gCurrent.measured |= HardwareMeasurement::BottomUi;
     } else if (gCurrentTarget->screen == GFX_TOP) {
+        if (gCurrentTarget->side == GFX_RIGHT) gRightEyeObserved = true;
         gCurrent.topUiMilliseconds += milliseconds;
         gCurrent.measured |= HardwareMeasurement::TopUi;
     }
@@ -51,6 +79,20 @@ void publishCompletedGpuFrame() {
     gPending.measured |= HardwareMeasurement::GpuDrawing;
     gSampler.record(gPending);
     gPendingReady = false;
+}
+
+void finishCurrentFrame() {
+    if (!gFrameActive) return;
+    gCurrent.citroProcessingMilliseconds = std::max(C3D_GetProcessingTime(), 0.0F);
+    gCurrent.freeLinearMemoryBytes = static_cast<std::size_t>(linearSpaceFree());
+    gCurrent.eyeCount = gRightEyeObserved ? 2U : 1U;
+    gCurrent.measured |= HardwareMeasurement::CitroProcessing |
+        HardwareMeasurement::LinearMemory;
+    gCounters.applyTo(gCurrent);
+    gPending = gCurrent;
+    gPendingReady = true;
+    gFrameActive = false;
+    gCurrentTarget = nullptr;
 }
 
 }  // namespace
@@ -68,24 +110,24 @@ extern "C" bool __wrap_C3D_FrameBegin(u8 flags) {
     const u64 start = svcGetSystemTick();
     const bool result = __real_C3D_FrameBegin(flags);
     const u64 end = svcGetSystemTick();
-    if (result && gFrameActive) {
-        gCurrent.frameWaitMilliseconds = elapsedMilliseconds(start, end);
-        gCurrent.measured |= HardwareMeasurement::FrameWait;
+    if (result) {
         publishCompletedGpuFrame();
+        beginCurrentFrame(elapsedMilliseconds(start, end));
     }
     return result;
 }
 
 extern "C" bool __wrap_C3D_FrameDrawOn(C3D_RenderTarget* target) {
     gCurrentTarget = target;
+    if (target != nullptr && target->screen == GFX_TOP && target->side == GFX_RIGHT) {
+        gRightEyeObserved = true;
+    }
     return __real_C3D_FrameDrawOn(target);
 }
 
 extern "C" void __wrap_C3D_FrameEnd(u8 flags) {
     __real_C3D_FrameEnd(flags);
-    if (!gFrameActive) return;
-    gCurrent.citroProcessingMilliseconds = std::max(C3D_GetProcessingTime(), 0.0F);
-    gCurrent.measured |= HardwareMeasurement::CitroProcessing;
+    finishCurrentFrame();
 }
 
 extern "C" void __wrap_C3D_DrawArrays(
@@ -115,35 +157,10 @@ extern "C" void __wrap_C3D_SyncTextureCopy(
     if (gFrameActive) gCounters.recordTextureUpload(static_cast<std::size_t>(size));
 }
 
-void hardwareTelemetryInitializeDeviceProfile() {
-    bool isNew3DS = false;
-    const Result result = APT_CheckNew3DS(&isNew3DS);
-    gDeviceProfile = R_SUCCEEDED(result)
-        ? (isNew3DS ? HardwareDeviceProfile::New3DS : HardwareDeviceProfile::Old3DS)
-        : HardwareDeviceProfile::Unknown;
-}
-
-void hardwareTelemetryBeginFrame(float gameCpuMilliseconds) {
-    gCurrent = {};
-    gCounters.reset();
-    gCurrentTarget = nullptr;
-    gCurrent.cpuMilliseconds = std::max(gameCpuMilliseconds, 0.0F);
-    gCurrent.deviceProfile = gDeviceProfile;
-    gCurrent.speedupEnabled = false;
-    gCurrent.measured = HardwareMeasurement::Cpu | HardwareMeasurement::DeviceProfile;
-    gFrameActive = true;
-}
-
-void hardwareTelemetryFinishFrame(std::size_t freeLinearMemoryBytes, std::uint8_t eyeCount) {
+void hardwareTelemetryRecordGameCpu(float milliseconds) {
     if (!gFrameActive) return;
-    gCurrent.freeLinearMemoryBytes = freeLinearMemoryBytes;
-    gCurrent.eyeCount = eyeCount > 1U ? 2U : 1U;
-    gCurrent.measured |= HardwareMeasurement::LinearMemory;
-    gCounters.applyTo(gCurrent);
-    gPending = gCurrent;
-    gPendingReady = true;
-    gFrameActive = false;
-    gCurrentTarget = nullptr;
+    gCurrent.cpuMilliseconds = std::max(milliseconds, 0.0F);
+    gCurrent.measured |= HardwareMeasurement::Cpu;
 }
 
 const HardwareTelemetrySnapshot& hardwareTelemetrySnapshot() {
