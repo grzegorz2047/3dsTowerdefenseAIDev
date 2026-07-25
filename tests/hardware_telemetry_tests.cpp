@@ -90,6 +90,12 @@ int main() {
     incompleteSampler.record(incomplete);
     assert(incompleteSampler.snapshot().measurementComplete());
 
+    HardwareTelemetrySampler missingCpuCompletenessSampler;
+    HardwareFrameMetrics missingCpuCompleteness = second;
+    missingCpuCompleteness.measured &= static_cast<std::uint16_t>(~HardwareMeasurement::Cpu);
+    missingCpuCompletenessSampler.record(missingCpuCompleteness);
+    assert(!missingCpuCompletenessSampler.snapshot().measurementComplete());
+
     HardwareTelemetrySampler unbiasedSampler;
     HardwareFrameMetrics missingCpu{};
     missingCpu.leftEyeMilliseconds = 3.0F;
