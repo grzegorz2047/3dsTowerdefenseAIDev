@@ -115,14 +115,18 @@ void finishCurrentFrame() {
 
 const char* hardwareVerdict(const HardwareTelemetrySnapshot& snapshot) {
     if (snapshot.sampleCount == 0U || !snapshot.measurementComplete()) return "WARN";
-    const float gpuBudget = snapshot.last.eyeCount > 1U
+    const float gpuBudget = snapshot.stereoObserved
         ? PerformanceBudget::kStereoRenderBudgetMilliseconds
         : PerformanceBudget::kMonoRenderBudgetMilliseconds;
+    const float worstCpuWork = snapshot.worstCpuMilliseconds +
+        snapshot.worstCitroProcessingMilliseconds;
     if (snapshot.minimumFreeLinearMemoryBytes <
             PerformanceBudget::kMinimumLinearMemoryReserveBytes ||
-        snapshot.worstGpuDrawingMilliseconds > gpuBudget) {
+        snapshot.worstGpuDrawingMilliseconds > gpuBudget ||
+        worstCpuWork > PerformanceBudget::kWarningFrameMilliseconds) {
         return "FAIL";
     }
+    if (worstCpuWork > PerformanceBudget::kTargetFrameMilliseconds) return "WARN";
     return "PASS";
 }
 
