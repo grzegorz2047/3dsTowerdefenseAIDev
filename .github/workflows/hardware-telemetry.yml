@@ -36,6 +36,11 @@ jobs:
           grep -q -- '--wrap=C3D_FrameBegin' Makefile
           grep -q -- '--wrap=C3D_DrawArrays' Makefile
           grep -q -- '--wrap=C3D_DrawElements' Makefile
+          grep -q -- '--wrap=C2D_Flush' Makefile
+          grep -q -- '--wrap=C2D_Fini' Makefile
           grep -q 'C3D_GetDrawingTime' source/HardwareTelemetryRuntime.cpp
           grep -q 'C3D_GetProcessingTime' source/HardwareTelemetryRuntime.cpp
           grep -q 'linearSpaceFree' source/HardwareTelemetryRuntime.cpp
+          grep -q 'KEY_SELECT' source/HardwareTelemetryRuntime.cpp
+          grep -q 'measurementComplete' source/HardwareTelemetryRuntime.cpp
+          grep -q 'minimumFreeLinearMemoryBytes' source/HardwareTelemetryRuntime.cpp
