@@ -1,0 +1,27 @@
+name: Hardware telemetry
+
+on:
+  pull_request:
+    paths:
+      - 'include/HardwareTelemetry.hpp'
+      - 'tests/hardware_telemetry_tests.cpp'
+      - '.github/workflows/hardware-telemetry.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'include/HardwareTelemetry.hpp'
+      - 'tests/hardware_telemetry_tests.cpp'
+      - '.github/workflows/hardware-telemetry.yml'
+
+jobs:
+  host-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile telemetry tests
+        run: >-
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -Iinclude
+          tests/hardware_telemetry_tests.cpp
+          -o hardware-telemetry-tests
+      - name: Run telemetry tests
+        run: ./hardware-telemetry-tests
