@@ -19,6 +19,7 @@ HardwareFrameMetrics gPending{};
 HardwareDeviceProfile gDeviceProfile = HardwareDeviceProfile::Unknown;
 C3D_RenderTarget* gCurrentTarget = nullptr;
 C2D_TextBuf gOverlayTextBuffer = nullptr;
+u64 gPreviousFrameEndTicks = 0U;
 bool gDeviceProfileInitialized = false;
 bool gFrameActive = false;
 bool gPendingReady = false;
@@ -49,18 +50,20 @@ void initializeDeviceProfile() {
     gDeviceProfileInitialized = true;
 }
 
-void beginCurrentFrame(float frameWaitMilliseconds) {
+void beginCurrentFrame(float frameWaitMilliseconds, float gameCpuMilliseconds, bool cpuMeasured) {
     initializeDeviceProfile();
     gCurrent = {};
     gCounters.reset();
     gCurrentTarget = nullptr;
     gRightEyeObserved = false;
     gSceneObserved = false;
+    gCurrent.cpuMilliseconds = gameCpuMilliseconds;
     gCurrent.frameWaitMilliseconds = frameWaitMilliseconds;
     gCurrent.deviceProfile = gDeviceProfile;
     gCurrent.speedupEnabled = false;
     gCurrent.measured = HardwareMeasurement::FrameWait |
         HardwareMeasurement::DeviceProfile;
+    if (cpuMeasured) gCurrent.measured |= HardwareMeasurement::Cpu;
     gFrameActive = true;
 }
 
@@ -214,7 +217,11 @@ extern "C" bool __wrap_C3D_FrameBegin(u8 flags) {
     const u64 end = svcGetSystemTick();
     if (result) {
         publishCompletedGpuFrame();
-        beginCurrentFrame(elapsedMilliseconds(start, end));
+        const bool cpuMeasured = gPreviousFrameEndTicks != 0U;
+        const float gameCpu = cpuMeasured
+            ? elapsedMilliseconds(gPreviousFrameEndTicks, start)
+            : 0.0F;
+        beginCurrentFrame(elapsedMilliseconds(start, end), gameCpu, cpuMeasured);
     }
     return result;
 }
@@ -229,7 +236,9 @@ extern "C" bool __wrap_C3D_FrameDrawOn(C3D_RenderTarget* target) {
 
 extern "C" void __wrap_C3D_FrameEnd(u8 flags) {
     __real_C3D_FrameEnd(flags);
+    const u64 end = svcGetSystemTick();
     finishCurrentFrame();
+    gPreviousFrameEndTicks = end;
 }
 
 extern "C" void __wrap_C3D_DrawArrays(
