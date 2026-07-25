@@ -113,5 +113,17 @@ class EvidenceManifestTests(unittest.TestCase):
             self.assertIn("Old 3DS verdict FAIL blocks release", errors)
 
 
+class ReleaseWorkflowContractTests(unittest.TestCase):
+    def test_release_targets_manifest_source_commit(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+        self.assertIn("hardware-release-audit:", workflow)
+        self.assertIn("- hardware-release-audit", workflow)
+        self.assertIn("source_commit: ${{ steps.source.outputs.source_commit }}", workflow)
+        self.assertIn("git checkout --detach \"$source_commit\"", workflow)
+        self.assertIn("--expected-commit \"${{ needs.build-release.outputs.source_commit }}\"", workflow)
+        self.assertIn("--target \"${{ needs.build-release.outputs.source_commit }}\"", workflow)
+        self.assertNotIn("--target \"$GITHUB_SHA\"", workflow)
+
+
 if __name__ == "__main__":
     unittest.main()
